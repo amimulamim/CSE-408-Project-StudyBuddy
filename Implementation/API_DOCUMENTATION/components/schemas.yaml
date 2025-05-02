@@ -1,0 +1,47 @@
+components:
+  schemas:
+    # 🔹 Chat module schema
+    Message:
+      type: object
+      properties:
+        role:
+          type: string
+        text:
+          type: string
+        files:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    # QuizQuestion:
+    #   type: object
+    #   properties:
+    #     question:
+    #       type: string
+    #     options:
+    #       type: array
+    #       items:
+    #         type: string
+    #     correctAnswer:
+    #       type: string
+
+    # QuizResult:
+    #   type: object
+    #   properties:
+    #     score:
+    #       type: number
+    #     total:
+    #       type: number
+    #     feedback:
+    #       type: string
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

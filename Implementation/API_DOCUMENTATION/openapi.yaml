@@ -1,0 +1,266 @@
+openapi: 3.0.3
+info:
+  title: StudyBuddy API
+  version: 1.0.0
+  description: API docs for StudyBuddy modules
+servers:
+- url: http://localhost:8000
+tags:
+- name: Auth
+- name: Chat
+paths:
+  /api/auth/signup:
+    post:
+      tags:
+      - Auth
+      summary: Sign up using email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '201':
+          description: User created
+        '400':
+          description: Invalid input
+  /api/auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Log in using email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Login successful
+        '401':
+          description: Unauthorized
+  /api/auth/google:
+    post:
+      tags:
+      - Auth
+      summary: Google Sign-in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - idToken
+              properties:
+                idToken:
+                  type: string
+      responses:
+        '200':
+          description: Google login/signup handled
+        '401':
+          description: Invalid token
+  /api/auth/user-info:
+    get:
+      tags:
+      - Auth
+      summary: Get user info
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: User profile
+        '401':
+          description: Unauthorized
+  /ai/chat:
+    post:
+      tags:
+      - Chat
+      summary: Start or continue a chat with AI
+      description: 'Starts a new chat session if `chatId` is not provided.
+
+        If `chatId` is provided, it continues the session by adding a new message.
+
+        '
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  description: User's message text
+                image:
+                  type: string
+                  format: binary
+                  description: Optional image file
+                chatId:
+                  type: string
+                  description: Optional chat session ID
+      responses:
+        '200':
+          description: AI response and chat session ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  chatId:
+                    type: string
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+  /ai/chat/list:
+    get:
+      tags:
+      - Chat
+      summary: Get list of all chat sessions for the user
+      responses:
+        '200':
+          description: List of chat sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  chats:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                        name:
+                          type: string
+  /ai/chat/{chatId}:
+    get:
+      tags:
+      - Chat
+      summary: Retrieve a specific chat session by ID
+      parameters:
+      - in: path
+        name: chatId
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Chat session details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                  name:
+                    type: string
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+    delete:
+      tags:
+      - Chat
+      summary: Delete a specific chat session
+      parameters:
+      - in: path
+        name: chatId
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Confirmation of deletion
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  chatId:
+                    type: string
+  /ai/chat/{chatId}/rename:
+    patch:
+      tags:
+      - Chat
+      summary: Rename an existing chat session
+      parameters:
+      - in: path
+        name: chatId
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              properties:
+                name:
+                  type: string
+                  description: New chat name
+      responses:
+        '200':
+          description: Chat renamed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                  name:
+                    type: string
+components:
+  schemas:
+    Message:
+      type: object
+      properties:
+        role:
+          type: string
+        text:
+          type: string
+        files:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
