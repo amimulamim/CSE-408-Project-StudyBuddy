@@ -18,6 +18,19 @@ components:
           type: string
           format: date-time
 
+    #authorization and billing
+    SubscriptionStatus:
+      type: object
+      properties:
+        plan:
+          type: string
+          enum: [free, premium]
+        active:
+          type: boolean
+        expiresAt:
+          type: string
+          format: date-time
+
     # QuizQuestion:
     #   type: object
     #   properties:

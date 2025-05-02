@@ -8,6 +8,8 @@ servers:
 tags:
 - name: Auth
 - name: Chat
+- name: Billing
+  description: Subscription and payment management
 paths:
   /api/auth/signup:
     post:
@@ -94,6 +96,103 @@ paths:
           description: User profile
         '401':
           description: Unauthorized
+  /billing/subscribe:
+    post:
+      tags:
+      - Billing
+      summary: Create a checkout session to subscribe to premium plan
+      description: 'Redirects the user to the payment provider (e.g., Stripe) to complete
+        the checkout.
+
+        '
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                planId:
+                  type: string
+                  example: premium_monthly
+                successUrl:
+                  type: string
+                cancelUrl:
+                  type: string
+      responses:
+        '200':
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkoutUrl:
+                    type: string
+                    description: Redirect URL to complete payment
+        '400':
+          description: Invalid request
+  /billing/status:
+    get:
+      tags:
+      - Billing
+      summary: Check the user's current subscription status
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Subscription status details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plan:
+                    type: string
+                    enum:
+                    - free
+                    - premium
+                  active:
+                    type: boolean
+                  expiresAt:
+                    type: string
+                    format: date-time
+  /billing/cancel:
+    post:
+      tags:
+      - Billing
+      summary: Cancel the current user's subscription
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Subscription cancellation confirmed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /billing/webhook:
+    post:
+      tags:
+      - Billing
+      summary: Handle incoming payment gateway webhooks
+      description: 'Receives events from payment providers like Stripe. This endpoint
+        is **internal** and should be secured with a secret key.
+
+        '
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Webhook processed
   /ai/chat:
     post:
       tags:
@@ -257,6 +356,19 @@ components:
         status:
           type: string
         timestamp:
+          type: string
+          format: date-time
+    SubscriptionStatus:
+      type: object
+      properties:
+        plan:
+          type: string
+          enum:
+          - free
+          - premium
+        active:
+          type: boolean
+        expiresAt:
           type: string
           format: date-time
   securitySchemes:
