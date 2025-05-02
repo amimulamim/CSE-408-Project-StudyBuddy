@@ -1,0 +1,251 @@
+[
+    {
+        "usecase": {
+            "name": "Similar Raw Content Retrieval",
+            "scenario": "System retrieves similar existing content from RawContentDB based on content type and topic description",
+            "actors": "System",
+            "preconditions": "RawContentDB contains indexed content of various types",
+            "steps": [
+                "System receives content type and topic description",
+                "System validates input parameters",
+                "System searches for similar content in RawContentDB",
+                "System filters results based on similarity threshold",
+                "System returns specified number of retrievals"
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Valid Content Retrieval",
+                "description": "Verify successful retrieval of similar content matching type and topic",
+                "input": {
+                    "contentType": "slides",
+                    "contentTopic": "Photosynthesis in plants",
+                    "similarityThreshold": 0.75,
+                    "numRetrievals": 3
+                },
+                "expected": {
+                    "outcome": "Retrieval successful",
+                    "retrievedCount": 3,
+                    "allAboveThreshold": true,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Empty Content Type",
+                "description": "Verify system handling of empty content type",
+                "input": {
+                    "contentType": "",
+                    "contentTopic": "Cell Division",
+                    "similarityThreshold": 0.75,
+                    "numRetrievals": 3
+                },
+                "expected": {
+                    "outcome": "Retrieval failed",
+                    "error": "Content type cannot be empty",
+                    "status": "Rejected"
+                }
+            },
+            {
+                "name": "Empty Topic",
+                "description": "Verify system handling of empty topic description",
+                "input": {
+                    "contentType": "flashcards",
+                    "contentTopic": "",
+                    "similarityThreshold": 0.75,
+                    "numRetrievals": 3
+                },
+                "expected": {
+                    "outcome": "Retrieval failed",
+                    "error": "Content topic cannot be empty",
+                    "status": "Rejected"
+                }
+            },
+            {
+                "name": "Type Mismatch With Similar Topic",
+                "description": "Verify handling of cases where similar topic exists but in different content type",
+                "input": {
+                    "contentType": "slides",
+                    "contentTopic": "Respiration process",
+                    "similarityThreshold": 0.75,
+                    "numRetrievals": 3
+                },
+                "expected": {
+                    "outcome": "Retrieval failed",
+                    "error": "No matching content found for specified type",
+                    "status": "Failed"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Content Modification",
+            "scenario": "System modifies existing similar content to match required content type and topic",
+            "actors": "System",
+            "preconditions": "Similar content has been retrieved from RawContentDB",
+            "steps": [
+                "System analyzes existing content characteristics",
+                "System determines required modifications",
+                "System applies modifications to match required type and topic",
+                "System validates modified content"
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Valid Content Modification",
+                "description": "Verify successful modification of content to match required type and topic",
+                "input": {
+                    "existingContentType": "slides",
+                    "existingContentTopic": "DNA Replication",
+                    "requiredContentType": "slides",
+                    "requiredContentTopic": "DNA Replication Importance"
+                },
+                "expected": {
+                    "outcome": "Modification successful",
+                    "contentMatches": true,
+                    "status": "Completed"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Resource Retrieval",
+            "scenario": "System retrieves relevant resources from specified collection based on content topic",
+            "actors": "System",
+            "preconditions": "Resource collections are properly indexed and available in vector database",
+            "steps": [
+                "System validates collection name",
+                "System searches for relevant resources",
+                "System ranks resources by relevance",
+                "System returns specified number of resources"
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Valid Resource Retrieval",
+                "description": "Verify successful retrieval of resources from valid collection",
+                "input": {
+                    "collectionName": "biology_resources",
+                    "contentTopic": "Cell Structure",
+                    "numRetrievals": 5
+                },
+                "expected": {
+                    "outcome": "Retrieval successful",
+                    "resourceCount": 5,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Invalid Collection",
+                "description": "Verify handling of non-existent collection",
+                "input": {
+                    "collectionName": "invalid_collection",
+                    "contentTopic": "Quantum Physics",
+                    "numRetrievals": 3
+                },
+                "expected": {
+                    "outcome": "Retrieval failed",
+                    "error": "Collection does not exist",
+                    "status": "Rejected"
+                }
+            },
+            {
+                "name": "Insufficient Resources",
+                "description": "Verify handling of insufficient stored chunks",
+                "input": {
+                    "collectionName": "new_collection",
+                    "contentTopic": "Advanced Calculus",
+                    "numRetrievals": 10
+                },
+                "expected": {
+                    "outcome": "Partial number of chunks retrieved",
+                    "error": "Not enough chunks stored",
+                    "resourceCount": 3,
+                    "status": "Partially Retrieved"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Raw Content Generation",
+            "scenario": "System generates new raw content from retrieved resources based on specified content type",
+            "actors": "System",
+            "preconditions": "Relevant resources have been retrieved successfully",
+            "steps": [
+                "System validates content type support",
+                "System analyzes retrieved resources",
+                "System generates content according to type requirements",
+                "System validates generated content completeness"
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Valid Content Generation",
+                "description": "Verify successful generation of content from adequate resources",
+                "input": {
+                    "retrievedResources": [
+                        "Detailed text about cell structure",
+                        "Information about cell organelles",
+                        "Cell function descriptions"
+                    ],
+                    "contentType": "slides",
+                    "maximumTokenCount": 1000
+                },
+                "expected": {
+                    "outcome": "Generation successful",
+                    "contentMeetsRequirements": true,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Unsupported Content Type",
+                "description": "Verify handling of unsupported content type request",
+                "input": {
+                    "retrievedResources": [
+                        "Resource text 1",
+                        "Resource text 2"
+                    ],
+                    "contentType": "video",
+                    "maximumTokenCount": 500
+                },
+                "expected": {
+                    "outcome": "Generation failed",
+                    "error": "Content type not supported",
+                    "status": "Rejected"
+                }
+            },
+            {
+                "name": "Insufficient Content",
+                "description": "Verify handling of insufficient content for required type",
+                "input": {
+                    "retrievedResources": [
+                        "One line Definition of Photosynthesis"
+                    ],
+                    "contentType": "slides",
+                    "maximumTokenCount": 1000
+                },
+                "expected": {
+                    "outcome": "Generation failed",
+                    "error": "Not enough content for complete slides",
+                    "status": "Rejected"
+                }
+            },
+            {
+                "name": "No Retrieved Resources",
+                "description": "Verify handling of empty resource list",
+                "input": {
+                    "retrievedResources": [],
+                    "contentType": "flashcards",
+                    "minimumContentLength": 500
+                },
+                "expected": {
+                    "outcome": "Generation failed",
+                    "error": "No resources available for content generation",
+                    "status": "Rejected"
+                }
+            }
+        ]
+    }
+]

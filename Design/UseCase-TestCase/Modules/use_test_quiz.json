@@ -1,0 +1,358 @@
+[
+  {
+    "usecase": {
+      "name": "Quiz Request with Customization Parameters",
+      "scenario": "Student prompts the system to generate a quiz with customization parameters such as subject, topic, marks, time, and difficulty.",
+      "actors": "Student, System ",
+      "preconditions": "The student is logged in and has access to the quiz generation feature.",
+      "steps": [
+        "Student requests a quiz through a conversation, providing customization parameters (subject, topic, marks, time, difficulty).",
+        "System validates the parameters.",
+        "System proceeds with the quiz generation or provides feedback to the student"
+      ]
+    },
+    "testcases": [
+      {
+        "name": "Valid Quiz Request",
+        "description": "Verify that a student can successfully request a quiz with valid customization parameters.",
+        "input": {
+          "subject": "Data Structures and Algorithms",
+          "topic": "Dynamic Programming",
+          "marks": 50,
+          "time": 30,
+          "difficulty": "Medium"
+        },
+        "expected": {
+          "outcome": "Quiz request submitted successfully",
+          "status": "Submitted"
+        }
+      },
+      {
+        "name": "Missing Optional Parameters",
+        "description": "Verify that the system proceeds with default or recommended values when optional parameters like difficulty are not provided.",
+        "input": {
+          "subject": "Software Engineering",
+          "topic": "Design Patterns",
+          "marks": 20,
+          "time": 15
+        },
+        "expected": {
+          "outcome": "Quiz request submitted successfully",
+
+          "status": "Submitted"
+        }
+      },
+      {
+        "name": "Invalid Customization Parameters",
+        "description": "Verify that the system handles invalid, unreal or extreme customization parameters such as negative time or unrealistic difficulty.",
+        "input": {
+          "subject": "Physics",
+          "topic": "Quantum Mechanics",
+          "marks": 200,
+          "time": 2,
+          "difficulty": "Hard"
+        },
+        "expected": {
+          "outcome": "Invalid parameters, please correct",
+          "status": "Aborted"
+        }
+      },
+      {
+        "name": "Missing Required Parameters",
+        "description": "Verify that the system asks the student for missing compulsory parameters like subject and topic.",
+        "input": {
+          "marks": 10,
+          "time": 10
+        },
+        "expected": {
+          "outcome": "Missing subject or topic, please provide",
+          "status": "Aborted"
+        }
+      },
+      {
+        "name": "Sensitive Subject or Topic",
+        "description": "Verify that the system handles sensitive subjects or topics appropriately by rejecting or sanitizing input.",
+        "input": {
+          "subject": "Nuclear Engineering",
+          "topic": "Bombing"
+        },
+        "expected": {
+          "outcome": "System rejects sensitive input",
+          "status": "Aborted"
+        }
+      }
+    ]
+  },
+  {
+    "usecase": {
+      "name": "Quiz Question Selection ",
+      "scenario": "System  selects quiz questions based on the customization parameters and student’s past performance and peer activity analysis.",
+      "actors": "System",
+      "preconditions": "The student requests a quiz with valid customization parameters.",
+      "steps": [
+        "System analyzes the customization parameters as well as past performance and peer activities .",
+        "System selects a list of selected questions based on the analysis"
+      ]
+    },
+    "testcases": [
+
+
+      {
+        "name": "Good Distribution of Subtopics and Difficulty",
+        "description": "Verify that the selected questions cover all subtopics with a good distribution of difficulty levels.",
+        "input": {
+          "subtopics": ["Subtopic1", "Subtopic2", "Subtopic3"],
+          "difficultyDistribution": {
+            "easy": 2,
+            "medium": 3,
+            "hard": 1
+          }
+        },
+        "expected": {
+          "outcome": "All subtopics covered, balanced difficulty distribution questions selected",
+          "status": "Selected"
+        }
+      },
+      {
+        "name": "Lack of Matching Questions",
+        "description": "Verify that the system handles the case where there are not enough available questions matching the customization parameters.",
+        "input": {
+          "subject": "CSE",
+          "topic": "Quantum Computing",
+          "marks": 100,
+          "time": 60,
+          "difficulty": "Hard"
+        },
+        "expected": {
+          "outcome": "Questions generated with available number of questions and adjusted time",
+          "status": "Adjusted"
+        }
+      }
+    ]
+  },
+  {
+    "usecase": {
+      "name": "Quiz Taking Environment",
+      "scenario": "Student answers quiz questions, and the system records the answers immediately.System submits automatically when time runs out.",
+      "actors": "Student, System",
+      "preconditions": "Quiz is loaded and displayed to the student.",
+      "steps": [
+        "Student selects answers for each question.",
+        "System records the answer as soon as the student selects it."
+      ]
+    },
+    "testcases": [
+
+      {
+        "name": "Rapidly Changing Answers Before Submission",
+        "description": "Verify that the system records the last selected answer when the student rapidly changes answers before submission.",
+        "input": {
+          "answers": ["A", "B", "C"],
+          "finalAnswer": "C"
+        },
+        "expected": {
+          "outcome": "Final answer recorded",
+          "status": "Recorded"
+        }
+      },
+      {
+        "name": "Some Questions Left Blank",
+        "description": "Verify that the system allows some questions to be left blank and proceeds with evaluation.",
+        "input": {
+          "answers": ["A", "", "B"]
+        },
+        "expected": {
+          "outcome": "Proceed with submission",
+          "status": "Proceeded"
+        }
+      },
+      {
+        "name": "No Answers Provided",
+        "description": "Verify that the system prompts the student to review or submit when no answers are provided.",
+        "input": {
+          "answers": []
+        },
+        "expected": {
+          "outcome": "Prompt the student to review or submit",
+          "status": "Prompted"
+        }
+      },
+      {
+        "name": "Summary View Display",
+        "description": "Verify that the system correctly displays the summary view with the count of answered and unanswered questions, as well as the remaining time.",
+        "input": {
+          "answers": ["A", "", "C", "", "D"],
+          "timeRemaining": "10 min"
+        },
+        "expected": {
+          "outcome": "Summary view displays the count of answered (3), unanswered (2) questions, and time remaining (10 min).",
+          "status": "Displayed"
+        }
+      }
+      ,
+      {
+        "name": "Answer Recorded Just Before Time Runs Out",
+        "description": "Verify that the system records the answer just before time runs out.",
+        "input": {
+          "answer": "A",
+          "timeRemaining": "1 sec"
+        },
+        "expected": {
+          "outcome": "Answer recorded successfully",
+          "status": "Recorded"
+        }
+      },
+      {
+        "name": "Automatic Submission on Timeout",
+        "description": "Verify that the system automatically submits the quiz when the timer runs out.",
+        "input": {
+          "timeRemaining": "0 sec",
+          "answers": ["A", "B", ""]
+        },
+        "expected": {
+          "outcome": "Quiz submitted automatically",
+          "status": "Submitted"
+        }
+      }
+    ]
+  },
+
+  
+
+    {
+        "usecase": {
+            "name": "Quiz Evaluation and Feedback",
+            "scenario": "The System matches answers, evaluates the quiz, and provides feedback for incorrect responses.",
+            "actors": "System",
+            "preconditions": "Student has submitted the quiz, and the answers need to be evaluated.",
+            "steps": [
+                "System matches submitted answers with the correct ones.",
+                "System marks the answers as correct or wrong.",
+                "System provides feedback for incorrect answers."
+            ]
+        },
+        "testcases": [
+
+            {
+                "name": "Marked Single Correct Option",
+                "description": "Verify that the system correctly marks the selected option as either correct or wrong.",
+                "input": {
+                    "selectedAnswer": "A",
+                    "correctAnswer": "A"
+                },
+                "expected": {
+                    "outcome": "Marked as correct",
+                    "status": "Marked"
+                }
+            },
+            {
+                "name": "Marked Single Wrong Option",
+                "description": "Verify that the system correctly marks the selected option as either correct or wrong .",
+                "input": {
+                    "selectedAnswer": "A",
+                    "correctAnswer": "B"
+                },
+                "expected": {
+                    "outcome": "Marked as incorrect",
+                    "status": "Marked"
+                }
+            },
+            {
+                "name": "Multiple Correct Answers Allowed",
+                "description": "Verify that the system allows and correctly evaluates questions with multiple correct answers.",
+                "input": {
+                    "selectedAnswers": ["A", "C"],
+                    "correctAnswers": ["A", "C"]
+                },
+                "expected": {
+                    "outcome": "Both answers marked as correct",
+                    "status": "Marked"
+                }
+            },
+            {
+                "name": "All Correct Answers Must Be Selected for a Score",
+                "description": "Verify that the student must select all correct answers to get a score.",
+                "input": {
+                    "selectedAnswers": ["A"],
+                    "correctAnswers": ["A", "C"]
+                },
+                "expected": {
+                    "outcome": "No score awarded",
+                    "status": "Marked"
+                }
+            },
+            {
+                "name": "Marking Incorrect Options Along with Correct",
+                "description": "Verify that the system correctly handles cases where both correct and incorrect options are selected.",
+                "input": {
+                    "selectedAnswers": ["A", "B"],
+                    "correctAnswer": ["A"]
+                },
+                "expected": {
+                    "outcome": "Partial score awarded for correct answer",
+                    "status": "Marked"
+                }
+            }
+        ]
+    }
+    ,
+    
+        {
+            "usecase": {
+                "name": "Quiz Result and Analytics",
+                "scenario": "The system shows the quiz result to the student, provides explanations for correct answers, hints for incorrect answers, and updates the student’s performance dashboard.",
+                "actors": "Student, System",
+                "preconditions": "The quiz has been submitted, and the evaluation has been completed.",
+                "steps": [
+                    "System shows the result with correct answers marked in green and incorrect answers marked in red.",
+                    "Student clicks for explanation or hints",
+                    "System provides explanations for correct answers.",
+                    "System provides hints and a brief explanation for incorrect answers.",
+                    "System updates the student's dashboard with strengths, weaknesses, and history of quiz performance."
+                ]
+            },
+            "testcases": [
+                {
+                    "name": "Result Display with Green for Correct and Red for Incorrect",
+                    "description": "Verify that the system displays the result with correct answers in green and incorrect answers in red.",
+                    "input": {
+                        "corrects": [1, 3],
+                        "incorrects": [2,4,5]
+                    },
+                    "expected": {
+                        "outcome": "Correct answers shown in green, incorrect answers shown in red",
+                        "status": "Displayed"
+                    }
+                },
+                {
+                    "name": "Explanation for Correct Answers",
+                    "description": "Verify that the system provides an explanation for correct answers.",
+                    "input": {
+                        "correctAnswers": ["A"],
+                        "explanation": "Option A is correct because it aligns with the principles of Neural Networks."
+                    },
+                    "expected": {
+                        "outcome": "Explanation provided for correct answers",
+                        "status": "Displayed"
+                    }
+                },
+                {
+                    "name": "Hint and Brief Explanation for Incorrect Answers",
+                    "description": "Verify that the system provides a hint and a brief explanation for incorrect answers without giving away the full answer, preserving it for future attempts.",
+                    "input": {
+                        "incorrectAnswer": "B",
+                        "hint": "Remember to consider the laws of energy conservation.",
+                        "briefExplanation": "This concept deals with energy flow, which you may want to review."
+                    },
+                    "expected": {
+                        "outcome": "Hint and brief explanation provided for incorrect answers",
+                        "status": "Displayed"
+                    }
+                }
+
+            ]
+        }
+    
+    
+
+]

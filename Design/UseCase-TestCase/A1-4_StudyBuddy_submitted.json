@@ -1,0 +1,1776 @@
+[
+    {
+        "usecase": {
+            "name": "Resource Document Preprocessing",
+            "scenario": "System processes an uploaded PDF document to extract various components including text, images, tables, and generates QA pairs",
+            "actors": "Operator, System",
+            "preconditions": "Operator has a valid PDF document to upload",
+            "steps": [
+                "Operator uploads a PDF document",
+                "System validates the document format and size",
+                "System extracts components from the document",
+                "System generates initial parsing results"
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Valid PDF Processing",
+                "description": "Verify that the system can successfully process a valid PDF document and extract components",
+                "input": {
+                    "file": "lecture_notes.pdf",
+                    "fileSize": "2.5MB",
+                    "fileType": "application/pdf"
+                },
+                "expected": {
+                    "outcome": "Processing successful",
+                    "componentsExtracted": {
+                        "text": true,
+                        "images": true,
+                        "tables": true
+                    },
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Invalid File Format",
+                "description": "Verify that the system properly handles non-PDF file uploads",
+                "input": {
+                    "file": "notes.docx",
+                    "fileSize": "1.2MB",
+                    "fileType": "application/msword"
+                },
+                "expected": {
+                    "outcome": "Processing failed",
+                    "error": "Invalid file format - only PDF files are supported",
+                    "status": "Rejected"
+                }
+            },
+            {
+                "name": "Oversized File",
+                "description": "Verify that the system handles PDF files exceeding size limit",
+                "input": {
+                    "file": "large_textbook.pdf",
+                    "fileSize": "5GB",
+                    "fileType": "application/pdf"
+                },
+                "expected": {
+                    "outcome": "Processing failed",
+                    "error": "File size exceeds maximum limit",
+                    "status": "Rejected"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Content Chunking",
+            "scenario": "System breaks down processed text content into manageable chunks for further processing",
+            "actors": "System",
+            "preconditions": "Valid text content is available in text or markdown format",
+            "steps": [
+                "System receives parsed text content",
+                "System validates the input format",
+                "System chunks the content based on specified size",
+                "System returns the chunked content"
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Valid Text Chunking",
+                "description": "Verify that the system can successfully chunk valid text content",
+                "input": {
+                    "content": "chapter1.txt",
+                    "format": "txt",
+                    "maxChunkSize": 1000,
+                    "content_length": 2500
+                },
+                "expected": {
+                    "outcome": "Chunking successful",
+                    "chunks_created": 3,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Empty Content",
+                "description": "Verify system handling of empty text content",
+                "input": {
+                    "content": "empty.md",
+                    "format": "md",
+                    "maxChunkSize": 1000,
+                    "content_length": 0
+                },
+                "expected": {
+                    "outcome": "Chunking failed",
+                    "error": "Empty text content",
+                    "status": "Rejected"
+                }
+            },
+            {
+                "name": "Unsupported Format",
+                "description": "Verify system handling of unsupported file formats",
+                "input": {
+                    "content": "notes.docx",
+                    "format": "docx",
+                    "maxChunkSize": 1000
+                },
+                "expected": {
+                    "outcome": "Chunking failed",
+                    "error": "Unsupported format - only text or markdown allowed",
+                    "status": "Rejected"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Content Vectorization",
+            "scenario": "System vectorizes chunked content and stores it in vector database",
+            "actors": "System",
+            "preconditions": "Valid chunked content is available with proper metadata",
+            "steps": [
+                "System receives chunked content with metadata",
+                "System validates chunk sizes and metadata",
+                "System vectorizes the content",
+                "System stores vectors in specified database"
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Valid Vectorization",
+                "description": "Verify successful vectorization and storage of valid content chunks",
+                "input": {
+                    "chunks": [
+                        {
+                            "id": "chunk_001",
+                            "text": "Valid content chunk",
+                            "metadata": {
+                                "source": "chapter1",
+                                "page": 1
+                            }
+                        }
+                    ],
+                    "vectorDbName": "local_vectors"
+                },
+                "expected": {
+                    "outcome": "Vectorization successful",
+                    "vectors_stored": true,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Token Limit Exceeded",
+                "description": "Verify handling of chunks exceeding embedding model token limit",
+                "input": {
+                    "chunks": [
+                        {
+                            "id": "chunk_002",
+                            "text": "Very long content exceeding 8191 tokens",
+                            "metadata": {
+                                "source": "chapter2",
+                                "page": 5
+                            }
+                        }
+                    ],
+                    "vectorDbName": "local_vectors"
+                },
+                "expected": {
+                    "outcome": "Vectorization failed",
+                    "error": "Chunk length exceeded for embedding",
+                    "status": "Rejected"
+                }
+            },
+            {
+                "name": "Invalid Metadata",
+                "description": "Verify handling of invalid metadata types",
+                "input": {
+                    "chunks": [
+                        {
+                            "id": "chunk_003",
+                            "text": "Valid content",
+                            "metadata": {
+                                "tags": [
+                                    "physics",
+                                    "mechanics"
+                                ],
+                                "references": {
+                                    "book": "Physics 101"
+                                }
+                            }
+                        }
+                    ],
+                    "vectorDbName": "local_vectors"
+                },
+                "expected": {
+                    "outcome": "Vectorization failed",
+                    "error": "Metadata fields each must be primitive types",
+                    "status": "Rejected"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "QA Generation",
+            "scenario": "System processes and stores generated question-answer pairs",
+            "actors": "System, Moderator",
+            "preconditions": "Valid QA pairs are generated from processed content",
+            "steps": [
+                "System receives generated QA pairs",
+                "System validates QA structure and content",
+                "System categorizes questions by type",
+                "System stores finalized QA pairs"
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Valid Theoretical QA",
+                "description": "Verify processing of valid theoretical question-answer pairs",
+                "input": {
+                    "qa_pair": {
+                        "question": "What is the unit of acceleration?",
+                        "choices": [
+                            "m/s",
+                            "m/s²",
+                            "m",
+                            "m²/s²"
+                        ],
+                        "correctOptionIndex": 1,
+                        "type": "Theoretical",
+                        "difficultyRating": "1",
+                        "explanation": "Acceleration means a = (v-u)/t, so calculating from this, we get the the answer.",
+                        "hints": [
+                            "Think about acceleration formulae"
+                        ]
+                    },
+                    "moderator_comment": null
+                },
+                "expected": {
+                    "outcome": "QA processing successful",
+                    "stored": true,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Valid Problem Solving QA",
+                "description": "Verify processing of valid problem-solving question-answer pairs",
+                "input": {
+                    "qa_pair": {
+                        "question": "Calculate the force needed to accelerate a 2kg mass at 5 m/s²",
+                        "choices": [
+                            "5 N",
+                            "7 N",
+                            "10 N",
+                            "15 N"
+                        ],
+                        "correctOptionIndex": 2,
+                        "type": "Problem Solving",
+                        "explanation": "Using F = ma, F = 2 * 5 = 10N",
+                        "hints": [
+                            "Use Newton's Second Law",
+                            "F = ma"
+                        ]
+                    },
+                    "moderator_comment": "OK"
+                },
+                "expected": {
+                    "outcome": "QA processing successful",
+                    "stored": true,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Inconsistent Problem Solving QA",
+                "description": "Verify processing of inconsistent problem-solving question-answer pairs",
+                "input": {
+                    "qa_pair": {
+                        "question": "Calculate the force needed to accelerate a 2 second mass at 5 ft",
+                        "choices": [
+                            "5 m",
+                            "7 m",
+                            "10 m",
+                            "15 m"
+                        ],
+                        "correctOptionIndex": 2,
+                        "type": "Problem Solving",
+                        "explanation": "Using F = ma, F = 2 * 5 = 10N",
+                        "hints": [
+                            "Use Newton's Second Law",
+                            "F = ma"
+                        ]
+                    },
+                    "moderator_comment": "Inconsistent units",
+                    "moderator_edit": {
+                        "question": "Calculate the force needed to accelerate a 2kg mass at 5 m/s²",
+                        "choices": [
+                            "5 N",
+                            "7 N",
+                            "10 N",
+                            "15 N"
+                        ],
+                        "correctOptionIndex": 2,
+                        "type": "Problem Solving",
+                        "explanation": "Using F = ma, F = 2 * 5 = 10N",
+                        "hints": [
+                            "Use Newton's Second Law",
+                            "F = ma"
+                        ]
+                    }
+                },
+                "expected": {
+                    "outcome": "Edited QA stored successfully",
+                    "stored": true,
+                    "status": "Completed"
+                }
+            }
+        ]
+    },
+
+
+
+
+
+
+    {
+        "usecase": {
+            "name": "Handling Inappropriate Messages in Conversation",
+            "scenario": "The system detects inappropriate messages and responds appropriately by flagging or rejecting the content.",
+            "actors": "Student, System",
+            "preconditions": "Student is engaged in conversation with the System.",
+            "steps": [
+                "Student sends an inappropriate message (e.g., offensive, harmful).",
+                "System detects inappropriate content using content moderation techniques.",
+                "System responds with a warning and stops further interaction."
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Appropriate Message Interaction",
+                "description": "Verify that the System allows a polite, non-harmful message to pass without warnings or interruptions.",
+                "input": {
+                    "message": "Can you help me with my math homework?"
+                },
+                "expected": {
+                    "outcome": "System engages in the conversation and provides a helpful response",
+                    "status": "Allowed"
+                }
+            },
+            {
+                "name": "Detect Inappropriate and Harmful Content",
+                "description": "Verify that the System detects and flags inappropriate content like offensive language ,harmful suggestions or violent actions.",
+                "input": {
+                    "message": "How to do a nuclear attack?"
+                },
+                "expected": {
+                    "outcome": "System flags the message and warns the Student",
+                    "status": "Warned"
+                }
+            },
+            {
+                "name": "Confidential Information Request",
+                "description": "Verify that the System refuses to provide or request private/confidential information.",
+                "input": {
+                    "message": "What is your private key?"
+                },
+                "expected": {
+                    "outcome": "System refuses the request and reminds the Student of confidentiality rules",
+                    "status": "Refused"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Student Input Validity for Files",
+            "scenario": "The system validates Student input, ensuring that the correct file types, sizes, and formats are accepted.",
+            "actors": "Student, System",
+            "preconditions": "Student uploads a file for processing.",
+            "steps": [
+                "Student attempts to upload a file.",
+                "System checks file type (allowed: images,txt).",
+                "System checks the file size to ensure it does not exceed limits."
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Valid File Upload",
+                "description": "Verify that the system allows uploading valid file types within size limits.",
+                "input": {
+                    "fileType": "png",
+                    "fileSize": "1 MB"
+                },
+                "expected": {
+                    "outcome": "File uploaded successfully",
+                    "status": "Uploaded"
+                }
+            },
+            {
+                "name": "Invalid File Type",
+                "description": "Verify that the system rejects unsupported file types.",
+                "input": {
+                    "fileType": "pdf",
+                    "fileSize": "500 KB"
+                },
+                "expected": {
+                    "outcome": "System rejects the file and asks the Student to upload a supported file type",
+                    "status": "Rejected"
+                }
+            },
+            {
+                "name": "File Size Exceeds Limit",
+                "description": "Verify that the system rejects files that exceed the maximum size limit.",
+                "input": {
+                    "fileType": "png",
+                    "fileSize": "15 MB"
+                },
+                "expected": {
+                    "outcome": "File rejected due to size limit",
+                    "status": "Rejected"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Explanation Request",
+            "scenario": "The student requests explanations for academic or conceptual questions from various fields, either by asking a question directly or by uploading a document. The student can follow up for further clarifications.",
+            "actors": "Student, System",
+            "preconditions": "The student asks a question or uploads a document that requires an explanation related to a concept or a problem or a solution.",
+            "steps": [
+                "Student asks a valid academic or conceptual question or uploads a document for analysis.",
+                "System retrieves relevant information from its knowledge base or analyzes the uploaded document.",
+                "System provides a clear and concise explanation.",
+                "System allows the student to ask follow-up questions for further clarification."
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Valid  Explanation Request",
+                "description": "Verify that the System explains the logic behind a specific concept,problem or solution.",
+                "input": {
+                    "message": "Can you explain this Python code: for i in range(5): print(i)"
+                },
+                "expected": {
+                    "outcome": "System explains : A loop that prints numbers from 0 to 4.",
+                    "status": "Explained"
+                }
+            },
+            {
+                "name": "Follow-Up Question for Deeper  Explanation",
+                "description": "Verify that the system allows follow-up questions for deeper understanding of a  problem.",
+                "input": {
+                    "question": "What does the range mean?",
+                    "message": [
+                        {
+                            "role": "Student",
+                            "content": "Can you explain this Python code: for i in range(5): print(i)"
+                        },
+                        {
+                            "role": "System",
+                            "content": "A loop that prints numbers from 0 to 4."
+                        },
+                        {
+                            "role": "Student",
+                            "content": "What does the range mean?"
+                        }
+                    ]
+                },
+                "expected": {
+                    "outcome": "System explains: range(n) generates numbers from 0 to n-1.Here, range(5) generates numbers from 0 to 4",
+                    "status": "Explained"
+                }
+            },
+            {
+                "name": "Public Document Selection for Problem Explanation",
+                "description": "Verify that the system analyzes a problem presented in a selected public document and provides a relevant response.",
+                "input": {
+                    "document": "publicDocument1.pdf",
+                    "problem": "Explain the main argument presented in the document."
+                },
+                "expected": {
+                    "outcome": "System analyzes the selected document and provides a summary of the main argument.",
+                    "status": "Explained"
+                }
+            },
+            {
+                "name": "Handling Complex Problem with Step-by-Step Hints",
+                "description": "Verify that the system provides step-by-step hints for complex problems instead of disclosing the full solution at once.",
+                "input": {
+                    "question": "How do I solve this integral: ∫ (tanx)^5 dx"
+                },
+                "expected": {
+                    "outcome": "System provides a step-by-step solution, starting with the first hint and allowing the student to request additional hints as needed.",
+                    "status": "Responded"
+                }
+            },
+            {
+                "name": "Ambiguous Question",
+                "description": "Verify that the system asks for clarification when the student provides an incomplete or vague question.",
+                "input": {
+                    "question": "How do I solve this?"
+                },
+                "expected": {
+                    "outcome": "System asks for clarification on the specific problem",
+                    "status": "Asked"
+                }
+            },
+            {
+                "name": "No Relevant Info in Database",
+                "description": "Verify that the system handles cases where no relevant information is found in the database.",
+                "input": {
+                    "question": "Explain quantum entanglement in detail."
+                },
+                "expected": {
+                    "outcome": "System responds with a message of general information and ask for more contextual information.",
+                    "status": "Responded"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Content Generation Request",
+            "scenario": "Student requests the system to generate content such as flashcards, slides, cheatsheets, or notes.",
+            "actors": "Student, System",
+            "preconditions": "Student has requested specific content generation (e.g., flashcards).",
+            "steps": [
+                "Student requests content (e.g., flashcards, slides).",
+                "System generates requested content with default options",
+                "Student may or may not provide customization options",
+                "System makes necessary changes",
+                "System provides the generated content to the Student."
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Valid Content Request",
+                "description": "Verify that the system generates the requested content (e.g., flashcards or notes) and customizes the format.",
+                "input": {
+                    "contentType": "flashcards",
+                    "customization": {
+                        "format": "pdf",
+                        "quality": "high",
+                        "design": "simple"
+                    }
+                },
+                "expected": {
+                    "outcome": "Flashcards generated in the requested format",
+                    "status": "Generated"
+                }
+            },
+            {
+                "name": "Request for Invalid Content Type",
+                "description": "Verify that the system handles invalid content types by rejecting the request.",
+                "input": {
+                    "contentType": "hevc"
+                },
+                "expected": {
+                    "outcome": "System rejects the request and System prompts the Student with allowed content types",
+                    "status": "Rejected"
+                }
+            },
+            {
+                "name": "Request for Customization Beyond Limits",
+                "description": "Verify that the system handles unrealistic customization requests such as very high resolution for small files.",
+                "input": {
+                    "contentType": "slides",
+                    "customization": {
+                        "format": "ppt",
+                        "resolution": "4000 dpi",
+                        "size": "100 B"
+                    }
+                },
+                "expected": {
+                    "outcome": "Unrealistic customization request rejected",
+                    "status": "Rejected"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "User Interaction and Usability: Understanding and Correcting Input",
+            "scenario": "The system continues to function regardless of how the student chats by properly understanding and correcting various input styles, including grammatical mistakes, slang, formality, and incomplete sentences.",
+            "actors": "Student, System",
+            "preconditions": "Student interacts with the system using various types of input, including grammatical errors, slang, incomplete sentences, or colloquial language.",
+            "steps": [
+                "Student sends a message with grammatical errors, slang, or informal language.",
+                "System detects and corrects the input, ensuring proper understanding.",
+                "System provides the appropriate response based on corrected input."
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Handling Varied Communication Styles in a Single Query",
+                "description": "Verify that the system understands and responds correctly when a question contains a mix of grammatical errors, slang, overly formal language, and casual/informal language.",
+                "input": {
+                    "message": "Yo, can u pls elucidate whts de deal with algorithem in dat sorting thing?"
+                },
+                "expected": {
+                    "outcome": "System detects and corrects grammatical errors, interprets slang and casual phrases ('Yo', 'u', 'pls', 'de deal', 'dat'), and recognizes the formal term 'elucidate'. The response should provide a clear explanation of algorithms used in sorting, correcting 'algorithem' to 'algorithm' and other errors.",
+                    "status": "Responded"
+                }
+            },
+            {
+                "name": "Handling Abbreviations and Incomplete Sentences",
+                "description": "Verify that the system understands abbreviations and incomplete sentences and provides the correct response.",
+                "input": {
+                    "message": "Plz xplain PEFT"
+                },
+                "expected": {
+                    "outcome": "System interprets 'Plz' as 'Please' and 'xplain' as 'explain' and PEFT as 'Parameter Efficient Fine-tuning', and provides a clear explanation of recursion.",
+                    "status": "Responded"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Error Handling for Wrong Solution and Syntax Error Explanation",
+            "scenario": "The student asks for explanations of a wrong solution or code with syntax errors, and the system handles these edge cases properly.",
+            "actors": "Student, System",
+            "preconditions": "Student provides a wrong solution or code with syntax errors and requests an explanation.",
+            "steps": [
+                "Student asks for an explanation of a wrong solution or code.",
+                "System detects the anomalies and  System explains the correct one."
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Request for Explanation of Wrong Solution",
+                "description": "Verify that the system detects a wrong solution provided by the student and explains why the solution is incorrect, followed by the correct solution.",
+                "input": {
+                    "question": "Can you explain why 2 + 2 = 5?"
+                },
+                "expected": {
+                    "outcome": "System detects the wrong solution and explains that 2 + 2 equals 4, not 5.",
+                    "status": "Clarified"
+                }
+            },
+            {
+                "name": "Request for Explanation of Partially Correct Solution",
+                "description": "Verify that the system detects when a solution is partially correct and explains which parts are correct and where the error is.",
+                "input": {
+                    "question": "Can you explain why 5 * 2 + 6 = 10  + 5  ?",
+                    "providedSolution": "15"
+                },
+                "expected": {
+                    "outcome": "System explains that multiplication is correct but the result should be 10, not 9.",
+                    "status": "Clarified"
+                }
+            },
+            {
+                "name": "Request for Explanation of Code with Multiple Syntax Errors",
+                "description": "Verify that the system handles code with multiple syntax errors by identifying each error and providing feedback for correction.",
+                "input": {
+                    "code": "for i in range(5)\n    print(i"
+                },
+                "expected": {
+                    "outcome": "System detects the missing colon and closing parenthesis, and suggests how to fix Systemh errors.",
+                    "status": "Clarified"
+                }
+            },
+            {
+                "name": "Request for Explanation of Logical Error in Code",
+                "description": "Verify that the system distinguishes between syntax errors and logical errors, explaining the logic mistake in the code.",
+                "input": {
+                    "code": "def add(a, b):\n    return a - b",
+                    "expectedAction": "Addition"
+                },
+                "expected": {
+                    "outcome": "System detects that the logic of the function is incorrect (subtraction instead of addition) and provides the correct logic.",
+                    "status": "Rectified"
+                }
+            }
+        ]
+    },
+
+
+
+
+
+
+
+
+
+    {
+        "usecase": {
+            "name": "Similar Raw Content Retrieval",
+            "scenario": "System retrieves similar existing content from RawContentDB based on content type and topic description",
+            "actors": "System",
+            "preconditions": "RawContentDB contains indexed content of various types",
+            "steps": [
+                "System receives content type and topic description",
+                "System validates input parameters",
+                "System searches for similar content in RawContentDB",
+                "System filters results based on similarity threshold",
+                "System returns specified number of retrievals"
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Valid Content Retrieval",
+                "description": "Verify successful retrieval of similar content matching type and topic",
+                "input": {
+                    "contentType": "slides",
+                    "contentTopic": "Photosynthesis in plants",
+                    "similarityThreshold": 0.75,
+                    "numRetrievals": 3
+                },
+                "expected": {
+                    "outcome": "Retrieval successful",
+                    "retrievedCount": 3,
+                    "allAboveThreshold": true,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Empty Content Type",
+                "description": "Verify system handling of empty content type",
+                "input": {
+                    "contentType": "",
+                    "contentTopic": "Cell Division",
+                    "similarityThreshold": 0.75,
+                    "numRetrievals": 3
+                },
+                "expected": {
+                    "outcome": "Retrieval failed",
+                    "error": "Content type cannot be empty",
+                    "status": "Rejected"
+                }
+            },
+            {
+                "name": "Empty Topic",
+                "description": "Verify system handling of empty topic description",
+                "input": {
+                    "contentType": "flashcards",
+                    "contentTopic": "",
+                    "similarityThreshold": 0.75,
+                    "numRetrievals": 3
+                },
+                "expected": {
+                    "outcome": "Retrieval failed",
+                    "error": "Content topic cannot be empty",
+                    "status": "Rejected"
+                }
+            },
+            {
+                "name": "Type Mismatch With Similar Topic",
+                "description": "Verify handling of cases where similar topic exists but in different content type",
+                "input": {
+                    "contentType": "slides",
+                    "contentTopic": "Respiration process",
+                    "similarityThreshold": 0.75,
+                    "numRetrievals": 3
+                },
+                "expected": {
+                    "outcome": "Retrieval failed",
+                    "error": "No matching content found for specified type",
+                    "status": "Failed"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Content Modification",
+            "scenario": "System modifies existing similar content to match required content type and topic",
+            "actors": "System",
+            "preconditions": "Similar content has been retrieved from RawContentDB",
+            "steps": [
+                "System analyzes existing content characteristics",
+                "System determines required modifications",
+                "System applies modifications to match required type and topic",
+                "System validates modified content"
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Valid Content Modification",
+                "description": "Verify successful modification of content to match required type and topic",
+                "input": {
+                    "existingContentType": "slides",
+                    "existingContentTopic": "DNA Replication",
+                    "requiredContentType": "slides",
+                    "requiredContentTopic": "DNA Replication Importance"
+                },
+                "expected": {
+                    "outcome": "Modification successful",
+                    "contentMatches": true,
+                    "status": "Completed"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Resource Retrieval",
+            "scenario": "System retrieves relevant resources from specified collection based on content topic",
+            "actors": "System",
+            "preconditions": "Resource collections are properly indexed and available in vector database",
+            "steps": [
+                "System validates collection name",
+                "System searches for relevant resources",
+                "System ranks resources by relevance",
+                "System returns specified number of resources"
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Valid Resource Retrieval",
+                "description": "Verify successful retrieval of resources from valid collection",
+                "input": {
+                    "collectionName": "biology_resources",
+                    "contentTopic": "Cell Structure",
+                    "numRetrievals": 5
+                },
+                "expected": {
+                    "outcome": "Retrieval successful",
+                    "resourceCount": 5,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Invalid Collection",
+                "description": "Verify handling of non-existent collection",
+                "input": {
+                    "collectionName": "invalid_collection",
+                    "contentTopic": "Quantum Physics",
+                    "numRetrievals": 3
+                },
+                "expected": {
+                    "outcome": "Retrieval failed",
+                    "error": "Collection does not exist",
+                    "status": "Rejected"
+                }
+            },
+            {
+                "name": "Insufficient Resources",
+                "description": "Verify handling of insufficient stored chunks",
+                "input": {
+                    "collectionName": "new_collection",
+                    "contentTopic": "Advanced Calculus",
+                    "numRetrievals": 10
+                },
+                "expected": {
+                    "outcome": "Partial number of chunks retrieved",
+                    "error": "Not enough chunks stored",
+                    "resourceCount": 3,
+                    "status": "Partially Retrieved"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Raw Content Generation",
+            "scenario": "System generates new raw content from retrieved resources based on specified content type",
+            "actors": "System",
+            "preconditions": "Relevant resources have been retrieved successfully",
+            "steps": [
+                "System validates content type support",
+                "System analyzes retrieved resources",
+                "System generates content according to type requirements",
+                "System validates generated content completeness"
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Valid Content Generation",
+                "description": "Verify successful generation of content from adequate resources",
+                "input": {
+                    "retrievedResources": [
+                        "Detailed text about cell structure",
+                        "Information about cell organelles",
+                        "Cell function descriptions"
+                    ],
+                    "contentType": "slides",
+                    "maximumTokenCount": 1000
+                },
+                "expected": {
+                    "outcome": "Generation successful",
+                    "contentMeetsRequirements": true,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Unsupported Content Type",
+                "description": "Verify handling of unsupported content type request",
+                "input": {
+                    "retrievedResources": [
+                        "Resource text 1",
+                        "Resource text 2"
+                    ],
+                    "contentType": "video",
+                    "maximumTokenCount": 500
+                },
+                "expected": {
+                    "outcome": "Generation failed",
+                    "error": "Content type not supported",
+                    "status": "Rejected"
+                }
+            },
+            {
+                "name": "Insufficient Content",
+                "description": "Verify handling of insufficient content for required type",
+                "input": {
+                    "retrievedResources": [
+                        "One line Definition of Photosynthesis"
+                    ],
+                    "contentType": "slides",
+                    "maximumTokenCount": 1000
+                },
+                "expected": {
+                    "outcome": "Generation failed",
+                    "error": "Not enough content for complete slides",
+                    "status": "Rejected"
+                }
+            },
+            {
+                "name": "No Retrieved Resources",
+                "description": "Verify handling of empty resource list",
+                "input": {
+                    "retrievedResources": [],
+                    "contentType": "flashcards",
+                    "minimumContentLength": 500
+                },
+                "expected": {
+                    "outcome": "Generation failed",
+                    "error": "No resources available for content generation",
+                    "status": "Rejected"
+                }
+            }
+        ]
+    },
+
+    
+    {
+        "usecase": {
+            "name": "Quiz Request with Customization Parameters",
+            "scenario": "Student prompts the system to generate a quiz with customization parameters such as subject, topic, marks, time, and difficulty.",
+            "actors": "Student, System ",
+            "preconditions": "The student is logged in and has access to the quiz generation feature.",
+            "steps": [
+                "Student requests a quiz through a conversation, providing customization parameters (subject, topic, marks, time, difficulty).",
+                "System validates the parameters.",
+                "System proceeds with the quiz generation or provides feedback to the student"
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Valid Quiz Request",
+                "description": "Verify that a student can successfully request a quiz with valid customization parameters.",
+                "input": {
+                    "subject": "Data Structures and Algorithms",
+                    "topic": "Dynamic Programming",
+                    "marks": 50,
+                    "time": 30,
+                    "difficulty": "Medium"
+                },
+                "expected": {
+                    "outcome": "Quiz request submitted successfully",
+                    "status": "Submitted"
+                }
+            },
+            {
+                "name": "Missing Optional Parameters",
+                "description": "Verify that the system proceeds with default or recommended values when optional parameters like difficulty are not provided.",
+                "input": {
+                    "subject": "Software Engineering",
+                    "topic": "Design Patterns",
+                    "marks": 20,
+                    "time": 15
+                },
+                "expected": {
+                    "outcome": "Quiz request submitted successfully",
+                    "status": "Submitted"
+                }
+            },
+            {
+                "name": "Invalid Customization Parameters",
+                "description": "Verify that the system handles invalid, unreal or extreme customization parameters such as negative time or unrealistic difficulty.",
+                "input": {
+                    "subject": "Physics",
+                    "topic": "Quantum Mechanics",
+                    "marks": 200,
+                    "time": 2,
+                    "difficulty": "Hard"
+                },
+                "expected": {
+                    "outcome": "Invalid parameters, please correct",
+                    "status": "Aborted"
+                }
+            },
+            {
+                "name": "Missing Required Parameters",
+                "description": "Verify that the system asks the student for missing compulsory parameters like subject and topic.",
+                "input": {
+                    "marks": 10,
+                    "time": 10
+                },
+                "expected": {
+                    "outcome": "Missing subject or topic, please provide",
+                    "status": "Aborted"
+                }
+            },
+            {
+                "name": "Sensitive Subject or Topic",
+                "description": "Verify that the system handles sensitive subjects or topics appropriately by rejecting or sanitizing input.",
+                "input": {
+                    "subject": "Nuclear Engineering",
+                    "topic": "Bombing"
+                },
+                "expected": {
+                    "outcome": "System rejects sensitive input",
+                    "status": "Aborted"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Quiz Question Selection ",
+            "scenario": "System  selects quiz questions based on the customization parameters and student’s past performance and peer activity analysis.",
+            "actors": "System",
+            "preconditions": "The student requests a quiz with valid customization parameters.",
+            "steps": [
+                "System analyzes the customization parameters as well as past performance and peer activities .",
+                "System selects a list of selected questions based on the analysis"
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Good Distribution of Subtopics and Difficulty",
+                "description": "Verify that the selected questions cover all subtopics with a good distribution of difficulty levels.",
+                "input": {
+                    "subtopics": [
+                        "Subtopic1",
+                        "Subtopic2",
+                        "Subtopic3"
+                    ],
+                    "difficultyDistribution": {
+                        "easy": 2,
+                        "medium": 3,
+                        "hard": 1
+                    }
+                },
+                "expected": {
+                    "outcome": "All subtopics covered, balanced difficulty distribution questions selected",
+                    "status": "Selected"
+                }
+            },
+            {
+                "name": "Lack of Matching Questions",
+                "description": "Verify that the system handles the case where there are not enough available questions matching the customization parameters.",
+                "input": {
+                    "subject": "CSE",
+                    "topic": "Quantum Computing",
+                    "marks": 100,
+                    "time": 60,
+                    "difficulty": "Hard"
+                },
+                "expected": {
+                    "outcome": "Questions generated with available number of questions and adjusted time",
+                    "status": "Adjusted"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Quiz Taking Environment",
+            "scenario": "Student answers quiz questions, and the system records the answers immediately.System submits automatically when time runs out.",
+            "actors": "Student, System",
+            "preconditions": "Quiz is loaded and displayed to the student.",
+            "steps": [
+                "Student selects answers for each question.",
+                "System records the answer as soon as the student selects it."
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Rapidly Changing Answers Before Submission",
+                "description": "Verify that the system records the last selected answer when the student rapidly changes answers before submission.",
+                "input": {
+                    "answers": [
+                        "A",
+                        "B",
+                        "C"
+                    ],
+                    "finalAnswer": "C"
+                },
+                "expected": {
+                    "outcome": "Final answer recorded",
+                    "status": "Recorded"
+                }
+            },
+            {
+                "name": "Some Questions Left Blank",
+                "description": "Verify that the system allows some questions to be left blank and proceeds with evaluation.",
+                "input": {
+                    "answers": [
+                        "A",
+                        "",
+                        "B"
+                    ]
+                },
+                "expected": {
+                    "outcome": "Proceed with submission",
+                    "status": "Proceeded"
+                }
+            },
+            {
+                "name": "No Answers Provided",
+                "description": "Verify that the system prompts the student to review or submit when no answers are provided.",
+                "input": {
+                    "answers": []
+                },
+                "expected": {
+                    "outcome": "Prompt the student to review or submit",
+                    "status": "Prompted"
+                }
+            },
+            {
+                "name": "Summary View Display",
+                "description": "Verify that the system correctly displays the summary view with the count of answered and unanswered questions, as well as the remaining time.",
+                "input": {
+                    "answers": [
+                        "A",
+                        "",
+                        "C",
+                        "",
+                        "D"
+                    ],
+                    "timeRemaining": "10 min"
+                },
+                "expected": {
+                    "outcome": "Summary view displays the count of answered (3), unanswered (2) questions, and time remaining (10 min).",
+                    "status": "Displayed"
+                }
+            },
+            {
+                "name": "Answer Recorded Just Before Time Runs Out",
+                "description": "Verify that the system records the answer just before time runs out.",
+                "input": {
+                    "answer": "A",
+                    "timeRemaining": "1 sec"
+                },
+                "expected": {
+                    "outcome": "Answer recorded successfully",
+                    "status": "Recorded"
+                }
+            },
+            {
+                "name": "Automatic Submission on Timeout",
+                "description": "Verify that the system automatically submits the quiz when the timer runs out.",
+                "input": {
+                    "timeRemaining": "0 sec",
+                    "answers": [
+                        "A",
+                        "B",
+                        ""
+                    ]
+                },
+                "expected": {
+                    "outcome": "Quiz submitted automatically",
+                    "status": "Submitted"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Quiz Evaluation and Feedback",
+            "scenario": "The System matches answers, evaluates the quiz, and provides feedback for incorrect responses.",
+            "actors": "System",
+            "preconditions": "Student has submitted the quiz, and the answers need to be evaluated.",
+            "steps": [
+                "System matches submitted answers with the correct ones.",
+                "System marks the answers as correct or wrong.",
+                "System provides feedback for incorrect answers."
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Marked Single Correct Option",
+                "description": "Verify that the system correctly marks the selected option as either correct or wrong.",
+                "input": {
+                    "selectedAnswer": "A",
+                    "correctAnswer": "A"
+                },
+                "expected": {
+                    "outcome": "Marked as correct",
+                    "status": "Marked"
+                }
+            },
+            {
+                "name": "Marked Single Wrong Option",
+                "description": "Verify that the system correctly marks the selected option as either correct or wrong .",
+                "input": {
+                    "selectedAnswer": "A",
+                    "correctAnswer": "B"
+                },
+                "expected": {
+                    "outcome": "Marked as incorrect",
+                    "status": "Marked"
+                }
+            },
+            {
+                "name": "Multiple Correct Answers Allowed",
+                "description": "Verify that the system allows and correctly evaluates questions with multiple correct answers.",
+                "input": {
+                    "selectedAnswers": [
+                        "A",
+                        "C"
+                    ],
+                    "correctAnswers": [
+                        "A",
+                        "C"
+                    ]
+                },
+                "expected": {
+                    "outcome": "Both answers marked as correct",
+                    "status": "Marked"
+                }
+            },
+            {
+                "name": "All Correct Answers Must Be Selected for a Score",
+                "description": "Verify that the student must select all correct answers to get a score.",
+                "input": {
+                    "selectedAnswers": [
+                        "A"
+                    ],
+                    "correctAnswers": [
+                        "A",
+                        "C"
+                    ]
+                },
+                "expected": {
+                    "outcome": "No score awarded",
+                    "status": "Marked"
+                }
+            },
+            {
+                "name": "Marking Incorrect Options Along with Correct",
+                "description": "Verify that the system correctly handles cases where both correct and incorrect options are selected.",
+                "input": {
+                    "selectedAnswers": [
+                        "A",
+                        "B"
+                    ],
+                    "correctAnswer": [
+                        "A"
+                    ]
+                },
+                "expected": {
+                    "outcome": "Partial score awarded for correct answer",
+                    "status": "Marked"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Quiz Result and Analytics",
+            "scenario": "The system shows the quiz result to the student, provides explanations for correct answers, hints for incorrect answers, and updates the student’s performance dashboard.",
+            "actors": "Student, System",
+            "preconditions": "The quiz has been submitted, and the evaluation has been completed.",
+            "steps": [
+                "System shows the result with correct answers marked in green and incorrect answers marked in red.",
+                "Student clicks for explanation or hints",
+                "System provides explanations for correct answers.",
+                "System provides hints and a brief explanation for incorrect answers.",
+                "System updates the student's dashboard with strengths, weaknesses, and history of quiz performance."
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Result Display with Green for Correct and Red for Incorrect",
+                "description": "Verify that the system displays the result with correct answers in green and incorrect answers in red.",
+                "input": {
+                    "corrects": [
+                        1,
+                        3
+                    ],
+                    "incorrects": [
+                        2,
+                        4,
+                        5
+                    ]
+                },
+                "expected": {
+                    "outcome": "Correct answers shown in green, incorrect answers shown in red",
+                    "status": "Displayed"
+                }
+            },
+            {
+                "name": "Explanation for Correct Answers",
+                "description": "Verify that the system provides an explanation for correct answers.",
+                "input": {
+                    "correctAnswers": [
+                        "A"
+                    ],
+                    "explanation": "Option A is correct because it aligns with the principles of Neural Networks."
+                },
+                "expected": {
+                    "outcome": "Explanation provided for correct answers",
+                    "status": "Displayed"
+                }
+            },
+            {
+                "name": "Hint and Brief Explanation for Incorrect Answers",
+                "description": "Verify that the system provides a hint and a brief explanation for incorrect answers without giving away the full answer, preserving it for future attempts.",
+                "input": {
+                    "incorrectAnswer": "B",
+                    "hint": "Remember to consider the laws of energy conservation.",
+                    "briefExplanation": "This concept deals with energy flow, which you may want to review."
+                },
+                "expected": {
+                    "outcome": "Hint and brief explanation provided for incorrect answers",
+                    "status": "Displayed"
+                }
+            }
+        ]
+    },
+
+
+
+
+
+
+
+    {
+        "usecase": {
+            "name": "Balanced Problem Set Generation",
+            "scenario": "System generates a balanced problem set based on topic frequencies and marks distribution.",
+            "actors": "System",
+            "preconditions": "System has access to topic distribution and required marks.",
+            "steps": [
+                "System receives topics, frequencies, and marks as input.",
+                "System validates the input parameters.",
+                "System calculates the ratio of topics to be included.",
+                "System generates a problem set based on the ratio and marks distribution."
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Equal Marks with Different Frequencies Distribution",
+                "description": "Verify the system generates a problem set with the correct ratio of topics.",
+                "input": {
+                    "topics": [
+                        "A",
+                        "B"
+                    ],
+                    "frequencies": [
+                        25,
+                        75
+                    ],
+                    "marks": [
+                        85,
+                        85
+                    ],
+                    "ratio": [
+                        75,
+                        25
+                    ]
+                },
+                "expected": {
+                    "outcome": "Problem set generated successfully.",
+                    "problemSetMatchesRatio": true,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Extreme Frequency Distribution",
+                "description": "Verify the system handles cases with an extreme frequency distribution.",
+                "input": {
+                    "topics": [
+                        "A",
+                        "B"
+                    ],
+                    "frequencies": [
+                        0,
+                        100
+                    ],
+                    "marks": [
+                        0,
+                        100
+                    ],
+                    "ratio": [
+                        100,
+                        0
+                    ]
+                },
+                "expected": {
+                    "outcome": "Problem set generated with only topic B.",
+                    "problemSetMatchesRatio": true,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Extreme Frequency Distribution Considering Obtained Marks",
+                "description": "Verify system behavior when one topic has extreme frequency but low marks.",
+                "input": {
+                    "topics": [
+                        "A",
+                        "B"
+                    ],
+                    "frequencies": [
+                        0,
+                        100
+                    ],
+                    "marks": [
+                        0,
+                        10
+                    ],
+                    "ratio": [
+                        50,
+                        50
+                    ]
+                },
+                "expected": {
+                    "outcome": "Problem set generated based on frequencies.",
+                    "problemSetMatchesRatio": false,
+                    "status": "Completed"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Suggest Connections",
+            "scenario": "System suggests connections based on shared institute, subject, and performance in similar quizzes.",
+            "actors": "System",
+            "preconditions": "Student data includes institute, subjects, and quiz results.",
+            "steps": [
+                "System receives the student's profile data.",
+                "System calculates similarities with other students based on weighted criteria.",
+                "System ranks potential connections by similarity score.",
+                "System suggests top matching connections."
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Same Institute and Subject and Similar Quiz Scores",
+                "description": "Verify system prioritizes suggestions from the same institute and subject and similar quiz marks.",
+                "input": {
+                    "1ststudentInstitute": "Institute A",
+                    "1ststudentSubjects": [
+                        "Math",
+                        "Physics"
+                    ],
+                    "1ststudentquizScores": [
+                        80,
+                        95
+                    ],
+                    "2ndstudentInstitute": "Institute A",
+                    "2ndstudentSubjects": [
+                        "Math",
+                        "Physics"
+                    ],
+                    "2ndstudentquizScores": [
+                        85,
+                        90
+                    ]
+                },
+                "expected": {
+                    "outcome": "Top suggestions are students from the same institute and same subject and similar quiz marks.",
+                    "estimatedMatchScore": 0.9,
+                    "suggestionsSortedByWeight": true,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Same Institute and Subject",
+                "description": "Verify system gives high match scores to suggestions from the same institute and subject.",
+                "input": {
+                    "1ststudentInstitute": "Institute A",
+                    "1ststudentSubjects": [
+                        "Math",
+                        "Physics"
+                    ],
+                    "1ststudentquizScores": [
+                        60,
+                        70
+                    ],
+                    "2ndstudentInstitute": "Institute A",
+                    "2ndstudentSubjects": [
+                        "Math",
+                        "Physics"
+                    ],
+                    "2ndstudentquizScores": [
+                        85,
+                        90
+                    ]
+                },
+                "expected": {
+                    "outcome": "Top suggestions are students from the same institute and subject.",
+                    "estimatedMatchScore": 0.85,
+                    "suggestionsSortedByWeight": true,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Different Institute but Same Subject",
+                "description": "Verify system suggests students from different institutes with the same subject.",
+                "input": {
+                    "1ststudentInstitute": "Institute A",
+                    "1ststudentSubjects": [
+                        "Math",
+                        "Physics"
+                    ],
+                    "1ststudentquizScores": [
+                        60,
+                        70
+                    ],
+                    "2ndstudentInstitute": "Institute B",
+                    "2ndstudentSubjects": [
+                        "Math",
+                        "Physics"
+                    ],
+                    "2ndstudentquizScores": [
+                        40,
+                        50
+                    ]
+                },
+                "expected": {
+                    "outcome": "Suggestions include students from different institutes with a high subject match.",
+                    "estimatedMatchScore": 0.7,
+                    "suggestionsSortedByWeight": true,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Similar Quiz Marks in Similar Subjects",
+                "description": "Verify system handles cases where students have similar marks but different institutes and same subjects.",
+                "input": {
+                    "1ststudentInstitute": "Institute A",
+                    "1ststudentSubjects": [
+                        "Math",
+                        "Physics"
+                    ],
+                    "1ststudentquizScores": [
+                        80,
+                        70
+                    ],
+                    "2ndstudentInstitute": "Institute B",
+                    "2ndstudentSubjects": [
+                        "Math",
+                        "Physics"
+                    ],
+                    "2ndstudentquizScores": [
+                        80,
+                        70
+                    ]
+                },
+                "expected": {
+                    "outcome": "System suggests students with similar quiz marks even if other factors have low weight.",
+                    "estimatedMatchScore": 0.8,
+                    "suggestionsIncludeLowWeightCriteria": true,
+                    "status": "Completed"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Topic and Content Related Suggestion",
+            "scenario": "System suggests popular content based on topic sequences and feedback.",
+            "actors": "System",
+            "preconditions": "Content feedback and topic sequences are indexed.",
+            "steps": [
+                "System receives the student's current content progression.",
+                "System identifies the next topic in sequence.",
+                "System searches for popular content related to the next topic or other important subjects."
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Next Topic in Sequence",
+                "description": "Verify system suggests next topic in sequence.",
+                "input": {
+                    "currentTopic": "Combinatorics",
+                    "nextTopic": "Probability"
+                },
+                "expected": {
+                    "outcome": "Topic that comes next to Combinatorics is suggested.",
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "No Topic Started Yet",
+                "description": "Verify system suggests a preliminary topic if no topic is started yet.",
+                "input": {
+                    "currentTopic": "",
+                    "subject": "Biology",
+                    "nextTopic": "Cell Division"
+                },
+                "expected": {
+                    "outcome": "Cell Division is suggested as the first topic of Biology.",
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Important Topics of Subject",
+                "description": "Verify system suggests important topics of the subject which has not been started yet.",
+                "input": {
+                    "currentTopic": "Cell Division",
+                    "subject": "Biology",
+                    "suggestedTopics": [
+                        "Genetics",
+                        "Evolution"
+                    ]
+                },
+                "expected": {
+                    "outcome": "Key topics of Biology is suggested.",
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Popular contents of the Subject",
+                "description": "Verify system suggests popular contents of the subject.",
+                "input": {
+                    "currentTopic": "Cell Division",
+                    "subject": "Biology",
+                    "noOfContents": 4,
+                    "popularContentTopics": [
+                        "Blood Circulation",
+                        "Human Body",
+                        "Photosynthesis",
+                        "Respiration"
+                    ],
+                    "contentID": [
+                        "123",
+                        "456",
+                        "789",
+                        "101"
+                    ]
+                },
+                "expected": {
+                    "outcome": "Content for key topics of Biology is suggested.",
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "No Subject Chosen Yet",
+                "description": "Verify system suggests a subject if no subject is chosen yet.",
+                "input": {
+                    "subject": "",
+                    "suggestedSubjects": [
+                        "Physics",
+                        "Math"
+                    ]
+                },
+                "expected": {
+                    "outcome": "Physics and Math are suggested as first subject by default.",
+                    "status": "Completed"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Connectivity Status",
+            "scenario": "System provides notifications for connection requests",
+            "actors": "System, Student",
+            "preconditions": "Student has activity data such as sent connection requests",
+            "steps": [
+                "System allows sending and tracking connection requests.",
+                "System updates the dashboard with connection request status."
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Connection Request Accepted",
+                "description": "Verify system correctly updates dashboard when a connection request is accepted.",
+                "input": {
+                    "connectionRequestStatus": "Accepted",
+                    "requestedConnection": "Student_B"
+                },
+                "expected": {
+                    "outcome": "Dashboard shows 'Connection Request Accepted' status for Student_B.",
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Connection Request Not Accepted",
+                "description": "Verify system updates dashboard when a connection request is not accepted.",
+                "input": {
+                    "connectionRequestStatus": "Not Accepted",
+                    "requestedConnection": "Student_C"
+                },
+                "expected": {
+                    "outcome": "Dashboard shows 'Connection Request Not Accepted' status for Student_C.",
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Connection Request Ignored",
+                "description": "Verify system updates dashboard when a connection request is ignored.",
+                "input": {
+                    "connectionRequestStatus": "Ignored",
+                    "requestedConnection": "Student_D"
+                },
+                "expected": {
+                    "outcome": "Dashboard shows 'Connection Request Ignored' status for Student_D.",
+                    "status": "Completed"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Progress Analysis",
+            "scenario": "System provides a detailed analysis of student progress over time.",
+            "actors": "System, Student",
+            "preconditions": "Student has activity data such as quiz scores, content interactions, and time spent.",
+            "steps": [
+                "System displays progress curve based on quiz scores and time spent.",
+                "System allows students to compare progress with connections and global averages."
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Analyze Progress Over Different Time Durations",
+                "description": "Verify system provides accurate progress analysis over various time periods.",
+                "input": {
+                    "timeFromJoining": "120 days",
+                    "timeDuration": "Last 30 Days",
+                    "compareWith": "Global Average"
+                },
+                "expected": {
+                    "outcome": "Dashboard displays correct progress curve for the last 30 days with the global average.",
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Invalid Time Duration for Progress Analysis",
+                "description": "Verify system handles invalid time duration input for progress analysis.",
+                "input": {
+                    "timeFromJoining": "10 days",
+                    "timeDuration": "Last 30 Days",
+                    "compareWith": "Connections"
+                },
+                "expected": {
+                    "outcome": "Dashboard displays correct progress curve for the last 10 days with a comparison with the connections and a message showing the time duration is higher than the time from joining.",
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Segregate Progress by Topics",
+                "description": "Verify system can segregate and display progress by specific topics.",
+                "input": {
+                    "topics": [
+                        "Math",
+                        "Physics"
+                    ],
+                    "timeDuration": "Last 30 Days",
+                    "compareWith": ""
+                },
+                "expected": {
+                    "outcome": "Dashboard displays separate progress curves for Math and Physics.",
+                    "status": "Completed"
+                }
+            }
+        ]
+    }
+]

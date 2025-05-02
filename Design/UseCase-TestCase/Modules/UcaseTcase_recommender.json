@@ -1,0 +1,335 @@
+[
+    {
+        "usecase": {
+            "name": "Balanced Problem Set Generation",
+            "scenario": "System generates a balanced problem set based on topic frequencies and marks distribution.",
+            "actors": "System",
+            "preconditions": "System has access to topic distribution and required marks.",
+            "steps": [
+                "System receives topics, frequencies, and marks as input.",
+                "System validates the input parameters.",
+                "System calculates the ratio of topics to be included.",
+                "System generates a problem set based on the ratio and marks distribution."
+            ]
+        },
+        "testcases": [
+            {
+                "name":"Equal Marks with Different Frequencies Distribution",
+                "description": "Verify the system generates a problem set with the correct ratio of topics.",
+                "input": {
+                    "topics": ["A", "B"],
+                    "frequencies": [25, 75],
+                    "marks": [85, 85],
+                    "ratio": [75, 25]
+                },
+                "expected": {
+                    "outcome": "Problem set generated successfully.",
+                    "problemSetMatchesRatio": true,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Extreme Frequency Distribution",
+                "description": "Verify the system handles cases with an extreme frequency distribution.",
+                "input": {
+                    "topics": ["A", "B"],
+                    "frequencies": [0, 100],
+                    "marks": [0, 100],
+                    "ratio": [100, 0]
+                },
+                "expected": {
+                    "outcome": "Problem set generated with only topic B.",
+                    "problemSetMatchesRatio": true,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Extreme Frequency Distribution Considering Obtained Marks",
+                "description": "Verify system behavior when one topic has extreme frequency but low marks.",
+                "input": {
+                    "topics": ["A", "B"],
+                    "frequencies": [0, 100],
+                    "marks": [0, 10],
+                    "ratio": [50, 50]
+                },
+                "expected": {
+                    "outcome": "Problem set generated based on frequencies.",
+                    "problemSetMatchesRatio": false,
+                    "status": "Completed"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Suggest Connections",
+            "scenario": "System suggests connections based on shared institute, subject, and performance in similar quizzes.",
+            "actors": "System",
+            "preconditions": "Student data includes institute, subjects, and quiz results.",
+            "steps": [
+                "System receives the student's profile data.",
+                "System calculates similarities with other students based on weighted criteria.",
+                "System ranks potential connections by similarity score.",
+                "System suggests top matching connections."
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Same Institute and Subject and Similar Quiz Scores",
+                "description": "Verify system prioritizes suggestions from the same institute and subject and similar quiz marks.",
+                "input": {
+                    "1ststudentInstitute": "Institute A",
+                    "1ststudentSubjects": ["Math", "Physics"],
+                    "1ststudentquizScores": [80, 95],
+                    "2ndstudentInstitute": "Institute A",
+                    "2ndstudentSubjects": ["Math", "Physics"],
+                    "2ndstudentquizScores": [85, 90]
+                },
+                "expected": {
+                    "outcome": "Top suggestions are students from the same institute and same subject and similar quiz marks.",
+                    "estimatedMatchScore": 0.9,
+                    "suggestionsSortedByWeight": true,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Same Institute and Subject",
+                "description": "Verify system gives high match scores to suggestions from the same institute and subject.",
+                "input": {
+                    "1ststudentInstitute": "Institute A",
+                    "1ststudentSubjects": ["Math", "Physics"],
+                    "1ststudentquizScores": [60, 70],
+                    "2ndstudentInstitute": "Institute A",
+                    "2ndstudentSubjects": ["Math", "Physics"],
+                    "2ndstudentquizScores": [85, 90]
+                },
+                "expected": {
+                    "outcome": "Top suggestions are students from the same institute and subject.",
+                    "estimatedMatchScore": 0.85,
+                    "suggestionsSortedByWeight": true,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Different Institute but Same Subject",
+                "description": "Verify system suggests students from different institutes with the same subject.",
+                "input": {
+                    "1ststudentInstitute": "Institute A",
+                    "1ststudentSubjects": ["Math", "Physics"],
+                    "1ststudentquizScores": [60, 70],
+                    "2ndstudentInstitute": "Institute B",
+                    "2ndstudentSubjects": ["Math", "Physics"],
+                    "2ndstudentquizScores": [40, 50]
+                },
+                "expected": {
+                    "outcome": "Suggestions include students from different institutes with a high subject match.",
+                    "estimatedMatchScore": 0.7,
+                    "suggestionsSortedByWeight": true,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Similar Quiz Marks in Similar Subjects",
+                "description": "Verify system handles cases where students have similar marks but different institutes and same subjects.",
+                "input": {
+                    "1ststudentInstitute": "Institute A",
+                    "1ststudentSubjects": ["Math", "Physics"],
+                    "1ststudentquizScores": [80, 70],
+                    "2ndstudentInstitute": "Institute B",
+                    "2ndstudentSubjects": ["Math", "Physics"],
+                    "2ndstudentquizScores": [80, 70]
+                },
+                "expected": {
+                    "outcome": "System suggests students with similar quiz marks even if other factors have low weight.",
+                    "estimatedMatchScore": 0.8,
+                    "suggestionsIncludeLowWeightCriteria": true,
+                    "status": "Completed"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Topic and Content Related Suggestion",
+            "scenario": "System suggests popular content based on topic sequences and feedback.",
+            "actors": "System",
+            "preconditions": "Content feedback and topic sequences are indexed.",
+            "steps": [
+                "System receives the student's current content progression.",
+                "System identifies the next topic in sequence.",
+                "System searches for popular content related to the next topic or other important subjects."
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Next Topic in Sequence",
+                "description": "Verify system suggests next topic in sequence.",
+                "input": {
+                    "currentTopic": "Combinatorics",
+                    "nextTopic": "Probability"
+                },
+                "expected": {
+                    "outcome": "Topic that comes next to Combinatorics is suggested.",
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "No Topic Started Yet",
+                "description": "Verify system suggests a preliminary topic if no topic is started yet.",
+                "input": {
+                    "currentTopic": "",
+                    "subject": "Biology",
+                    "nextTopic": "Cell Division"
+                },
+                "expected": {
+                    "outcome": "Cell Division is suggested as the first topic of Biology.",
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Important Topics of Subject",
+                "description": "Verify system suggests important topics of the subject which has not been started yet.",
+                "input": {
+                    "currentTopic": "Cell Division",
+                    "subject": "Biology",
+                    "suggestedTopics": ["Genetics", "Evolution"]
+                },
+                "expected": {
+                    "outcome": "Key topics of Biology is suggested.",
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Popular contents of the Subject",
+                "description": "Verify system suggests popular contents of the subject.",
+                "input": {
+                    "currentTopic": "Cell Division",
+                    "subject": "Biology",
+                    "noOfContents": 4,
+                    "popularContentTopics": ["Blood Circulation", "Human Body", "Photosynthesis", "Respiration"],
+                    "contentID": ["123", "456", "789", "101"]
+                },
+                "expected": {
+                    "outcome": "Content for key topics of Biology is suggested.",
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "No Subject Chosen Yet",
+                "description": "Verify system suggests a subject if no subject is chosen yet.",
+                "input": {
+                    "subject": "",
+                    "suggestedSubjects": ["Physics", "Math"]
+                },
+                "expected": {
+                    "outcome": "Physics and Math are suggested as first subject by default.",
+                    "status": "Completed"
+                }
+            }
+        ]
+        
+    },
+    {
+        "usecase": {
+            "name": "Connectivity Status",
+            "scenario": "System provides notifications for connection requests",
+            "actors": "System, Student",
+            "preconditions": "Student has activity data such as sent connection requests",
+            "steps": [
+                "System allows sending and tracking connection requests.",
+                "System updates the dashboard with connection request status."
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Connection Request Accepted",
+                "description": "Verify system correctly updates dashboard when a connection request is accepted.",
+                "input": {
+                    "connectionRequestStatus": "Accepted",
+                    "requestedConnection": "Student_B"
+                },
+                "expected": {
+                    "outcome": "Dashboard shows 'Connection Request Accepted' status for Student_B.",
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Connection Request Not Accepted",
+                "description": "Verify system updates dashboard when a connection request is not accepted.",
+                "input": {
+                    "connectionRequestStatus": "Not Accepted",
+                    "requestedConnection": "Student_C"
+                },
+                "expected": {
+                    "outcome": "Dashboard shows 'Connection Request Not Accepted' status for Student_C.",
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Connection Request Ignored",
+                "description": "Verify system updates dashboard when a connection request is ignored.",
+                "input": {
+                    "connectionRequestStatus": "Ignored",
+                    "requestedConnection": "Student_D"
+                },
+                "expected": {
+                    "outcome": "Dashboard shows 'Connection Request Ignored' status for Student_D.",
+                    "status": "Completed"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Progress Analysis",
+            "scenario": "System provides a detailed analysis of student progress over time.",
+            "actors": "System, Student",
+            "preconditions": "Student has activity data such as quiz scores, content interactions, and time spent.",
+            "steps": [
+                "System displays progress curve based on quiz scores and time spent.",
+                "System allows students to compare progress with connections and global averages."
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Analyze Progress Over Different Time Durations",
+                "description": "Verify system provides accurate progress analysis over various time periods.",
+                "input": {
+                    "timeFromJoining": "120 days",
+                    "timeDuration": "Last 30 Days",
+                    "compareWith": "Global Average"
+                },
+                "expected": {
+                    "outcome": "Dashboard displays correct progress curve for the last 30 days.",
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Invalid Time Duration for Progress Analysis",
+                "description": "Verify system handles invalid time duration input for progress analysis.",
+                "input": {
+                    "timeFromJoining": "10 days",
+                    "timeDuration": "Last 30 Days",
+                    "compareWith": "Connections"
+                },
+                "expected": {
+                    "outcome": "Dashboard displays correct progress curve for the last 10 days and a message showing the time duration is higher than the time from joining.",
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Segregate Progress by Topics",
+                "description": "Verify system can segregate and display progress by specific topics.",
+                "input": {
+                    "topics": ["Math", "Physics"],
+                    "timeDuration": "Last 30 Days",
+                    "compareWith": ""
+                },
+                "expected": {
+                    "outcome": "Dashboard displays separate progress curves for Math and Physics.",
+                    "status": "Completed"
+                }
+            }
+        ]    
+    }
+]
