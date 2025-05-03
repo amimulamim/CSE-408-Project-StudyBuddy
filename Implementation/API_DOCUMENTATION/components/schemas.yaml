@@ -40,6 +40,34 @@ components:
         tablesExtracted:
           type: boolean
 
+    QuizQuestion:
+      type: object
+      required: [questionId, questionText, options]
+      properties:
+        questionId:
+          type: string
+        questionText:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        type:
+          type: string
+          enum: [Theoretical, ProblemSolving]
+        difficulty:
+          type: string
+          enum: [Easy, Medium, Hard]
+        marks:
+          type: integer
+        hints:
+          type: array
+          items:
+            type: string
+        explanation:
+          type: string
+
+
     # QuizQuestion:
     #   type: object
     #   properties:
