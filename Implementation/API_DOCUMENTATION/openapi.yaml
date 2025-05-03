@@ -11,63 +11,11 @@ tags:
 - name: Billing
   description: Subscription and payment management
 - name: Quiz
-  description: Quiz management and operations,Question retrieval , submission and evaluation
+  description: Quiz management and operations,Question retrieval , submission and
+    evaluation
 - name: ResourceProcessing
   description: Document processing ,parsing and vectorization
 paths:
-  /resource/upload:
-    post:
-      tags:
-      - ResourceProcessing
-      summary: Upload a resource document (PDF)
-      description: 'Uploads a PDF document. System automatically parses text, images,
-        tables,
-
-        chunks the text, vectorizes the content, and stores embeddings internally.
-
-        '
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                file:
-                  type: string
-                  format: binary
-                  description: PDF document file to upload
-      responses:
-        '200':
-          description: Upload and processing completed successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  documentId:
-                    type: string
-                  processingStatus:
-                    type: string
-                    example: Completed
-                  summary:
-                    type: object
-                    properties:
-                      textExtracted:
-                        type: boolean
-                      imagesExtracted:
-                        type: boolean
-                      tablesExtracted:
-                        type: boolean
-        '400':
-          description: Upload failed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
   /api/auth/signup:
     post:
       tags:
@@ -435,6 +383,262 @@ paths:
           description: Unauthorized
         '404':
           description: Chat not found
+  /api/quiz/request:
+    post:
+      tags:
+      - Quiz
+      summary: Request a customized quiz
+      description: Request a quiz with subject, topic, marks, time, and difficulty.
+        Missing values default to recommended.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - subject
+              - topic
+              - marks
+              - time
+              properties:
+                subject:
+                  type: string
+                topic:
+                  type: string
+                marks:
+                  type: integer
+                time:
+                  type: integer
+                  description: Total duration (minutes)
+                difficulty:
+                  type: string
+                  enum:
+                  - Easy
+                  - Medium
+                  - Hard
+      responses:
+        '200':
+          description: Quiz request accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  quizId:
+                    type: string
+                  status:
+                    type: string
+                    example: Submitted
+        '400':
+          description: Invalid or incomplete parameters
+        '401':
+          description: Unauthorized
+  /api/quiz/{quizId}:
+    get:
+      tags:
+      - Quiz
+      summary: Fetch quiz questions
+      description: Retrieve generated questions for the requested quiz session
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: quizId
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Quiz fetched
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  quizId:
+                    type: string
+                  subject:
+                    type: string
+                  topic:
+                    type: string
+                  questions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/QuizQuestion'
+        '404':
+          description: Quiz not found
+        '401':
+          description: Unauthorized
+  /api/quiz/{quizId}/submit:
+    post:
+      tags:
+      - Quiz
+      summary: Submit quiz answers
+      description: Student submits answers before or at timeout.
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: quizId
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - answers
+              properties:
+                answers:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      questionId:
+                        type: string
+                      selectedOptions:
+                        type: array
+                        items:
+                          type: string
+      responses:
+        '200':
+          description: Submission successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: Submitted
+        '400':
+          description: Invalid answers
+        '401':
+          description: Unauthorized
+        '404':
+          description: Quiz not found
+  /api/quiz/{quizId}/result:
+    get:
+      tags:
+      - Quiz
+      summary: Get quiz results and feedback
+      description: View score, correct/incorrect answers, hints and dashboard analytics.
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: quizId
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result summary returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  score:
+                    type: number
+                  total:
+                    type: number
+                  correctAnswers:
+                    type: array
+                    items:
+                      type: string
+                  incorrectAnswers:
+                    type: array
+                    items:
+                      type: string
+                  explanations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        questionId:
+                          type: string
+                        explanation:
+                          type: string
+                        hint:
+                          type: string
+                  analytics:
+                    type: object
+                    properties:
+                      strengthTopics:
+                        type: array
+                        items:
+                          type: string
+                      weakTopics:
+                        type: array
+                        items:
+                          type: string
+                      timeTaken:
+                        type: string
+                        example: 17 minutes
+        '401':
+          description: Unauthorized
+        '404':
+          description: Result not found
+  /resource/upload:
+    post:
+      tags:
+      - ResourceProcessing
+      summary: Upload a resource document (PDF)
+      description: 'Uploads a PDF document. System automatically parses text, images,
+        tables,
+
+        chunks the text, vectorizes the content, and stores embeddings internally.
+
+        '
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PDF document file to upload
+      responses:
+        '200':
+          description: Upload and processing completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  documentId:
+                    type: string
+                  processingStatus:
+                    type: string
+                    example: Completed
+                  summary:
+                    type: object
+                    properties:
+                      textExtracted:
+                        type: boolean
+                      imagesExtracted:
+                        type: boolean
+                      tablesExtracted:
+                        type: boolean
+        '400':
+          description: Upload failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
 components:
   schemas:
     Message:
@@ -475,6 +679,40 @@ components:
           type: boolean
         tablesExtracted:
           type: boolean
+    QuizQuestion:
+      type: object
+      required:
+      - questionId
+      - questionText
+      - options
+      properties:
+        questionId:
+          type: string
+        questionText:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        type:
+          type: string
+          enum:
+          - Theoretical
+          - ProblemSolving
+        difficulty:
+          type: string
+          enum:
+          - Easy
+          - Medium
+          - Hard
+        marks:
+          type: integer
+        hints:
+          type: array
+          items:
+            type: string
+        explanation:
+          type: string
   securitySchemes:
     bearerAuth:
       type: http
