@@ -8,6 +8,7 @@ This repo contains the OpenAPI documentation for the StudyBuddy project.
 - `paths/`: Modular endpoint files
 - `components/`: Shared schemas
 - `scripts/`: Helper script to merge files
+- 
 
 ## How to Contribute
 

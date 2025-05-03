@@ -10,6 +10,8 @@ tags:
 - name: Chat
 - name: Billing
   description: Subscription and payment management
+- name: Quiz
+  description: Quiz management and operations,Question retrieval , submission and evaluation
 paths:
   /api/auth/signup:
     post:
