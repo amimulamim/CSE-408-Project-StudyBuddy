@@ -67,6 +67,25 @@ components:
         explanation:
           type: string
 
+    ContentItem:
+      type: object
+      properties:
+        contentId:
+          type: string
+        content:
+          type: string
+        metadata:
+          type: object
+          properties:
+            topic:
+              type: string
+            contentType:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+
+
 
     # QuizQuestion:
     #   type: object
