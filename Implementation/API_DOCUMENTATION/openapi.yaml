@@ -16,6 +16,59 @@ tags:
 - name: ResourceProcessing
   description: Document processing ,parsing and vectorization
 paths:
+  /resource/upload:
+    post:
+      tags:
+      - ResourceProcessing
+      summary: Upload a resource document (PDF)
+      description: 'Uploads a PDF document. System automatically parses text, images,
+        tables,
+
+        chunks the text, vectorizes the content, and stores embeddings internally.
+
+        '
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PDF document file to upload
+      responses:
+        '200':
+          description: Upload and processing completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  documentId:
+                    type: string
+                  processingStatus:
+                    type: string
+                    example: Completed
+                  summary:
+                    type: object
+                    properties:
+                      textExtracted:
+                        type: boolean
+                      imagesExtracted:
+                        type: boolean
+                      tablesExtracted:
+                        type: boolean
+        '400':
+          description: Upload failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
   /api/auth/signup:
     post:
       tags:
@@ -218,10 +271,12 @@ paths:
                 text:
                   type: string
                   description: User's message text
-                image:
-                  type: string
+                files:
+                  type: array
+                  items:
+                    type: string
                   format: binary
-                  description: Optional image file
+                  description: Optional field (files) for uploading files
                 chatId:
                   type: string
                   description: Optional chat session ID
@@ -585,59 +640,6 @@ paths:
           description: Unauthorized
         '404':
           description: Result not found
-  /resource/upload:
-    post:
-      tags:
-      - ResourceProcessing
-      summary: Upload a resource document (PDF)
-      description: 'Uploads a PDF document. System automatically parses text, images,
-        tables,
-
-        chunks the text, vectorizes the content, and stores embeddings internally.
-
-        '
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                file:
-                  type: string
-                  format: binary
-                  description: PDF document file to upload
-      responses:
-        '200':
-          description: Upload and processing completed successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  documentId:
-                    type: string
-                  processingStatus:
-                    type: string
-                    example: Completed
-                  summary:
-                    type: object
-                    properties:
-                      textExtracted:
-                        type: boolean
-                      imagesExtracted:
-                        type: boolean
-                      tablesExtracted:
-                        type: boolean
-        '400':
-          description: Upload failed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
 components:
   schemas:
     Message:

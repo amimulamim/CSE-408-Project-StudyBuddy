@@ -17,10 +17,13 @@ paths:
                 text:
                   type: string
                   description: User's message text
-                image:
-                  type: string
+                files:
+                  type: array
+                  items:
+                    type: string
                   format: binary
-                  description: Optional image file
+                  description: Optional field (files) for uploading files
+
                 chatId:
                   type: string
                   description: Optional chat session ID
