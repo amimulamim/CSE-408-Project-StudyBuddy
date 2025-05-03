@@ -5,13 +5,14 @@ paths:
       summary: Start or continue a chat with AI
       description: |
         Starts a new chat session if `chatId` is not provided.
-        If `chatId` is provided, it continues the session by adding a new message.
+        If `chatId` is provided, the message is added to the existing session.
       requestBody:
         required: true
         content:
           multipart/form-data:
             schema:
               type: object
+              required: []
               properties:
                 text:
                   type: string
@@ -25,7 +26,7 @@ paths:
                   description: Optional chat session ID
       responses:
         '200':
-          description: AI response and chat session ID
+          description: AI responded successfully
           content:
             application/json:
               schema:
@@ -37,11 +38,26 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Message'
+        '400':
+          description: Invalid input (e.g., no message, multiple files, file too large)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '401':
+          description: Unauthorized (missing or invalid token)
+        '413':
+          description: Payload too large (file size exceeded)
 
   /ai/chat/list:
     get:
       tags: [Chat]
       summary: Get list of all chat sessions for the user
+      security:
+        - bearerAuth: []
       responses:
         '200':
           description: List of chat sessions
@@ -59,11 +75,15 @@ paths:
                           type: string
                         name:
                           type: string
+        '401':
+          description: Unauthorized
 
   /ai/chat/{chatId}:
     get:
       tags: [Chat]
       summary: Retrieve a specific chat session by ID
+      security:
+        - bearerAuth: []
       parameters:
         - in: path
           name: chatId
@@ -86,10 +106,16 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Message'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Chat not found
 
     delete:
       tags: [Chat]
       summary: Delete a specific chat session
+      security:
+        - bearerAuth: []
       parameters:
         - in: path
           name: chatId
@@ -98,7 +124,7 @@ paths:
             type: string
       responses:
         '200':
-          description: Confirmation of deletion
+          description: Chat session deleted
           content:
             application/json:
               schema:
@@ -108,11 +134,17 @@ paths:
                     type: string
                   chatId:
                     type: string
+        '401':
+          description: Unauthorized
+        '404':
+          description: Chat not found
 
   /ai/chat/{chatId}/rename:
     patch:
       tags: [Chat]
       summary: Rename an existing chat session
+      security:
+        - bearerAuth: []
       parameters:
         - in: path
           name: chatId
@@ -133,7 +165,7 @@ paths:
                   description: New chat name
       responses:
         '200':
-          description: Chat renamed
+          description: Chat renamed successfully
           content:
             application/json:
               schema:
@@ -143,3 +175,9 @@ paths:
                     type: string
                   name:
                     type: string
+        '400':
+          description: Invalid request (e.g., empty name)
+        '401':
+          description: Unauthorized
+        '404':
+          description: Chat not found

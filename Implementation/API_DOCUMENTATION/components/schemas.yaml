@@ -30,6 +30,15 @@ components:
         expiresAt:
           type: string
           format: date-time
+    ResourceProcessingSummary:
+      type: object
+      properties:
+        textExtracted:
+          type: boolean
+        imagesExtracted:
+          type: boolean
+        tablesExtracted:
+          type: boolean
 
     # QuizQuestion:
     #   type: object
