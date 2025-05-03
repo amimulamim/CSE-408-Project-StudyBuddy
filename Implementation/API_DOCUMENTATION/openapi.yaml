@@ -216,7 +216,6 @@ paths:
           multipart/form-data:
             schema:
               type: object
-              required: []
               properties:
                 text:
                   type: string

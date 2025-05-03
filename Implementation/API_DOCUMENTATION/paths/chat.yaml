@@ -12,7 +12,7 @@ paths:
           multipart/form-data:
             schema:
               type: object
-              required: []
+              # required: []
               properties:
                 text:
                   type: string
