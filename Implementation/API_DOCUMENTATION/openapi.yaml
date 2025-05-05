@@ -32,7 +32,6 @@ tags:
     and quizzes.
 - name: Recommendation
   description: Endpoints for generating personalized content recommendations.
-
 paths:
   /api/content/generate:
     post:
@@ -526,6 +525,35 @@ paths:
           description: Invalid webhook payload or signature
         '500':
           description: Error processing webhook
+  /recommendations:
+    get:
+      tags:
+      - Recommendation
+      summary: Get Recommended Content for User
+      description: Returns a list of recommended contents for the user, based on previously
+        generated quizzes and contents.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: offset
+        in: query
+        required: true
+        schema:
+          type: integer
+      - name: size
+        in: query
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: List of recommended contents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecommendedContent'
   /api/quiz/request:
     post:
       tags:
@@ -1703,6 +1731,15 @@ components:
         totalTimeSpent:
           type: number
           description: Time spent on site (in hours)
+    RecommendedContent:
+      type: object
+      properties:
+        content:
+          $ref: '#/components/schemas/ContentItem'
+        recommendationScore:
+          type: number
+          format: float
+          description: Score between 0 and 1 indicating the relevance of the content
   securitySchemes:
     bearerAuth:
       type: http
