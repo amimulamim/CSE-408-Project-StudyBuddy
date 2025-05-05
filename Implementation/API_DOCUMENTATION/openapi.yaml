@@ -145,6 +145,32 @@ paths:
           description: Google login/signup handled successfully
         '401':
           description: Invalid or expired Google token
+  /api/auth/logout:
+    post:
+      tags:
+      - Auth
+      summary: Log out the current user
+      description: 'Logs the user out by invalidating session or clearing refresh
+        tokens.
+
+        In stateless auth systems (like Firebase), logout is handled on client side.
+
+        '
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: User logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logged out successfully.
+        '401':
+          description: Unauthorized (invalid or missing token)
   /api/auth/user-info:
     get:
       tags:
@@ -176,20 +202,20 @@ paths:
               properties:
                 name:
                   type: string
-                  description: Update user's name
+                  description: New name of the user
                 bio:
                   type: string
-                  description: Short bio or about section
+                  description: Short bio or description
                 institution:
                   type: string
-                  description: Name of institution/organization
+                  description: Institution or organization name
                 role:
                   type: string
-                  description: User role (student, teacher, developer, etc.)
+                  description: User's role (e.g., student, teacher,developer)
                 photo:
                   type: string
                   format: binary
-                  description: Optional upload new profile photo
+                  description: Upload a new profile photo (optional)
       responses:
         '200':
           description: Profile updated successfully
@@ -205,7 +231,7 @@ paths:
                     type: string
                     description: New photo URL if uploaded
         '400':
-          description: Invalid input (unsupported file type, validation error)
+          description: Invalid input (validation error or file type issue)
         '401':
           description: Unauthorized
   /api/content/generate:
