@@ -28,6 +28,159 @@ tags:
 - name: Notification
   description: Endpoints for users to manage their notifications.
 paths:
+  /resource/upload:
+    post:
+      tags:
+      - ResourceProcessing
+      summary: Upload a resource document (PDF)
+      description: 'Uploads a PDF document. System automatically parses text, images,
+        tables,
+
+        chunks the text, vectorizes the content, and stores embeddings internally.
+
+        '
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PDF document file to upload
+      responses:
+        '200':
+          description: Upload and processing completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  documentId:
+                    type: string
+                  processingStatus:
+                    type: string
+                    example: Completed
+                  summary:
+                    type: object
+                    properties:
+                      textExtracted:
+                        type: boolean
+                      imagesExtracted:
+                        type: boolean
+                      tablesExtracted:
+                        type: boolean
+        '400':
+          description: Upload failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  /api/auth/signup:
+    post:
+      tags:
+      - Auth
+      summary: Sign up using email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '201':
+          description: User created successfully
+        '400':
+          description: Invalid input (missing fields, weak password)
+  /api/auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Log in using email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Login successful
+        '401':
+          description: Unauthorized (invalid credentials)
+  /api/auth/google:
+    post:
+      tags:
+      - Auth
+      summary: Google Sign-in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - idToken
+              properties:
+                idToken:
+                  type: string
+                  description: Firebase ID token from Google
+      responses:
+        '200':
+          description: Google login/signup handled successfully
+        '401':
+          description: Invalid or expired Google token
+  /api/auth/logout:
+    post:
+      tags:
+      - Auth
+      summary: Log out the current user
+      description: 'Logs the user out by invalidating session or clearing refresh
+        tokens.
+
+        In stateless auth systems (like Firebase), logout is handled on client side.
+
+        '
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: User logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logged out successfully.
+        '401':
+          description: Unauthorized (invalid or missing token)
   /api/content/generate:
     post:
       tags:
@@ -235,59 +388,6 @@ paths:
                           format: date-time
         '401':
           description: Unauthorized
-  /resource/upload:
-    post:
-      tags:
-      - ResourceProcessing
-      summary: Upload a resource document (PDF)
-      description: 'Uploads a PDF document. System automatically parses text, images,
-        tables,
-
-        chunks the text, vectorizes the content, and stores embeddings internally.
-
-        '
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                file:
-                  type: string
-                  format: binary
-                  description: PDF document file to upload
-      responses:
-        '200':
-          description: Upload and processing completed successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  documentId:
-                    type: string
-                  processingStatus:
-                    type: string
-                    example: Completed
-                  summary:
-                    type: object
-                    properties:
-                      textExtracted:
-                        type: boolean
-                      imagesExtracted:
-                        type: boolean
-                      tablesExtracted:
-                        type: boolean
-        '400':
-          description: Upload failed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
   /billing/subscribe:
     post:
       tags:
@@ -403,209 +503,413 @@ paths:
           description: Invalid webhook payload or signature
         '500':
           description: Error processing webhook
-  /api/quiz/request:
+  /ai/chat:
     post:
       tags:
-      - Quiz
-      summary: Request a customized quiz
-      description: Request a quiz with subject, topic, marks, time, and difficulty.
-        Missing values default to recommended.
-      security:
-      - bearerAuth: []
+      - Chat
+      summary: Start or continue a chat with AI
+      description: 'Starts a new chat session if `chatId` is not provided.
+
+        If `chatId` is provided, the message is added to the existing session.
+
+        '
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
-              required:
-              - subject
-              - topic
-              - marks
-              - time
               properties:
-                subject:
+                text:
                   type: string
-                topic:
-                  type: string
-                marks:
-                  type: integer
-                time:
-                  type: integer
-                  description: Total duration (minutes)
-                difficulty:
-                  type: string
-                  enum:
-                  - Easy
-                  - Medium
-                  - Hard
-      responses:
-        '200':
-          description: Quiz request accepted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  quizId:
-                    type: string
-                  status:
-                    type: string
-                    example: Submitted
-        '400':
-          description: Invalid or incomplete parameters
-        '401':
-          description: Unauthorized
-  /api/quiz/{quizId}:
-    get:
-      tags:
-      - Quiz
-      summary: Fetch quiz questions
-      description: Retrieve generated questions for the requested quiz session
-      security:
-      - bearerAuth: []
-      parameters:
-      - in: path
-        name: quizId
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Quiz fetched
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  quizId:
-                    type: string
-                  subject:
-                    type: string
-                  topic:
-                    type: string
-                  questions:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/QuizQuestion'
-        '404':
-          description: Quiz not found
-        '401':
-          description: Unauthorized
-  /api/quiz/{quizId}/submit:
-    post:
-      tags:
-      - Quiz
-      summary: Submit quiz answers
-      description: Student submits answers before or at timeout.
-      security:
-      - bearerAuth: []
-      parameters:
-      - in: path
-        name: quizId
-        required: true
-        schema:
-          type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-              - answers
-              properties:
-                answers:
+                  description: User's message text
+                files:
                   type: array
                   items:
-                    type: object
-                    properties:
-                      questionId:
-                        type: string
-                      selectedOptions:
-                        type: array
-                        items:
-                          type: string
+                    type: string
+                  format: binary
+                  description: Optional field (files) for uploading files
+                chatId:
+                  type: string
+                  description: Optional chat session ID
       responses:
         '200':
-          description: Submission successful
+          description: AI responded successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  status:
+                  chatId:
                     type: string
-                    example: Submitted
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
         '400':
-          description: Invalid answers
+          description: Invalid input (e.g., no message, multiple files, file too large)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
         '401':
-          description: Unauthorized
-        '404':
-          description: Quiz not found
-  /api/quiz/{quizId}/result:
+          description: Unauthorized (missing or invalid token)
+        '413':
+          description: Payload too large (file size exceeded)
+  /ai/chat/list:
     get:
       tags:
-      - Quiz
-      summary: Get quiz results and feedback
-      description: View score, correct/incorrect answers, hints and dashboard analytics.
+      - Chat
+      summary: Get list of all chat sessions for the user
       security:
       - bearerAuth: []
-      parameters:
-      - in: path
-        name: quizId
-        required: true
-        schema:
-          type: string
       responses:
         '200':
-          description: Result summary returned
+          description: List of chat sessions
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  score:
-                    type: number
-                  total:
-                    type: number
-                  correctAnswers:
-                    type: array
-                    items:
-                      type: string
-                  incorrectAnswers:
-                    type: array
-                    items:
-                      type: string
-                  explanations:
+                  chats:
                     type: array
                     items:
                       type: object
                       properties:
-                        questionId:
+                        _id:
                           type: string
-                        explanation:
+                        name:
                           type: string
-                        hint:
-                          type: string
-                  analytics:
-                    type: object
-                    properties:
-                      strengthTopics:
-                        type: array
-                        items:
-                          type: string
-                      weakTopics:
-                        type: array
-                        items:
-                          type: string
-                      timeTaken:
-                        type: string
-                        example: 17 minutes
+        '401':
+          description: Unauthorized
+  /ai/chat/{chatId}:
+    get:
+      tags:
+      - Chat
+      summary: Retrieve a specific chat session by ID
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: chatId
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Chat session details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                  name:
+                    type: string
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
         '401':
           description: Unauthorized
         '404':
-          description: Result not found
+          description: Chat not found
+    delete:
+      tags:
+      - Chat
+      summary: Delete a specific chat session
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: chatId
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Chat session deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  chatId:
+                    type: string
+        '401':
+          description: Unauthorized
+        '404':
+          description: Chat not found
+  /ai/chat/{chatId}/rename:
+    patch:
+      tags:
+      - Chat
+      summary: Rename an existing chat session
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: chatId
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              properties:
+                name:
+                  type: string
+                  description: New chat name
+      responses:
+        '200':
+          description: Chat renamed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                  name:
+                    type: string
+        '400':
+          description: Invalid request (e.g., empty name)
+        '401':
+          description: Unauthorized
+        '404':
+          description: Chat not found
+  /profile/minimal:
+    get:
+      tags:
+      - Profile
+      summary: View Minimal Profile
+      description: Returns username, photo URL, and current plan.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successfully fetched minimal profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  username:
+                    type: string
+                  photoUrl:
+                    type: string
+                  currentPlan:
+                    type: string
+  /profile/detail:
+    get:
+      tags:
+      - Profile
+      summary: View Detailed Profile
+      description: Returns detailed user profile.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successfully fetched detailed profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+  /profile/edit:
+    put:
+      tags:
+      - Profile
+      summary: Edit Profile
+      description: Update any fields from the detailed profile.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                username:
+                  type: string
+                photoUrl:
+                  type: string
+                currentPlan:
+                  type: string
+                location:
+                  type: string
+                occupation:
+                  type: string
+                institution:
+                  type: string
+                studyDomain:
+                  type: string
+                interests:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Profile updated successfully
+  /progress:
+    get:
+      tags:
+      - Progress
+      summary: View Progress
+      description: Fetch user's quiz results using pagination.
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: query
+        name: offset
+        schema:
+          type: integer
+        required: true
+      - in: query
+        name: size
+        schema:
+          type: integer
+        required: true
+      responses:
+        '200':
+          description: List of quiz results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/QuizResult'
+  /contents/generated:
+    get:
+      tags:
+      - Content
+      summary: Get Generated Contents
+      description: Fetch AI-generated contents with pagination.
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: query
+        name: offset
+        schema:
+          type: integer
+        required: true
+      - in: query
+        name: size
+        schema:
+          type: integer
+        required: true
+      responses:
+        '200':
+          description: List of generated contents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ContentItem'
+  /stats/spent-time:
+    get:
+      tags:
+      - Analytics
+      summary: View Time Spent
+      description: Returns time spent by the user within the given time range.
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: query
+        name: start
+        schema:
+          type: string
+          format: date-time
+        required: true
+      - in: query
+        name: end
+        schema:
+          type: string
+          format: date-time
+        required: true
+      responses:
+        '200':
+          description: Time spent data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date:
+                      type: string
+                      format: date
+                    timeSpent:
+                      type: number
+                      format: float
+                      description: Time spent in hours
+  /notifications:
+    get:
+      tags:
+      - Notification
+      summary: Get User Notifications
+      description: Retrieve paginated notifications for the authenticated user.
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: query
+        name: offset
+        required: true
+        schema:
+          type: integer
+      - in: query
+        name: size
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+  /notifications/{notificationId}:
+    put:
+      tags:
+      - Notification
+      summary: Mark Notification as Read
+      description: Mark a specific notification as read or update its status.
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: notificationId
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                read:
+                  type: boolean
+      responses:
+        '200':
+          description: Notification updated
   /admin/users:
     get:
       tags:
@@ -839,8 +1143,7 @@ paths:
                 userId:
                   type: string
                 notification:
-                  schema:
-                    $ref: '#/components/schemas/Notification'
+                  $ref: '#/components/schemas/Notification'
       responses:
         '200':
           description: Notification sent
@@ -864,8 +1167,7 @@ paths:
               type: object
               properties:
                 notification:
-                  schema:
-                    $ref: '#/components/schemas/Notification'
+                  $ref: '#/components/schemas/Notification'
       responses:
         '200':
           description: Notification updated
@@ -884,49 +1186,13 @@ paths:
       responses:
         '200':
           description: Notification deleted
-  /profile/minimal:
-    get:
+  /api/quiz/request:
+    post:
       tags:
-      - Profile
-      summary: View Minimal Profile
-      description: Returns username, photo URL, and current plan.
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: Successfully fetched minimal profile
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  username:
-                    type: string
-                  photoUrl:
-                    type: string
-                  currentPlan:
-                    type: string
-  /profile/detail:
-    get:
-      tags:
-      - Profile
-      summary: View Detailed Profile
-      description: Returns detailed user profile.
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: Successfully fetched detailed profile
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserInfo'
-  /profile/edit:
-    put:
-      tags:
-      - Profile
-      summary: Edit Profile
-      description: Update any fields from the detailed profile.
+      - Quiz
+      summary: Request a customized quiz
+      description: Request a quiz with subject, topic, marks, time, and difficulty.
+        Missing values default to recommended.
       security:
       - bearerAuth: []
       requestBody:
@@ -935,462 +1201,194 @@ paths:
           application/json:
             schema:
               type: object
-              additionalProperties: true
+              required:
+              - subject
+              - topic
+              - marks
+              - time
               properties:
-                username:
+                subject:
                   type: string
-                photoUrl:
+                topic:
                   type: string
-                currentPlan:
+                marks:
+                  type: integer
+                time:
+                  type: integer
+                  description: Total duration (minutes)
+                difficulty:
                   type: string
-                location:
-                  type: string
-                occupation:
-                  type: string
-                institution:
-                  type: string
-                studyDomain:
-                  type: string
-                interests:
-                  type: array
-                  items:
+                  enum:
+                  - Easy
+                  - Medium
+                  - Hard
+      responses:
+        '200':
+          description: Quiz request accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  quizId:
                     type: string
-      responses:
-        '200':
-          description: Profile updated successfully
-  /progress:
+                  status:
+                    type: string
+                    example: Submitted
+        '400':
+          description: Invalid or incomplete parameters
+        '401':
+          description: Unauthorized
+  /api/quiz/{quizId}:
     get:
       tags:
-      - Progress
-      summary: View Progress
-      description: Fetch user's quiz results using pagination.
-      security:
-      - bearerAuth: []
-      parameters:
-      - in: query
-        name: offset
-        schema:
-          type: integer
-        required: true
-      - in: query
-        name: size
-        schema:
-          type: integer
-        required: true
-      responses:
-        '200':
-          description: List of quiz results
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/QuizResult'
-  /contents/generated:
-    get:
-      tags:
-      - Content
-      summary: Get Generated Contents
-      description: Fetch AI-generated contents with pagination.
-      security:
-      - bearerAuth: []
-      parameters:
-      - in: query
-        name: offset
-        schema:
-          type: integer
-        required: true
-      - in: query
-        name: size
-        schema:
-          type: integer
-        required: true
-      responses:
-        '200':
-          description: List of generated contents
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ContentItem'
-  /stats/spent-time:
-    get:
-      tags:
-      - Analytics
-      summary: View Time Spent
-      description: Returns time spent by the user within the given time range.
-      security:
-      - bearerAuth: []
-      parameters:
-      - in: query
-        name: start
-        schema:
-          type: string
-          format: date-time
-        required: true
-      - in: query
-        name: end
-        schema:
-          type: string
-          format: date-time
-        required: true
-      responses:
-        '200':
-          description: Time spent data
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    date:
-                      type: string
-                      format: date
-                    timeSpent:
-                      type: number
-                      format: float
-                      description: Time spent in hours
-  /notifications:
-    get:
-      tags:
-      - Notification
-      summary: Get User Notifications
-      description: Retrieve paginated notifications for the authenticated user.
-      security:
-      - bearerAuth: []
-      parameters:
-      - in: query
-        name: offset
-        required: true
-        schema:
-          type: integer
-      - in: query
-        name: size
-        required: true
-        schema:
-          type: integer
-      responses:
-        '200':
-          description: List of notifications
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Notification'
-  /notifications/{notificationId}:
-    put:
-      tags:
-      - Notification
-      summary: Mark Notification as Read
-      description: Mark a specific notification as read or update its status.
+      - Quiz
+      summary: Fetch quiz questions
+      description: Retrieve generated questions for the requested quiz session
       security:
       - bearerAuth: []
       parameters:
       - in: path
-        name: notificationId
+        name: quizId
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Quiz fetched
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  quizId:
+                    type: string
+                  subject:
+                    type: string
+                  topic:
+                    type: string
+                  questions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/QuizQuestion'
+        '404':
+          description: Quiz not found
+        '401':
+          description: Unauthorized
+  /api/quiz/{quizId}/submit:
+    post:
+      tags:
+      - Quiz
+      summary: Submit quiz answers
+      description: Student submits answers before or at timeout.
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: quizId
         required: true
         schema:
           type: string
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               type: object
+              required:
+              - answers
               properties:
-                read:
-                  type: boolean
-      responses:
-        '200':
-          description: Notification updated
-  /ai/chat:
-    post:
-      tags:
-      - Chat
-      summary: Start or continue a chat with AI
-      description: 'Starts a new chat session if `chatId` is not provided.
-
-        If `chatId` is provided, the message is added to the existing session.
-
-        '
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                text:
-                  type: string
-                  description: User's message text
-                files:
+                answers:
                   type: array
                   items:
-                    type: string
-                  format: binary
-                  description: Optional field (files) for uploading files
-                chatId:
-                  type: string
-                  description: Optional chat session ID
+                    type: object
+                    properties:
+                      questionId:
+                        type: string
+                      selectedOptions:
+                        type: array
+                        items:
+                          type: string
       responses:
         '200':
-          description: AI responded successfully
+          description: Submission successful
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  chatId:
+                  status:
                     type: string
-                  messages:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Message'
+                    example: Submitted
         '400':
-          description: Invalid input (e.g., no message, multiple files, file too large)
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+          description: Invalid answers
         '401':
-          description: Unauthorized (missing or invalid token)
-        '413':
-          description: Payload too large (file size exceeded)
-  /ai/chat/list:
+          description: Unauthorized
+        '404':
+          description: Quiz not found
+  /api/quiz/{quizId}/result:
     get:
       tags:
-      - Chat
-      summary: Get list of all chat sessions for the user
+      - Quiz
+      summary: Get quiz results and feedback
+      description: View score, correct/incorrect answers, hints and dashboard analytics.
       security:
       - bearerAuth: []
+      parameters:
+      - in: path
+        name: quizId
+        required: true
+        schema:
+          type: string
       responses:
         '200':
-          description: List of chat sessions
+          description: Result summary returned
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  chats:
+                  score:
+                    type: number
+                  total:
+                    type: number
+                  correctAnswers:
+                    type: array
+                    items:
+                      type: string
+                  incorrectAnswers:
+                    type: array
+                    items:
+                      type: string
+                  explanations:
                     type: array
                     items:
                       type: object
                       properties:
-                        _id:
+                        questionId:
                           type: string
-                        name:
+                        explanation:
                           type: string
-        '401':
-          description: Unauthorized
-  /ai/chat/{chatId}:
-    get:
-      tags:
-      - Chat
-      summary: Retrieve a specific chat session by ID
-      security:
-      - bearerAuth: []
-      parameters:
-      - in: path
-        name: chatId
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Chat session details
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  _id:
-                    type: string
-                  name:
-                    type: string
-                  messages:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Message'
+                        hint:
+                          type: string
+                  analytics:
+                    type: object
+                    properties:
+                      strengthTopics:
+                        type: array
+                        items:
+                          type: string
+                      weakTopics:
+                        type: array
+                        items:
+                          type: string
+                      timeTaken:
+                        type: string
+                        example: 17 minutes
         '401':
           description: Unauthorized
         '404':
-          description: Chat not found
-    delete:
-      tags:
-      - Chat
-      summary: Delete a specific chat session
-      security:
-      - bearerAuth: []
-      parameters:
-      - in: path
-        name: chatId
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Chat session deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                  chatId:
-                    type: string
-        '401':
-          description: Unauthorized
-        '404':
-          description: Chat not found
-  /ai/chat/{chatId}/rename:
-    patch:
-      tags:
-      - Chat
-      summary: Rename an existing chat session
-      security:
-      - bearerAuth: []
-      parameters:
-      - in: path
-        name: chatId
-        required: true
-        schema:
-          type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-              - name
-              properties:
-                name:
-                  type: string
-                  description: New chat name
-      responses:
-        '200':
-          description: Chat renamed successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  _id:
-                    type: string
-                  name:
-                    type: string
-        '400':
-          description: Invalid request (e.g., empty name)
-        '401':
-          description: Unauthorized
-        '404':
-          description: Chat not found
-  /api/auth/signup:
-    post:
-      tags:
-      - Auth
-      summary: Sign up using email and password
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-              - email
-              - password
-              properties:
-                email:
-                  type: string
-                  format: email
-                password:
-                  type: string
-                  format: password
-      responses:
-        '201':
-          description: User created successfully
-        '400':
-          description: Invalid input (missing fields, weak password)
-  /api/auth/login:
-    post:
-      tags:
-      - Auth
-      summary: Log in using email and password
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-              - email
-              - password
-              properties:
-                email:
-                  type: string
-                  format: email
-                password:
-                  type: string
-                  format: password
-      responses:
-        '200':
-          description: Login successful
-        '401':
-          description: Unauthorized (invalid credentials)
-  /api/auth/google:
-    post:
-      tags:
-      - Auth
-      summary: Google Sign-in
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-              - idToken
-              properties:
-                idToken:
-                  type: string
-                  description: Firebase ID token from Google
-      responses:
-        '200':
-          description: Google login/signup handled successfully
-        '401':
-          description: Invalid or expired Google token
-  /api/auth/logout:
-    post:
-      tags:
-      - Auth
-      summary: Log out the current user
-      description: 'Logs the user out by invalidating session or clearing refresh
-        tokens.
-
-        In stateless auth systems (like Firebase), logout is handled on client side.
-
-        '
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: User logged out successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: Logged out successfully.
-        '401':
-          description: Unauthorized (invalid or missing token)
+          description: Result not found
 components:
   schemas:
     Message:
@@ -1540,6 +1538,20 @@ components:
         domain:
           type: string
           description: The domain of the quiz (e.g., physics, chemistry)
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        read:
+          type: boolean
   securitySchemes:
     bearerAuth:
       type: http

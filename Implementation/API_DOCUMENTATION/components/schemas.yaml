@@ -157,14 +157,9 @@ components:
         domain:
           type: string
           description: The domain of the quiz (e.g., physics, chemistry)
+    
 
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
-  Notification:
+    Notification:
       type: object
       properties:
         id: { type: string }
@@ -172,3 +167,10 @@ components:
         message: { type: string }
         timestamp: { type: string, format: date-time }
         read: { type: boolean }
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
