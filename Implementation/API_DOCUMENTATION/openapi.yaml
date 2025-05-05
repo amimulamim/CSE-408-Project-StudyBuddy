@@ -606,6 +606,284 @@ paths:
           description: Unauthorized
         '404':
           description: Result not found
+  /admin/users:
+    get:
+      tags:
+      - Admin
+      summary: View All Users
+      description: Paginated list of all users with their full profile info.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: offset
+        in: query
+        schema:
+          type: integer
+        required: true
+      - name: size
+        in: query
+        schema:
+          type: integer
+        required: true
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserInfo'
+  /admin/users/{userId}:
+    put:
+      tags:
+      - Admin
+      summary: Edit User Profile
+      description: Modify fields of any user profile.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserInfo'
+      responses:
+        '200':
+          description: Profile updated
+    delete:
+      tags:
+      - Admin
+      summary: Delete User
+      description: Delete a specific user account.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: User deleted
+  /admin/content:
+    get:
+      tags:
+      - Admin
+      summary: View All Generated Content
+      description: Paginated content across all users.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: offset
+        in: query
+        schema:
+          type: integer
+        required: true
+      - name: size
+        in: query
+        schema:
+          type: integer
+        required: true
+      responses:
+        '200':
+          description: List of contents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ContentItem'
+  /admin/quiz-results:
+    get:
+      tags:
+      - Admin
+      summary: View All Quiz Results
+      description: Paginated results of all quizzes by all users.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: offset
+        in: query
+        schema:
+          type: integer
+        required: true
+      - name: size
+        in: query
+        schema:
+          type: integer
+        required: true
+      responses:
+        '200':
+          description: List of quiz results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/QuizResult'
+  /admin/chats:
+    get:
+      tags:
+      - Admin
+      summary: View All Chats
+      description: Paginated chat history across all users.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: offset
+        in: query
+        schema:
+          type: integer
+        required: true
+      - name: size
+        in: query
+        schema:
+          type: integer
+        required: true
+      responses:
+        '200':
+          description: Chat history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+  /admin/llm/invoke:
+    post:
+      tags:
+      - Admin
+      summary: Invoke LLM or Parser
+      description: Send prompts or content to LLM or parser APIs.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                target:
+                  type: string
+                  enum:
+                  - llm
+                  - parser
+                payload:
+                  type: object
+      responses:
+        '200':
+          description: Response from LLM or parser
+  /admin/stats/usage:
+    get:
+      tags:
+      - Admin
+      summary: Usage Statistics
+      description: Get usage stats between a time range.
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: query
+        name: startTime
+        required: true
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: endTime
+        required: true
+        schema:
+          type: string
+          format: date-time
+      responses:
+        '200':
+          description: Usage data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  usersAdded:
+                    type: integer
+                  contentGenerated:
+                    type: integer
+                  quizGenerated:
+                    type: integer
+                  contentUploaded:
+                    type: integer
+                  chatsDone:
+                    type: integer
+  /admin/notifications:
+    post:
+      tags:
+      - Admin
+      summary: Send Notification
+      description: Send a notification to a specific user.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                notification:
+                  schema:
+                    $ref: '#/components/schemas/Notification'
+      responses:
+        '200':
+          description: Notification sent
+  /admin/notifications/{notificationId}:
+    put:
+      tags:
+      - Admin
+      summary: Edit Notification
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: notificationId
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notification:
+                  schema:
+                    $ref: '#/components/schemas/Notification'
+      responses:
+        '200':
+          description: Notification updated
+    delete:
+      tags:
+      - Admin
+      summary: Delete Notification
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: notificationId
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Notification deleted
   /profile/minimal:
     get:
       tags:
@@ -642,26 +920,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  username:
-                    type: string
-                  photoUrl:
-                    type: string
-                  currentPlan:
-                    type: string
-                  location:
-                    type: string
-                  occupation:
-                    type: string
-                  institution:
-                    type: string
-                  studyDomain:
-                    type: string
-                  interests:
-                    type: array
-                    items:
-                      type: string
+                $ref: '#/components/schemas/UserInfo'
   /profile/edit:
     put:
       tags:
@@ -793,6 +1052,59 @@ paths:
                       type: number
                       format: float
                       description: Time spent in hours
+  /notifications:
+    get:
+      tags:
+      - Notification
+      summary: Get User Notifications
+      description: Retrieve paginated notifications for the authenticated user.
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: query
+        name: offset
+        required: true
+        schema:
+          type: integer
+      - in: query
+        name: size
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+  /notifications/{notificationId}:
+    put:
+      tags:
+      - Notification
+      summary: Mark Notification as Read
+      description: Mark a specific notification as read or update its status.
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: notificationId
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                read:
+                  type: boolean
+      responses:
+        '200':
+          description: Notification updated
   /ai/chat:
     post:
       tags:
@@ -1079,69 +1391,6 @@ paths:
                     example: Logged out successfully.
         '401':
           description: Unauthorized (invalid or missing token)
-  /api/auth/user-info:
-    get:
-      tags:
-      - Auth
-      summary: Get current authenticated user's info
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: Fetched user profile successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserInfo'
-        '401':
-          description: Unauthorized (token missing or invalid)
-    patch:
-      tags:
-      - Auth
-      summary: Update authenticated user's profile info
-      security:
-      - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                  description: New name of the user
-                bio:
-                  type: string
-                  description: Short bio or description
-                institution:
-                  type: string
-                  description: Institution or organization name
-                role:
-                  type: string
-                  description: User's role (e.g., student, teacher,developer)
-                photo:
-                  type: string
-                  format: binary
-                  description: Upload a new profile photo (optional)
-      responses:
-        '200':
-          description: Profile updated successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: Profile updated successfully.
-                  photoUrl:
-                    type: string
-                    description: New photo URL if uploaded
-        '400':
-          description: Invalid input (validation error or file type issue)
-        '401':
-          description: Unauthorized
 components:
   schemas:
     Message:
@@ -1256,6 +1505,16 @@ components:
         authProvider:
           type: string
           description: Authentication method (email/password, google)
+        currentPlan:
+          type: string
+        location:
+          type: string
+        studyDomain:
+          type: string
+        interests:
+          type: array
+          items:
+            type: string
     ErrorResponse:
       type: object
       properties:
@@ -1286,3 +1545,17 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  Notification:
+    type: object
+    properties:
+      id:
+        type: string
+      title:
+        type: string
+      message:
+        type: string
+      timestamp:
+        type: string
+        format: date-time
+      read:
+        type: boolean
