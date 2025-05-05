@@ -34,7 +34,7 @@ paths:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/GeneratedContent' }
+                items: { $ref: '#/components/schemas/ContentItem' }
 
   /moderator/contents/{contentId}:
     put:
@@ -50,7 +50,7 @@ paths:
       requestBody:
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/GeneratedContent' }
+            schema: { $ref: '#/components/schemas/ContentItem' }
       responses:
         '200':
           description: Content updated
@@ -77,7 +77,7 @@ paths:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Quiz' }
+                items: { $ref: '#/components/schemas/QuizQuestion' }
 
   /moderator/quizzes/{quizId}:
     put:
@@ -93,7 +93,7 @@ paths:
       requestBody:
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/Quiz' }
+            schema: { $ref: '#/components/schemas/QuizQuestion' }
       responses:
         '200':
           description: Quiz updated
