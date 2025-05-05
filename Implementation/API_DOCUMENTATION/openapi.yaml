@@ -1557,17 +1557,3 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-  Notification:
-    type: object
-    properties:
-      id:
-        type: string
-      title:
-        type: string
-      message:
-        type: string
-      timestamp:
-        type: string
-        format: date-time
-      read:
-        type: boolean
