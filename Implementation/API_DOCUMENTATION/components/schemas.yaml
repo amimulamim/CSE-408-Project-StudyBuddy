@@ -180,7 +180,16 @@ components:
         domain:
           type: string
           description: The domain of the quiz (e.g., physics, chemistry)
-    
+
+    RecommendedContent:
+      type: object
+      properties:
+        content:
+          $ref: '#/components/schemas/ContentItem'
+        recommendationScore:
+          type: number
+          format: float
+          description: Score between 0 and 1 indicating the relevance of the content
 
     Notification:
       type: object

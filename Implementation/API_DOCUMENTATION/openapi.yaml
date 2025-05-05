@@ -30,6 +30,9 @@ tags:
 - name: ContentModerator
   description: Endpoints for content moderators to manage domain-specific content
     and quizzes.
+- name: Recommendation
+  description: Endpoints for generating personalized content recommendations.
+
 paths:
   /api/content/generate:
     post:
