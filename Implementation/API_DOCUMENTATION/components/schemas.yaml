@@ -108,6 +108,12 @@ components:
               format: date-time
 
 
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Invalid planId"
 
     # QuizQuestion:
     #   type: object

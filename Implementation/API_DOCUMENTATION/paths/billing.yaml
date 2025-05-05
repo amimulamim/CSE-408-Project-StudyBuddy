@@ -2,26 +2,32 @@ paths:
   /billing/subscribe:
     post:
       tags: [Billing]
-      summary: Create a checkout session to subscribe to premium plan
+      summary: Create a checkout session to subscribe to a premium plan
       description: |
-        Redirects the user to the payment provider (e.g., Stripe) to complete the checkout.
+        Redirects the user to the payment provider (e.g., SSLCommerz) to complete the checkout.
+        Handles missing fields, unsupported plans, or subscription conflicts.
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required: [planId, successUrl, cancelUrl]
               properties:
                 planId:
                   type: string
                   example: premium_monthly
                 successUrl:
                   type: string
+                  description: URL to redirect after successful payment
                 cancelUrl:
                   type: string
+                  description: URL to redirect if user cancels
       responses:
         '200':
-          description: Checkout session created
+          description: Checkout session created successfully
           content:
             application/json:
               schema:
@@ -29,32 +35,31 @@ paths:
                 properties:
                   checkoutUrl:
                     type: string
-                    description: Redirect URL to complete payment
+                    description: URL to payment gateway checkout page
         '400':
-          description: Invalid request
+          description: Invalid input (missing planId, invalid URLs)
+        '409':
+          description: Conflict (already has active subscription)
+        '500':
+          description: Internal server error while creating checkout
 
   /billing/status:
     get:
       tags: [Billing]
-      summary: Check the user's current subscription status
+      summary: Get the current user's subscription status
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: Subscription status details
+          description: Subscription status retrieved
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  plan:
-                    type: string
-                    enum: [free, premium]
-                  active:
-                    type: boolean
-                  expiresAt:
-                    type: string
-                    format: date-time
+                $ref: '#/components/schemas/SubscriptionStatus'
+        '404':
+          description: No subscription found
+        '401':
+          description: Unauthorized
 
   /billing/cancel:
     post:
@@ -64,7 +69,7 @@ paths:
         - bearerAuth: []
       responses:
         '200':
-          description: Subscription cancellation confirmed
+          description: Subscription canceled successfully
           content:
             application/json:
               schema:
@@ -72,20 +77,30 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Subscription canceled."
+        '404':
+          description: No active subscription to cancel
+        '500':
+          description: Error canceling subscription
 
   /billing/webhook:
     post:
       tags: [Billing]
-      summary: Handle incoming payment gateway webhooks
+      summary: Handle incoming payment provider webhooks
       description: |
-        Receives events from payment providers like Stripe. This endpoint is **internal** and should be secured with a secret key.
+        Receives and processes events from SSLCommerz (e.g., invoice paid, subscription canceled).
+        **Must validate webhook signature.**
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              additionalProperties: true  # webhook payloads vary
+              additionalProperties: true  # Webhook event payloads vary
       responses:
         '200':
-          description: Webhook processed
+          description: Webhook processed successfully
+        '400':
+          description: Invalid webhook payload or signature
+        '500':
+          description: Error processing webhook
