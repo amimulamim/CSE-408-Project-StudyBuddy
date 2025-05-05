@@ -17,223 +17,13 @@ tags:
   description: Document processing ,parsing and vectorization
 - name: Content
   description: Content generation and management, including slides, flashcards,pdf
+- name: Profile
+  description: Endpoints for viewing and editing user profiles.
+- name: Progress
+  description: Endpoints for tracking learning progress.
+- name: Analytics
+  description: Endpoints for tracking time spent.
 paths:
-  /resource/upload:
-    post:
-      tags:
-      - ResourceProcessing
-      summary: Upload a resource document (PDF)
-      description: 'Uploads a PDF document. System automatically parses text, images,
-        tables,
-
-        chunks the text, vectorizes the content, and stores embeddings internally.
-
-        '
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                file:
-                  type: string
-                  format: binary
-                  description: PDF document file to upload
-      responses:
-        '200':
-          description: Upload and processing completed successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  documentId:
-                    type: string
-                  processingStatus:
-                    type: string
-                    example: Completed
-                  summary:
-                    type: object
-                    properties:
-                      textExtracted:
-                        type: boolean
-                      imagesExtracted:
-                        type: boolean
-                      tablesExtracted:
-                        type: boolean
-        '400':
-          description: Upload failed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-  /api/auth/signup:
-    post:
-      tags:
-      - Auth
-      summary: Sign up using email and password
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-              - email
-              - password
-              properties:
-                email:
-                  type: string
-                  format: email
-                password:
-                  type: string
-                  format: password
-      responses:
-        '201':
-          description: User created successfully
-        '400':
-          description: Invalid input (missing fields, weak password)
-  /api/auth/login:
-    post:
-      tags:
-      - Auth
-      summary: Log in using email and password
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-              - email
-              - password
-              properties:
-                email:
-                  type: string
-                  format: email
-                password:
-                  type: string
-                  format: password
-      responses:
-        '200':
-          description: Login successful
-        '401':
-          description: Unauthorized (invalid credentials)
-  /api/auth/google:
-    post:
-      tags:
-      - Auth
-      summary: Google Sign-in
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-              - idToken
-              properties:
-                idToken:
-                  type: string
-                  description: Firebase ID token from Google
-      responses:
-        '200':
-          description: Google login/signup handled successfully
-        '401':
-          description: Invalid or expired Google token
-  /api/auth/logout:
-    post:
-      tags:
-      - Auth
-      summary: Log out the current user
-      description: 'Logs the user out by invalidating session or clearing refresh
-        tokens.
-
-        In stateless auth systems (like Firebase), logout is handled on client side.
-
-        '
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: User logged out successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: Logged out successfully.
-        '401':
-          description: Unauthorized (invalid or missing token)
-  /api/auth/user-info:
-    get:
-      tags:
-      - Auth
-      summary: Get current authenticated user's info
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: Fetched user profile successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserInfo'
-        '401':
-          description: Unauthorized (token missing or invalid)
-    patch:
-      tags:
-      - Auth
-      summary: Update authenticated user's profile info
-      security:
-      - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                  description: New name of the user
-                bio:
-                  type: string
-                  description: Short bio or description
-                institution:
-                  type: string
-                  description: Institution or organization name
-                role:
-                  type: string
-                  description: User's role (e.g., student, teacher,developer)
-                photo:
-                  type: string
-                  format: binary
-                  description: Upload a new profile photo (optional)
-      responses:
-        '200':
-          description: Profile updated successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: Profile updated successfully.
-                  photoUrl:
-                    type: string
-                    description: New photo URL if uploaded
-        '400':
-          description: Invalid input (validation error or file type issue)
-        '401':
-          description: Unauthorized
   /api/content/generate:
     post:
       tags:
@@ -441,6 +231,59 @@ paths:
                           format: date-time
         '401':
           description: Unauthorized
+  /resource/upload:
+    post:
+      tags:
+      - ResourceProcessing
+      summary: Upload a resource document (PDF)
+      description: 'Uploads a PDF document. System automatically parses text, images,
+        tables,
+
+        chunks the text, vectorizes the content, and stores embeddings internally.
+
+        '
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PDF document file to upload
+      responses:
+        '200':
+          description: Upload and processing completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  documentId:
+                    type: string
+                  processingStatus:
+                    type: string
+                    example: Completed
+                  summary:
+                    type: object
+                    properties:
+                      textExtracted:
+                        type: boolean
+                      imagesExtracted:
+                        type: boolean
+                      tablesExtracted:
+                        type: boolean
+        '400':
+          description: Upload failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
   /billing/subscribe:
     post:
       tags:
@@ -556,192 +399,6 @@ paths:
           description: Invalid webhook payload or signature
         '500':
           description: Error processing webhook
-  /ai/chat:
-    post:
-      tags:
-      - Chat
-      summary: Start or continue a chat with AI
-      description: 'Starts a new chat session if `chatId` is not provided.
-
-        If `chatId` is provided, the message is added to the existing session.
-
-        '
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                text:
-                  type: string
-                  description: User's message text
-                files:
-                  type: array
-                  items:
-                    type: string
-                  format: binary
-                  description: Optional field (files) for uploading files
-                chatId:
-                  type: string
-                  description: Optional chat session ID
-      responses:
-        '200':
-          description: AI responded successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  chatId:
-                    type: string
-                  messages:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Message'
-        '400':
-          description: Invalid input (e.g., no message, multiple files, file too large)
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-        '401':
-          description: Unauthorized (missing or invalid token)
-        '413':
-          description: Payload too large (file size exceeded)
-  /ai/chat/list:
-    get:
-      tags:
-      - Chat
-      summary: Get list of all chat sessions for the user
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: List of chat sessions
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  chats:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        _id:
-                          type: string
-                        name:
-                          type: string
-        '401':
-          description: Unauthorized
-  /ai/chat/{chatId}:
-    get:
-      tags:
-      - Chat
-      summary: Retrieve a specific chat session by ID
-      security:
-      - bearerAuth: []
-      parameters:
-      - in: path
-        name: chatId
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Chat session details
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  _id:
-                    type: string
-                  name:
-                    type: string
-                  messages:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Message'
-        '401':
-          description: Unauthorized
-        '404':
-          description: Chat not found
-    delete:
-      tags:
-      - Chat
-      summary: Delete a specific chat session
-      security:
-      - bearerAuth: []
-      parameters:
-      - in: path
-        name: chatId
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Chat session deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                  chatId:
-                    type: string
-        '401':
-          description: Unauthorized
-        '404':
-          description: Chat not found
-  /ai/chat/{chatId}/rename:
-    patch:
-      tags:
-      - Chat
-      summary: Rename an existing chat session
-      security:
-      - bearerAuth: []
-      parameters:
-      - in: path
-        name: chatId
-        required: true
-        schema:
-          type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-              - name
-              properties:
-                name:
-                  type: string
-                  description: New chat name
-      responses:
-        '200':
-          description: Chat renamed successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  _id:
-                    type: string
-                  name:
-                    type: string
-        '400':
-          description: Invalid request (e.g., empty name)
-        '401':
-          description: Unauthorized
-        '404':
-          description: Chat not found
   /api/quiz/request:
     post:
       tags:
@@ -945,6 +602,542 @@ paths:
           description: Unauthorized
         '404':
           description: Result not found
+  /profile/minimal:
+    get:
+      tags:
+      - Profile
+      summary: View Minimal Profile
+      description: Returns username, photo URL, and current plan.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successfully fetched minimal profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  username:
+                    type: string
+                  photoUrl:
+                    type: string
+                  currentPlan:
+                    type: string
+  /profile/detail:
+    get:
+      tags:
+      - Profile
+      summary: View Detailed Profile
+      description: Returns detailed user profile.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successfully fetched detailed profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  username:
+                    type: string
+                  photoUrl:
+                    type: string
+                  currentPlan:
+                    type: string
+                  location:
+                    type: string
+                  occupation:
+                    type: string
+                  institution:
+                    type: string
+                  studyDomain:
+                    type: string
+                  interests:
+                    type: array
+                    items:
+                      type: string
+  /profile/edit:
+    put:
+      tags:
+      - Profile
+      summary: Edit Profile
+      description: Update any fields from the detailed profile.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                username:
+                  type: string
+                photoUrl:
+                  type: string
+                currentPlan:
+                  type: string
+                location:
+                  type: string
+                occupation:
+                  type: string
+                institution:
+                  type: string
+                studyDomain:
+                  type: string
+                interests:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Profile updated successfully
+  /progress:
+    get:
+      tags:
+      - Progress
+      summary: View Progress
+      description: Fetch user's quiz results using pagination.
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: query
+        name: offset
+        schema:
+          type: integer
+        required: true
+      - in: query
+        name: size
+        schema:
+          type: integer
+        required: true
+      responses:
+        '200':
+          description: List of quiz results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/QuizResult'
+  /contents/generated:
+    get:
+      tags:
+      - Content
+      summary: Get Generated Contents
+      description: Fetch AI-generated contents with pagination.
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: query
+        name: offset
+        schema:
+          type: integer
+        required: true
+      - in: query
+        name: size
+        schema:
+          type: integer
+        required: true
+      responses:
+        '200':
+          description: List of generated contents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ContentItem'
+  /stats/spent-time:
+    get:
+      tags:
+      - Analytics
+      summary: View Time Spent
+      description: Returns time spent by the user within the given time range.
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: query
+        name: start
+        schema:
+          type: string
+          format: date-time
+        required: true
+      - in: query
+        name: end
+        schema:
+          type: string
+          format: date-time
+        required: true
+      responses:
+        '200':
+          description: Time spent data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date:
+                      type: string
+                      format: date
+                    timeSpent:
+                      type: number
+                      format: float
+                      description: Time spent in hours
+  /ai/chat:
+    post:
+      tags:
+      - Chat
+      summary: Start or continue a chat with AI
+      description: 'Starts a new chat session if `chatId` is not provided.
+
+        If `chatId` is provided, the message is added to the existing session.
+
+        '
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  description: User's message text
+                files:
+                  type: array
+                  items:
+                    type: string
+                  format: binary
+                  description: Optional field (files) for uploading files
+                chatId:
+                  type: string
+                  description: Optional chat session ID
+      responses:
+        '200':
+          description: AI responded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  chatId:
+                    type: string
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+        '400':
+          description: Invalid input (e.g., no message, multiple files, file too large)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '401':
+          description: Unauthorized (missing or invalid token)
+        '413':
+          description: Payload too large (file size exceeded)
+  /ai/chat/list:
+    get:
+      tags:
+      - Chat
+      summary: Get list of all chat sessions for the user
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: List of chat sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  chats:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                        name:
+                          type: string
+        '401':
+          description: Unauthorized
+  /ai/chat/{chatId}:
+    get:
+      tags:
+      - Chat
+      summary: Retrieve a specific chat session by ID
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: chatId
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Chat session details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                  name:
+                    type: string
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Chat not found
+    delete:
+      tags:
+      - Chat
+      summary: Delete a specific chat session
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: chatId
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Chat session deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  chatId:
+                    type: string
+        '401':
+          description: Unauthorized
+        '404':
+          description: Chat not found
+  /ai/chat/{chatId}/rename:
+    patch:
+      tags:
+      - Chat
+      summary: Rename an existing chat session
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: chatId
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              properties:
+                name:
+                  type: string
+                  description: New chat name
+      responses:
+        '200':
+          description: Chat renamed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                  name:
+                    type: string
+        '400':
+          description: Invalid request (e.g., empty name)
+        '401':
+          description: Unauthorized
+        '404':
+          description: Chat not found
+  /api/auth/signup:
+    post:
+      tags:
+      - Auth
+      summary: Sign up using email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '201':
+          description: User created successfully
+        '400':
+          description: Invalid input (missing fields, weak password)
+  /api/auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Log in using email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Login successful
+        '401':
+          description: Unauthorized (invalid credentials)
+  /api/auth/google:
+    post:
+      tags:
+      - Auth
+      summary: Google Sign-in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - idToken
+              properties:
+                idToken:
+                  type: string
+                  description: Firebase ID token from Google
+      responses:
+        '200':
+          description: Google login/signup handled successfully
+        '401':
+          description: Invalid or expired Google token
+  /api/auth/logout:
+    post:
+      tags:
+      - Auth
+      summary: Log out the current user
+      description: 'Logs the user out by invalidating session or clearing refresh
+        tokens.
+
+        In stateless auth systems (like Firebase), logout is handled on client side.
+
+        '
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: User logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logged out successfully.
+        '401':
+          description: Unauthorized (invalid or missing token)
+  /api/auth/user-info:
+    get:
+      tags:
+      - Auth
+      summary: Get current authenticated user's info
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Fetched user profile successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+        '401':
+          description: Unauthorized (token missing or invalid)
+    patch:
+      tags:
+      - Auth
+      summary: Update authenticated user's profile info
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: New name of the user
+                bio:
+                  type: string
+                  description: Short bio or description
+                institution:
+                  type: string
+                  description: Institution or organization name
+                role:
+                  type: string
+                  description: User's role (e.g., student, teacher,developer)
+                photo:
+                  type: string
+                  format: binary
+                  description: Upload a new profile photo (optional)
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Profile updated successfully.
+                  photoUrl:
+                    type: string
+                    description: New photo URL if uploaded
+        '400':
+          description: Invalid input (validation error or file type issue)
+        '401':
+          description: Unauthorized
 components:
   schemas:
     Message:
@@ -1026,6 +1219,8 @@ components:
           type: string
         content:
           type: string
+        imagePreview:
+          type: string
         metadata:
           type: object
           properties:
@@ -1063,6 +1258,25 @@ components:
         message:
           type: string
           example: Invalid planId
+    QuizResult:
+      type: object
+      properties:
+        score:
+          type: number
+        total:
+          type: number
+        feedback:
+          type: string
+        topic:
+          type: string
+        quizId:
+          type: string
+        date:
+          type: string
+          format: date-time
+        domain:
+          type: string
+          description: The domain of the quiz (e.g., physics, chemistry)
   securitySchemes:
     bearerAuth:
       type: http

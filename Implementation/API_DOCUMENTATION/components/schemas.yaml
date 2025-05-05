@@ -96,6 +96,8 @@ components:
           type: string
         content:
           type: string
+        imagePreview:
+          type: string
         metadata:
           type: object
           properties:
@@ -127,15 +129,25 @@ components:
     #     correctAnswer:
     #       type: string
 
-    # QuizResult:
-    #   type: object
-    #   properties:
-    #     score:
-    #       type: number
-    #     total:
-    #       type: number
-    #     feedback:
-    #       type: string
+    QuizResult:
+      type: object
+      properties:
+        score:
+          type: number
+        total:
+          type: number
+        feedback:
+          type: string
+        topic:
+          type: string
+        quizId:
+          type: string
+        date:
+          type: string
+          format: date-time
+        domain:
+          type: string
+          description: The domain of the quiz (e.g., physics, chemistry)
 
   securitySchemes:
     bearerAuth:
