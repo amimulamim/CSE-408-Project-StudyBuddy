@@ -126,6 +126,29 @@ components:
           type: string
           example: "Invalid planId"
 
+    ContentModeratorProfile:
+      type: object
+      properties:
+        moderatorId: { type: string }
+        domains:
+          type: array
+          items: { type: string }
+        contentsModified:
+          type: integer
+        contentHistory:
+          type: array
+          items: { $ref: '#/components/schemas/ContentItem' }
+        quizzesModified:
+          type: integer
+        quizHistory:
+          type: array
+          items: { $ref: '#/components/schemas/QuizQuestion' }
+        topicsCovered:
+          type: array
+          items: { type: string }
+        totalTimeSpent:
+          type: number
+          description: Time spent on site (in hours)
     # QuizQuestion:
     #   type: object
     #   properties:

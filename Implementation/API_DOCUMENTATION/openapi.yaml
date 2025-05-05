@@ -27,6 +27,9 @@ tags:
   description: Administrative endpoints for managing users, content, and system usage.
 - name: Notification
   description: Endpoints for users to manage their notifications.
+- name: ContentModerator
+  description: Endpoints for content moderators to manage domain-specific content and quizzes.
+
 paths:
   /resource/upload:
     post:
