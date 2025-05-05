@@ -19,9 +19,9 @@ paths:
                   format: password
       responses:
         '201':
-          description: User created
+          description: User created successfully
         '400':
-          description: Invalid input
+          description: Invalid input (missing fields, weak password)
 
   /api/auth/login:
     post:
@@ -45,7 +45,7 @@ paths:
         '200':
           description: Login successful
         '401':
-          description: Unauthorized
+          description: Unauthorized (invalid credentials)
 
   /api/auth/google:
     post:
@@ -61,20 +61,72 @@ paths:
               properties:
                 idToken:
                   type: string
+                  description: Firebase ID token from Google
       responses:
         '200':
-          description: Google login/signup handled
+          description: Google login/signup handled successfully
         '401':
-          description: Invalid token
+          description: Invalid or expired Google token
 
   /api/auth/user-info:
     get:
       tags: [Auth]
-      summary: Get user info
+      summary: Get current authenticated user's info
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: User profile
+          description: Fetched user profile successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+        '401':
+          description: Unauthorized (token missing or invalid)
+
+    patch:
+      tags: [Auth]
+      summary: Update authenticated user's profile info
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Update user's name
+                bio:
+                  type: string
+                  description: Short bio or about section
+                institution:
+                  type: string
+                  description: Name of institution/organization
+                role:
+                  type: string
+                  description: User role (student, teacher, developer, etc.)
+                photo:
+                  type: string
+                  format: binary
+                  description: Optional upload new profile photo
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Profile updated successfully."
+                  photoUrl:
+                    type: string
+                    description: New photo URL if uploaded
+        '400':
+          description: Invalid input (unsupported file type, validation error)
         '401':
           description: Unauthorized

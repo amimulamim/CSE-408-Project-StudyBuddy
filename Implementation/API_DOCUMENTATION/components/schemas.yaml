@@ -1,5 +1,27 @@
 components:
   schemas:
+    # 🔹 User module schema
+    UserInfo:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        bio:
+          type: string
+        institution:
+          type: string
+        role:
+          type: string
+          description: e.g., student, teacher, developer
+        photoUrl:
+          type: string
+          description: URL of uploaded or Google profile photo
+        authProvider:
+          type: string
+          description: Authentication method (email/password, google)
     # 🔹 Chat module schema
     Message:
       type: object
