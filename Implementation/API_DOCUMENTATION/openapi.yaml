@@ -23,6 +23,10 @@ tags:
   description: Endpoints for tracking learning progress.
 - name: Analytics
   description: Endpoints for tracking time spent.
+- name: Admin
+  description: Administrative endpoints for managing users, content, and system usage.
+- name: Notification
+  description: Endpoints for users to manage their notifications.
 paths:
   /api/content/generate:
     post:

@@ -22,6 +22,16 @@ components:
         authProvider:
           type: string
           description: Authentication method (email/password, google)
+        currentPlan:
+          type: string
+        location:
+          type: string
+        studyDomain:
+          type: string
+        interests:
+          type: array
+          items:
+            type: string
     # 🔹 Chat module schema
     Message:
       type: object
@@ -109,7 +119,6 @@ components:
               type: string
               format: date-time
 
-
     ErrorResponse:
       type: object
       properties:
@@ -154,3 +163,12 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
+  Notification:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        message: { type: string }
+        timestamp: { type: string, format: date-time }
+        read: { type: boolean }

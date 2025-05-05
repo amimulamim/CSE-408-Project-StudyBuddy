@@ -36,26 +36,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  username:
-                    type: string
-                  photoUrl:
-                    type: string
-                  currentPlan:
-                    type: string
-                  location:
-                    type: string
-                  occupation:
-                    type: string
-                  institution:
-                    type: string
-                  studyDomain:
-                    type: string
-                  interests:
-                    type: array
-                    items:
-                      type: string
+                $ref: '#/components/schemas/UserInfo'
 
   /profile/edit:
     put:
@@ -191,3 +172,48 @@ paths:
                       type: number
                       format: float
                       description: Time spent in hours
+  /notifications:
+    get:
+      tags: [Notification]
+      summary: Get User Notifications
+      description: Retrieve paginated notifications for the authenticated user.
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: query
+          name: offset
+          required: true
+          schema: { type: integer }
+        - in: query
+          name: size
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Notification' }
+
+  /notifications/{notificationId}:
+    put:
+      tags: [Notification]
+      summary: Mark Notification as Read
+      description: Mark a specific notification as read or update its status.
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: notificationId
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                read: { type: boolean }
+      responses:
+        '200':
+          description: Notification updated
