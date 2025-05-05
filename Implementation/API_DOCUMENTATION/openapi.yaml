@@ -1033,6 +1033,34 @@ paths:
       responses:
         '200':
           description: Notification deleted
+  /admin/promote:
+    post:
+      tags:
+      - Admin
+      summary: Promote User to Admin
+      description: Allows an admin to promote an existing user to an admin role using
+        their username or email.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                identifier:
+                  type: string
+                  description: Username or email of the user to be promoted
+              required:
+              - identifier
+      responses:
+        '200':
+          description: User successfully promoted to admin
+        '400':
+          description: Invalid user or promotion failed
+        '403':
+          description: Unauthorized or not an admin
   /profile/minimal:
     get:
       tags:
