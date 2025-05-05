@@ -4,6 +4,12 @@ components:
     UserInfo:
       type: object
       properties:
+        isAdmin:
+          type: boolean
+        isModerator:
+          type: boolean
+        moderatorId:
+          type: string
         email:
           type: string
           format: email
