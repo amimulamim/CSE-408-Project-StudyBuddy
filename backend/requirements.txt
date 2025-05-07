@@ -2,4 +2,5 @@ fastapi
 uvicorn
 pytest
 httpx
-
+pytest-cov
+coverage
