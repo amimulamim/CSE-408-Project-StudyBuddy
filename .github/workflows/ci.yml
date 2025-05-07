@@ -34,7 +34,7 @@ jobs:
     - name: Upload coverage report artifact (optional)
       uses: actions/upload-artifact@v4
       with:
-        name: backend-coverage-report
-        path: backend/coverage_reports/coverage.xml
+        name: coverage-report
+        path: coverage_reports/coverage.xml
 
 
