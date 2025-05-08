@@ -61,7 +61,7 @@ jobs:
         run: npm install
 
       - name: Run Unit Tests
-        run: npm run test -- --coverage
+        run: npm run test
 
       - name: Upload coverage report (optional)
         if: success()
