@@ -99,7 +99,16 @@ jobs:
         with:
           name: frontend-coverage-report
           path: frontend/coverage_reports
-          
+
+      - name: Check if lcov.info exists
+        run: |
+          if [ -f frontend/coverage_reports/lcov.info ]; then
+            echo "✅ lcov.info found."
+          else
+            echo "❌ lcov.info is missing!"
+            exit 1
+          fi
+        
       - name: Check if coverage.xml exists
         run: |
           if [ -f backend/coverage_reports/coverage.xml ]; then
@@ -108,7 +117,6 @@ jobs:
             echo "❌ coverage.xml is missing!"
             exit 1
           fi
-
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
