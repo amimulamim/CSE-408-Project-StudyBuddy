@@ -5,7 +5,7 @@ on:
     branches: [feature/devops]
 
 jobs:
-  backend pipeline:
+  backend_pipeline:
     runs-on: ubuntu-latest
 
     defaults:
@@ -41,7 +41,7 @@ jobs:
         name: coverage-report
         path: coverage_reports/coverage.xml
 
-  frontend pipeline:
+  frontend_pipeline:
     runs-on: ubuntu-latest
 
     defaults:
