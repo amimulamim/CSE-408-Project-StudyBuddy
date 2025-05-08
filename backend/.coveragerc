@@ -1,6 +1,6 @@
 [run]
 branch = True
-source = app
+source = ./app
 relative_files = True
 
 [report]

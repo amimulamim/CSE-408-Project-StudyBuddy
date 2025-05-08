@@ -82,6 +82,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Create paths for coverage reports
+        run: |
+          mkdir -p backend/coverage_reports
+          mkdir -p frontend/coverage_reports
       
       - name: Download backend coverage
         uses: actions/download-artifact@v4
