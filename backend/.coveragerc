@@ -1,6 +1,6 @@
 [run]
 branch = True
-source = ./app
+source = CSE-408-Project-StudyBuddy/backend/
 relative_files = True
 
 [report]
