@@ -1,8 +1,13 @@
 name: CI pipeline
 
 on:
+  pull_request:
+    branches:
+      - main
+    types: [reopened, synchronize, opened]
   push:
-    branches: [feature/devops]
+    branches:
+      - main
 
 jobs:
   backend_pipeline:
