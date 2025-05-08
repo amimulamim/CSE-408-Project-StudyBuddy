@@ -33,7 +33,8 @@ jobs:
 
     - name: Run tests with coverage
       run: |
-        mkdir -p coverage_reports
+        rm -rf coverage_reports
+        mkdir coverage_reports
         COVERAGE_FILE=coverage_reports/.coverage \
         pytest --cov=app --cov-report=xml:coverage_reports/coverage.xml
 
