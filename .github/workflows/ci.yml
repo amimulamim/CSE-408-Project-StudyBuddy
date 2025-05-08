@@ -99,6 +99,16 @@ jobs:
         with:
           name: frontend-coverage-report
           path: frontend/coverage_reports
+          
+      - name: Check if coverage.xml exists
+        run: |
+          if [ -f backend/coverage_reports/coverage.xml ]; then
+            echo "✅ coverage.xml found."
+          else
+            echo "❌ coverage.xml is missing!"
+            exit 1
+          fi
+
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
