@@ -40,7 +40,7 @@ jobs:
     - name: Clean up .coverage if needed
       run: rm -f .coverage
 
-    - name: Upload coverage report artifact (optional)
+    - name: Upload coverage report artifact
       uses: actions/upload-artifact@v4
       with:
         name: backend-coverage-report
@@ -60,7 +60,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20' # or your project's Node version
+          node-version: '20'
 
       - name: Install dependencies
         run: npm install
@@ -68,8 +68,7 @@ jobs:
       - name: Run Unit Tests
         run: npm run test
 
-      - name: Upload coverage report (optional)
-        if: success()
+      - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
           name: frontend-coverage-report
@@ -82,11 +81,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Create paths for coverage reports
-        run: |
-          mkdir -p backend/coverage_reports
-          mkdir -p frontend/coverage_reports
       
       - name: Download backend coverage
         uses: actions/download-artifact@v4
@@ -99,24 +93,6 @@ jobs:
         with:
           name: frontend-coverage-report
           path: frontend/coverage_reports
-
-      - name: Check if lcov.info exists
-        run: |
-          if [ -f frontend/coverage_reports/lcov.info ]; then
-            echo "✅ lcov.info found."
-          else
-            echo "❌ lcov.info is missing!"
-            exit 1
-          fi
-        
-      - name: Check if coverage.xml exists
-        run: |
-          if [ -f backend/coverage_reports/coverage.xml ]; then
-            echo "✅ coverage.xml found."
-          else
-            echo "❌ coverage.xml is missing!"
-            exit 1
-          fi
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
