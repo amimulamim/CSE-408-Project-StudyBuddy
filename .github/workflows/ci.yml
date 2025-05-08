@@ -70,3 +70,17 @@ jobs:
           name: frontend-coverage-report
           path: frontend/coverage_reports/lcov.info
 
+  sonarcloud-scan:
+    name: SonarCloud Scan
+    runs-on: ubuntu-latest
+    needs: [backend-pipeline, frontend-pipeline]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        with:
+          projectBaseDir: .
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
