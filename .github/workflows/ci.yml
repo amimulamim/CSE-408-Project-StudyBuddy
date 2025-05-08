@@ -1,12 +1,16 @@
-name: Backend CI
+name: CI pipeline
 
 on:
   push:
     branches: [feature/devops]
 
 jobs:
-  test:
+  backend pipeline:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
 
     steps:
     - name: Checkout code
@@ -20,7 +24,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r backend/requirements.txt
+        pip install -r requirements.txt
 
     - name: Run tests with coverage
       run: |
@@ -37,4 +41,32 @@ jobs:
         name: coverage-report
         path: coverage_reports/coverage.xml
 
+  frontend pipeline:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20' # or your project's Node version
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Unit Tests
+        run: npm run test -- --coverage
+
+      - name: Upload coverage report (optional)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-report
+          path: frontend/coverage/lcov.info
 
