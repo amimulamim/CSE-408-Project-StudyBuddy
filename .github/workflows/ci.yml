@@ -83,6 +83,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      
+      - name: Download backend coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-coverage-report
+          path: backend/coverage_reports
+
+      - name: Download frontend coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-coverage-report
+          path: frontend/coverage_reports
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
