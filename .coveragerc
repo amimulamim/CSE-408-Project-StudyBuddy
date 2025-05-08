@@ -1,6 +1,6 @@
 [run]
 branch = True
-source = CSE-408-Project-StudyBuddy/backend/
+source = backend/
 relative_files = True
 
 [report]
@@ -9,4 +9,4 @@ exclude_lines =
     if __name__ == .__main__.:
 
 [xml]
-output = coverage_reports/coverage.xml
+output = backend/coverage_reports/coverage.xml
