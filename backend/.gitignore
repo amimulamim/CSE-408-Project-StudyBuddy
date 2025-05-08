@@ -2,3 +2,5 @@
 __pycache__/
 coverage_reports/
 .coverage
+venv/
+.env*

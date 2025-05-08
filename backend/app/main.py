@@ -1,7 +1,8 @@
 from fastapi import FastAPI
+from app.api.v1.routes import userRoutes
+from app.core.database import engine, Base
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-
-@app.get("/")
-def read_root():
-    return {"message": "Hello, FastAPI"}
+app.include_router(userRoutes.router, prefix="/api/v1")

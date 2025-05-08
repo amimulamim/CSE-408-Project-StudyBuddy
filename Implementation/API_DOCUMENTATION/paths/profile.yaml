@@ -39,7 +39,7 @@ paths:
                 $ref: '#/components/schemas/UserInfo'
 
   /profile/edit:
-    put:
+    patch:
       tags:
         - Profile
       summary: Edit Profile
