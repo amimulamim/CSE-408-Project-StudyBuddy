@@ -63,7 +63,7 @@ jobs:
     
     - name: Create .env.test file
       run: |
-        echo "FIREBASE_KEY_PATH=${{ secrets.FIREBASE_KEY_PATH }}" >> .env.test
+        echo "FIREBASE_KEY_PATH=/app/keys/firebaseKey.json" >> .env.test
         echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env.test
         echo "E2E_BASE_URL=${{ secrets.E2E_BASE_URL }}" >> .env.test
         echo "FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}" >> .env.test
