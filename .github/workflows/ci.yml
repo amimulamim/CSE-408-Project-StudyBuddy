@@ -25,6 +25,13 @@ jobs:
       run: |
         echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
         echo "FIREBASE_KEY_PATH=/app/keys/firebaseKey.json" >> .env
+    
+    - name: Upload env file
+      uses: actions/upload-artifact@v4
+      with:
+        name: env-file
+        path: .env
+
       
     - name: Create keys folder
       run: mkdir -p keys
@@ -40,10 +47,16 @@ jobs:
           "client_id": "${{ secrets.FIREBASE_CLIENT_ID }}",
           "auth_uri": "${{ secrets.FIREBASE_AUTH_URI }}",
           "token_uri": "${{ secrets.FIREBASE_TOKEN_URI }}",
-          "auth_provider_x509_cert_url": "${{ secrets.FIREBASE_AUTH_PROVIDER_CERT_URL }}",
+          "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
           "client_x509_cert_url": "${{ secrets.FIREBASE_CLIENT_CERT_URL }}",
           "universe_domain": "${{ secrets.FIREBASE_UNIVERSE_DOMAIN }}"
         }' > keys/firebaseKey.json
+    
+    - name: upload firebaseKey.json
+      uses: actions/upload-artifact@v4
+      with:
+        name: firebaseKey
+        path: keys/firebaseKey.json
     
     - name: Add studybuddy-50d75-firebase-adminsdk-fbsvc-b8eaf38672.json to keys folder
       run: |
@@ -56,10 +69,16 @@ jobs:
           "client_id": "${{ secrets.FIREBASE_CLIENT_ID }}",
           "auth_uri": "${{ secrets.FIREBASE_AUTH_URI }}",
           "token_uri": "${{ secrets.FIREBASE_TOKEN_URI }}",
-          "auth_provider_x509_cert_url": "${{ secrets.FIREBASE_AUTH_PROVIDER_CERT_URL }}",
+          "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
           "client_x509_cert_url": "${{ secrets.FIREBASE_CLIENT_CERT_URL }}",
           "universe_domain": "${{ secrets.FIREBASE_UNIVERSE_DOMAIN }}"
         }' > keys/studybuddy-50d75-firebase-adminsdk-fbsvc-b8eaf38672.json
+    
+    - name: upload studybuddy-50d75-firebase-adminsdk-fbsvc-b8eaf38672.json
+      uses: actions/upload-artifact@v4
+      with:
+        name: studybuddy-50d75-firebase-adminsdk-fbsvc-b8eaf38672.json
+        path: keys/studybuddy-50d75-firebase-adminsdk-fbsvc-b8eaf38672.json
     
     - name: Create .env.test file
       run: |
@@ -69,6 +88,12 @@ jobs:
         echo "FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}" >> .env.test
         echo "FIREBASE_TEST_EMAIL=${{ secrets.FIREBASE_TEST_EMAIL }}" >> .env.test
         echo "FIREBASE_TEST_PASSWORD=${{ secrets.FIREBASE_TEST_PASSWORD }}" >> .env.test
+    
+    - name: Upload .env.test file
+      uses: actions/upload-artifact@v4
+      with:
+        name: env-test-file
+        path: .env.test
 
 
     # - name: Set up Python
