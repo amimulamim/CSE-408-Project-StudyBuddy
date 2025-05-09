@@ -19,6 +19,7 @@ services:
     env_file:
       - .env.test
     command: >
-      sh -c "sleep 5 && pytest --cov=app tests"
+      sh -c "sleep 5 && coverage run -m pytest && coverage report && coverage xml &&
+      sed -i 's|<source>app</source>|<source>backend/app</source>|' coverage_reports/coverage.xml"
     volumes:
       - .:/app

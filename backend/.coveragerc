@@ -1,6 +1,6 @@
 [run]
 branch = True
-source = backend/
+source = app
 relative_files = True
 
 [report]
@@ -9,4 +9,4 @@ exclude_lines =
     if __name__ == .__main__.:
 
 [xml]
-output = backend/coverage_reports/coverage.xml
+output = coverage_reports/coverage.xml

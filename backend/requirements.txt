@@ -1,6 +1,3 @@
-
-
-
 # Core FastAPI
 fastapi
 uvicorn[standard]
