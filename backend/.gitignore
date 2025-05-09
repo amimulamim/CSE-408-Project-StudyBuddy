@@ -4,3 +4,4 @@ coverage_reports/
 .coverage
 venv/
 .env*
+keys/
