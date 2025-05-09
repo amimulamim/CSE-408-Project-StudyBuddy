@@ -45,6 +45,22 @@ jobs:
           "universe_domain": "${{ secrets.FIREBASE_UNIVERSE_DOMAIN }}"
         }' > keys/firebaseKey.json
     
+    - name: Add studybuddy-50d75-firebase-adminsdk-fbsvc-b8eaf38672.json to keys folder
+      run: |
+        echo '{
+          "type": "service_account",
+          "project_id": "${{ secrets.FIREBASE_PROJECT_ID }}",
+          "private_key_id": "${{ secrets.FIREBASE_PRIVATE_KEY_ID }}",
+          "private_key": "${{ secrets.FIREBASE_PRIVATE_KEY }}",
+          "client_email": "${{ secrets.FIREBASE_CLIENT_EMAIL }}",
+          "client_id": "${{ secrets.FIREBASE_CLIENT_ID }}",
+          "auth_uri": "${{ secrets.FIREBASE_AUTH_URI }}",
+          "token_uri": "${{ secrets.FIREBASE_TOKEN_URI }}",
+          "auth_provider_x509_cert_url": "${{ secrets.FIREBASE_AUTH_PROVIDER_CERT_URL }}",
+          "client_x509_cert_url": "${{ secrets.FIREBASE_CLIENT_CERT_URL }}",
+          "universe_domain": "${{ secrets.FIREBASE_UNIVERSE_DOMAIN }}"
+        }' > keys/studybuddy-50d75-firebase-adminsdk-fbsvc-b8eaf38672.json
+    
     - name: Create .env.test file
       run: |
         echo "FIREBASE_KEY_PATH=${{ secrets.FIREBASE_KEY_PATH }}" >> .env.test
