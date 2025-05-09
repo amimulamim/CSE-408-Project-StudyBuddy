@@ -20,3 +20,8 @@ app.add_middleware(
 
 # Include routes
 app.include_router(user.router, prefix="/api/v1")
+
+
+@app.get("/")
+def read_root():
+    return {"message": "Hello, FastAPI"}

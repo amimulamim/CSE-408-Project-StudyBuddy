@@ -1,17 +1,19 @@
-# tests/auth/test_firebase_auth.py
-
+from app.auth.service import get_user_from_token
+from app.users.schema import UserBase
+from unittest.mock import patch
 import pytest
-from app.auth.service import extract_token
 
-def test_extract_token_valid():
-    header = "Bearer test_token_123"
-    assert extract_token(header) == "test_token_123"
+@patch("app.auth.firebase_auth.auth.verify_id_token")
+def test_get_user_from_token_valid(mock_verify):
+    mock_verify.return_value = {
+        "uid": "123", "email": "test@x.com", "name": "X", "picture": "img"
+    }
+    token = "dummy"
+    user = get_user_from_token(token)
+    assert isinstance(user, UserBase)
+    assert user.email == "test@x.com"
 
-def test_extract_token_missing_prefix():
-    header = "InvalidToken test_token_123"
-    with pytest.raises(ValueError):
-        extract_token(header)
-
-def test_extract_token_empty():
-    with pytest.raises(ValueError):
-        extract_token("")
+@patch("app.auth.firebase_auth.auth.verify_id_token", side_effect=Exception)
+def test_get_user_from_token_invalid(mock_verify):
+    with pytest.raises(Exception):
+        get_user_from_token("bad-token")
