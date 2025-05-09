@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, Header
 from sqlalchemy.orm import Session
-from app.auth.firebaseAuth import verify_firebase_token
+from app.auth.firebase_auth import verify_firebase_token
 from app.core.database import get_db
-from app.schemas.userSchema import UserBase, UserUpdate
-from app.services.userService import get_or_create_user, update_user
+from app.users.schema import UserBase, UserUpdate
+from app.users.service import get_or_create_user, update_user
 
 router = APIRouter()
 
