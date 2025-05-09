@@ -20,6 +20,16 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
+    
+    - name: Create .env file
+      run: |
+        echo "FIREBASE_KEY_PATH=${{ secrets.FIREBASE_KEY_PATH }}" >> .env.test
+        echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env.test
+        echo "E2E_BASE_URL=${{ secrets.E2E_BASE_URL }}" >> .env.test
+        echo "FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}" >> .env.test
+        echo "FIREBASE_TEST_EMAIL=${{ secrets.FIREBASE_TEST_EMAIL }}" >> .env.test
+        echo "FIREBASE_TEST_PASSWORD=${{ secrets.FIREBASE_TEST_PASSWORD }}" >> .env.test
+
 
     # - name: Set up Python
     #   uses: actions/setup-python@v4
@@ -51,13 +61,13 @@ jobs:
     - name: Build and test with Docker Compose
       run: |
         docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
-      env:
-        FIREBASE_KEY_PATH: ${{ secrets.FIREBASE_KEY_PATH }}
-        DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
-        FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
-        FIREBASE_TEST_EMAIL: ${{ secrets.FIREBASE_TEST_EMAIL }}
-        FIREBASE_TEST_PASSWORD: ${{ secrets.FIREBASE_TEST_PASSWORD }}
+      # env:
+      #   FIREBASE_KEY_PATH: ${{ secrets.FIREBASE_KEY_PATH }}
+      #   DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      #   E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+      #   FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+      #   FIREBASE_TEST_EMAIL: ${{ secrets.FIREBASE_TEST_EMAIL }}
+      #   FIREBASE_TEST_PASSWORD: ${{ secrets.FIREBASE_TEST_PASSWORD }}
 
     # - name: Copy test coverage from container
     #   run: |
