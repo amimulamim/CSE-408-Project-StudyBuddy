@@ -1,6 +1,34 @@
+
+
+
+# Core FastAPI
 fastapi
-uvicorn
+uvicorn[standard]
+
+# PostgreSQL + ORM
+sqlalchemy
+psycopg2-binary
+
+# Config / Env Management
+python-dotenv
+pydantic>=2.0
+pydantic-settings>=2.0
+
+# Firebase Admin SDK
+firebase-admin
+
+# Optional but helpful
+httpx  # for async requests (useful for external APIs)
+python-multipart  # for form/image upload (if needed)
+passlib[bcrypt]  # for password hashing (if you add user auth later)
+
+# Testing
 pytest
-httpx
 pytest-cov
 coverage
+pytest-asyncio
+pytest-mock
+pytest-dotenv
+
+# Linting / Code Quality (Optional, for SonarCloud)
+flake8
