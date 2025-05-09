@@ -30,7 +30,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: env-file
-        path: .env
+        path: backend/.env
 
       
     - name: Create keys folder
@@ -56,7 +56,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: firebaseKey
-        path: keys/firebaseKey.json
+        path: backend/keys/firebaseKey.json
     
     - name: Add studybuddy-50d75-firebase-adminsdk-fbsvc-b8eaf38672.json to keys folder
       run: |
@@ -78,7 +78,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: studybuddy-50d75-firebase-adminsdk-fbsvc-b8eaf38672.json
-        path: keys/studybuddy-50d75-firebase-adminsdk-fbsvc-b8eaf38672.json
+        path: backend/keys/studybuddy-50d75-firebase-adminsdk-fbsvc-b8eaf38672.json
     
     - name: Create .env.test file
       run: |
@@ -93,7 +93,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: env-test-file
-        path: .env.test
+        path: backend/.env.test
 
 
     # - name: Set up Python
