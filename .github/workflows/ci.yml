@@ -125,7 +125,9 @@ jobs:
 
     - name: Build and test with Docker Compose
       run: |
-        docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
+        docker compose -f docker-compose.test.yml build --build-arg ENVIRONMENT=ci
+        docker compose -f docker-compose.test.yml up --abort-on-container-exit
+
       # env:
       #   FIREBASE_KEY_PATH: ${{ secrets.FIREBASE_KEY_PATH }}
       #   DATABASE_URL: ${{ secrets.DATABASE_URL }}
