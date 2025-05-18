@@ -29,3 +29,8 @@ pytest-dotenv
 
 # Linting / Code Quality (Optional, for SonarCloud)
 flake8
+
+
+#vector database
+chromadb[postgresql]>=0.4.24
+psycopg2-binary
