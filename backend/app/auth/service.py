@@ -6,6 +6,6 @@ def get_user_from_token(token: str) -> UserBase:
     return UserBase(
         uid=user_info["uid"],
         email=user_info["email"],
-        name=user_info.get("name", "No Name"),
+        name=user_info.get("name", "User"),
         avatar=user_info.get("picture")
     )
