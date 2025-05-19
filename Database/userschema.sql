@@ -1,5 +1,5 @@
 CREATE TABLE users (
-    uid TEXR PRIMARY KEY DEFAULT gen_random_uuid(),  -- system-generated user ID
+    uid TEXT PRIMARY KEY DEFAULT gen_random_uuid(),  -- system-generated user ID
     email TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
     bio TEXT,
