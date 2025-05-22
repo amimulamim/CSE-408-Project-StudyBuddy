@@ -36,3 +36,7 @@ chromadb[postgresql]>=0.4.24
 psycopg2-binary
 
 scanpy
+
+#chat
+google-generativeai
+python-multipart
