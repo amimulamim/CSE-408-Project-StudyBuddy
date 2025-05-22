@@ -39,3 +39,15 @@ def rename_chat(chat_id: UUID, new_name: str, db: Session) -> model.Chat:
         db.refresh(chat)
         return chat
     return None
+
+def add_message(db: Session, chat_id, role, text, status):
+    message = model.Message(chat_id=chat_id, role=role, text=text, status=status)
+    db.add(message)
+    db.commit()
+    db.refresh(message)
+    return message
+
+def add_files(db: Session, message_id: str, urls: list[str]):
+    for url in urls:
+        db.add(model.MessageFile(message_id=message_id, file_url=url))
+    db.commit()
