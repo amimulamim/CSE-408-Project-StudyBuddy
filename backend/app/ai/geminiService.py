@@ -11,7 +11,7 @@ class GeminiService(BaseChatService):
 
         self.system_instruction = """You are an academic assistant that answers based on files and images provided...
         """
-
+    
     def send_message(self, contents, files=[]):
         try:
             chat = self.model.start_chat(history=[])

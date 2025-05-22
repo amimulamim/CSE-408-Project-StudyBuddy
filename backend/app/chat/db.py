@@ -6,7 +6,7 @@ from app.chat import model, schema
 from typing import List
 
 
-def create_chat(user_id: str, name: str, db: Session) -> model.Chat:
+def create_chat(db: Session, user_id: str, name: str ) -> model.Chat:
     chat = model.Chat(name=name, user_id=user_id)
     db.add(chat)
     db.commit()
@@ -14,7 +14,7 @@ def create_chat(user_id: str, name: str, db: Session) -> model.Chat:
     return chat
 
 
-def get_chat(chat_id: UUID, db: Session) -> model.Chat:
+def get_chat( db: Session,chat_id: UUID) -> model.Chat:
     return db.query(model.Chat).filter_by(id=chat_id).first()
 
 

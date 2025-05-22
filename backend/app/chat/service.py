@@ -8,6 +8,9 @@ from app.chat import model
 from app.utils.file_upload import upload_to_firebase
 from app.chat.utils.chatHelper import prepare_chat_context
 from app.ai.chatFactory import get_chat_llm
+from app.chat import db as chat_db
+from app.chat.model import Chat, Message, MessageFile
+
 
 
 def generate_default_chat_name() -> str:
@@ -36,7 +39,6 @@ def save_chat_and_respond(
     ai_response,
     chat_id: Optional[str] = None
 ):
-    from app.chat import db as chat_db
 
     if chat_id:
         chat_db.add_message(db, chat_id, "user", user_message["text"], user_message["files"])
@@ -47,3 +49,43 @@ def save_chat_and_respond(
         chat_db.add_message(db, new_chat.id, "user", user_message["text"], user_message["files"])
         chat_db.add_message(db, new_chat.id, "assistant", ai_response.text, ai_response.files)
         return new_chat.id
+
+def create_chat(db: Session, user_id: str, name: Optional[str] = None):
+
+    if not name:
+        name = generate_default_chat_name()
+
+    chat = chat_db.create_chat(db, user_id, name)
+    return chat
+    
+
+def get_chat(db: Session, chat_id: str):
+    return chat_db.get_chat(db, chat_id)
+
+
+def add_message(
+    db: Session,
+    chat_id: str,
+    role: str,
+    text: str,
+    status: str,
+    files: Optional[List[UploadFile]] = None
+) -> Message:
+    # Step 1: Create Message
+    message = Message(chat_id=chat_id, role=role, text=text, status=status)
+    db.add(message)
+    db.flush()  # Ensure message.id is available
+
+    # Step 2: Upload Files and Associate
+    if files:
+        for file in files:
+            file_url = upload_to_firebase(file)
+            message_file = MessageFile(message_id=message.id, file_url=file_url)
+            db.add(message_file)
+
+    # Step 3: Commit
+    db.commit()
+    db.refresh(message)
+    return message
+
+

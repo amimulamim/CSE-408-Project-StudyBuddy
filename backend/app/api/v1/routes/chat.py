@@ -6,8 +6,12 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 
 from app.chat import service, schema
+from app.chat import db as chat_db
 from app.core.database import get_db
 from app.auth.firebase_auth import get_current_user
+from app.chat.utils.chatHelper import prepare_chat_context
+from app.ai.chatFactory import get_chat_llm
+from app.chat.utils.geminiFormatter import format_gemini_input
 
 router = APIRouter()
 
@@ -51,30 +55,52 @@ def rename_chat(
     return {"_id": str(chat.id), "name": chat.name}
 
 
+
 @router.post("/ai/chat", response_model=schema.MessageOut, tags=["Chat"])
 def create_or_continue_chat(
     text: str = Form(""),
-    files: list[UploadFile] = File([]),
+    files: list[UploadFile] = File(None),
     chatId: str = Form(None),
-    user_id: str = Depends(get_current_user),
+    user_info: str = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     if not text and not files:
-        raise HTTPException(status_code=400, detail="Message must have text or file")
+        raise HTTPException(status_code=400, detail="Message must include text or files")
 
+    files = files or []
+
+    user_id= user_info["uid"]
+    
+    # Get or create chat
     chat = service.get_chat(db, chatId) if chatId else service.create_chat(db, user_id)
-    user_msg = service.add_message(db, chat.id, "user", text, files)
+    
+    # Save user message
+    user_msg = service.add_message(db, chat.id, "user", text, "complete", files)
 
-    context = prepare_chat_context(chat, db)
+    
+
+    # Prepare context
+    context = prepare_chat_context(chat.id, db)
+    
+    # Call LLM
     llm = get_chat_llm("gemini")
-    ai_response = llm.send_message(context + [{"role": "user", "text": text}], files)
+    user_content = {
+        "role": "user",
+        "text": text,
+        "files": [f.file_url for f in user_msg.files] if user_msg.files else []
+    }
 
+    full_context = format_gemini_input(context + [user_content])
+    ai_response = llm.send_message(full_context)
+
+
+    # Save assistant message
     assistant_msg = service.add_message(db, chat.id, "assistant", ai_response.text, ai_response.files)
 
     return {
-        "chatId": chat.id,
+        "chatId": str(chat.id),
         "messages": [
-            {"role": "user", "text": user_msg.text},
-            {"role": "assistant", "text": assistant_msg.text}
+            schema.MessageOut.model_validate(user_msg),
+            schema.MessageOut.model_validate(assistant_msg)
         ]
     }

@@ -8,5 +8,5 @@ class AIResponse:
 
 class BaseChatService(ABC):
     @abstractmethod
-    def chat(self, context: List[dict], user_prompt: str) -> AIResponse:
+    def send_message(self, context: List[dict], user_prompt: str) -> AIResponse:
         pass
