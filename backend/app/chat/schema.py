@@ -4,6 +4,7 @@ from uuid import UUID
 from datetime import datetime
 from enum import Enum
 
+
 class RoleEnum(str, Enum):
     user = "user"
     assistant = "assistant"
@@ -13,12 +14,14 @@ class StatusEnum(str, Enum):
     streaming = "streaming"
     failed = "failed"
 
+
 class MessageFileOut(BaseModel):
     id: UUID
     file_url: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
 
 class MessageOut(BaseModel):
     id: UUID
@@ -29,7 +32,8 @@ class MessageOut(BaseModel):
     files: List[MessageFileOut] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
 
 class ChatOut(BaseModel):
     id: UUID = Field(..., alias="_id")
@@ -37,14 +41,21 @@ class ChatOut(BaseModel):
     messages: List[MessageOut]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
 
 class ChatSummary(BaseModel):
     _id: UUID
     name: str
 
     class Config:
-        from_attributes = True  # instead of deprecated orm_mode
+        from_attributes = True
+
 
 class ChatListResponse(BaseModel):
     chats: List[ChatSummary]
+
+
+class ChatCreateRequest(BaseModel):
+    text: str
+    chatId: Optional[UUID] = None
