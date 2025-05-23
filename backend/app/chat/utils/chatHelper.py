@@ -6,5 +6,5 @@ def prepare_chat_context(chat_id: str, db) -> list:
     if not chat:
         return []
     # Extract last 20 messages
-    messages = chat.messages[-20:]
+    messages = chat.messages[-10:]
     return format_messages_for_gemini(messages)

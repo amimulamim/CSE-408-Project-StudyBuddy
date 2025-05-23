@@ -35,8 +35,10 @@ flake8
 chromadb[postgresql]>=0.4.24
 psycopg2-binary
 
-scanpy
+# scanpy
 
 #chat
-google-generativeai
-python-multipart
+# google
+google-genai
+google-generativeai>=0.3.2
+# python-multipart
