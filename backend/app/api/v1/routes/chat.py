@@ -91,3 +91,41 @@ async def create_or_continue_chat(
         raise HTTPException(
             status_code=500, detail=f"Internal server error: {str(e)}"
         )
+
+
+
+@router.get("/ai/chat/list", response_model=schema.ChatListResponse)
+def list_chats(db: Session = Depends(get_db), user=Depends(get_current_user)):
+    chats = service.get_chats_by_user(db,user["uid"])
+    return {"chats": [{"id":str( c.id), "name": c.name} for c in chats]}
+
+# @router.get("/ai/chat/{chat_id}", response_model=schema.ChatOut)
+# def get_chat(chat_id: UUID = Path(...), db: Session = Depends(get_db), user=Depends(get_current_user)):
+#     chat = service.get_chat(db, chat_id)
+#     if not chat or chat.user_id != user.uid:
+#         raise HTTPException(status_code=404, detail="Chat not found")
+#     return chat
+
+# @router.delete("/ai/chat/{chat_id}")
+# def delete_chat(chat_id: UUID = Path(...), db: Session = Depends(get_db), user=Depends(get_current_user)):
+#     chat = service.get_chat(db, chat_id)
+#     if not chat or chat.user_id != user.uid:
+#         raise HTTPException(status_code=404, detail="Chat not found")
+#     service.delete_chat(chat_id, db)
+#     return {"message": "Chat deleted", "chatId": str(chat_id)}
+
+# @router.patch("/ai/chat/{chat_id}/rename")
+# def rename_chat(
+#     chat_id: UUID,
+#     body: Dict = Body(...),
+#     db: Session = Depends(get_db),
+#     user=Depends(get_current_user)
+# ):
+#     new_name = body.get("name")
+#     if not new_name:
+#         raise HTTPException(status_code=400, detail="Name is required")
+#     chat = service.rename_chat(chat_id, new_name, db)
+#     if not chat or chat.user_id != user.uid:
+#         raise HTTPException(status_code=404, detail="Chat not found")
+#     return {"_id": str(chat.id), "name": chat.name}
+

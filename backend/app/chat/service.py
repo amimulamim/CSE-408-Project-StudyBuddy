@@ -102,4 +102,13 @@ def add_message(
     db.refresh(message)
     return message, uploaded_files
 
+def get_chats_by_user(db: Session, user_id: str):
+    return (
+        db.query(Chat)
+        .filter(Chat.user_id == user_id)
+        .order_by(Chat.created_at.desc())  # Ensure `created_at` exists
+        .all()
+    )
+
+
 

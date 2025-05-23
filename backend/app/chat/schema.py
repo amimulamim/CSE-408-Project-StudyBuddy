@@ -45,7 +45,7 @@ class ChatOut(BaseModel):
 
 
 class ChatSummary(BaseModel):
-    _id: UUID
+    id: UUID
     name: str
 
     class Config:
