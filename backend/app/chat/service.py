@@ -129,3 +129,16 @@ def get_chat_with_paginated_messages(db: Session, chat_id: str, user_id: str, of
     return chat
 
 
+def rename_chat(chat_id: str, new_name: str, db: Session) -> Chat:
+    chat = db.query(Chat).filter(Chat.id == chat_id).first()
+    if chat:
+        chat.name = new_name
+        db.commit()
+        db.refresh(chat)
+    return chat
+
+def delete_chat(chat_id: str, db: Session):
+    chat = db.query(Chat).filter(Chat.id == chat_id).first()
+    if chat:
+        db.delete(chat)
+        db.commit()

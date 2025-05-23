@@ -5,7 +5,7 @@ from uuid import UUID
 
 from app.ai.chatFactory import get_chat_llm
 
-from fastapi import APIRouter, Depends, HTTPException,  Form, UploadFile, File , Query, Path
+from fastapi import APIRouter, Depends, HTTPException,  Form, UploadFile, File , Query, Path,Body
 from sqlalchemy.orm import Session
 
 
@@ -94,14 +94,14 @@ async def create_or_continue_chat(
 
 
 
-@router.get("/ai/chat/list", response_model=schema.ChatListResponse)
+@router.get("/ai/chat/list", response_model=schema.ChatListResponse , tags=["Chat"])
 def list_chats(db: Session = Depends(get_db), user=Depends(get_current_user)):
     chats = service.get_chats_by_user(db,user["uid"])
     return {"chats": [{"id":str( c.id), "name": c.name} for c in chats]}
 
 
 
-@router.get("/ai/chat/{chat_id}", response_model=schema.ChatPaginatedOut)
+@router.get("/ai/chat/{chat_id}", response_model=schema.ChatPaginatedOut , tags=["Chat"])
 def get_chat_messages(
     chat_id: UUID,
     offset: int = Query(0, ge=0),
@@ -111,27 +111,36 @@ def get_chat_messages(
 ):
     return service.get_chat_with_paginated_messages(db, chat_id, user_info["uid"], offset, limit)
 
+@router.delete("/ai/chat/{chat_id}", tags=["Chat"])
+def delete_chat(
+    chat_id: UUID = Path(...),
+    db: Session = Depends(get_db),
+    user_info: Dict[str, Any] = Depends(get_current_user),
+):
+    # Secure check
+    _ = service.get_chat_of_user_or_404(db, chat_id, user_info["uid"])
 
-# @router.delete("/ai/chat/{chat_id}")
-# def delete_chat(chat_id: UUID = Path(...), db: Session = Depends(get_db), user=Depends(get_current_user)):
-#     chat = service.get_chat(db, chat_id)
-#     if not chat or chat.user_id != user.uid:
-#         raise HTTPException(status_code=404, detail="Chat not found")
-#     service.delete_chat(chat_id, db)
-#     return {"message": "Chat deleted", "chatId": str(chat_id)}
+    # Proceed with deletion
+    service.delete_chat(chat_id, db)
+    return {"message": "Chat deleted", "chatId": str(chat_id)}
 
-# @router.patch("/ai/chat/{chat_id}/rename")
-# def rename_chat(
-#     chat_id: UUID,
-#     body: Dict = Body(...),
-#     db: Session = Depends(get_db),
-#     user=Depends(get_current_user)
-# ):
-#     new_name = body.get("name")
-#     if not new_name:
-#         raise HTTPException(status_code=400, detail="Name is required")
-#     chat = service.rename_chat(chat_id, new_name, db)
-#     if not chat or chat.user_id != user.uid:
-#         raise HTTPException(status_code=404, detail="Chat not found")
-#     return {"_id": str(chat.id), "name": chat.name}
+
+
+@router.patch("/ai/chat/{chat_id}/rename", tags=["Chat"])
+def rename_chat(
+    chat_id: UUID,
+    body: Dict = Body(...),
+    db: Session = Depends(get_db),
+    user_info: Dict[str, Any] = Depends(get_current_user),
+):
+    new_name = body.get("name")
+    if not new_name:
+        raise HTTPException(status_code=400, detail="Name is required")
+
+    # Secure fetch
+    chat = service.get_chat_of_user_or_404(db, chat_id, user_info["uid"])
+
+    # Rename operation
+    renamed = service.rename_chat(chat_id, new_name, db)
+    return {"_id": str(renamed.id), "name": renamed.name}
 
