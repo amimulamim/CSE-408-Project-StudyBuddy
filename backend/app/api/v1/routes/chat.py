@@ -17,109 +17,19 @@ from app.chat import service, schema
 from app.chat import model as db_model
 from app.core.database import get_db
 from app.auth.firebase_auth import get_current_user
+from app.chat.utils.geminiFormatter import fetch_image_bytes, prepare_gemini_parts
+from app.chat.utils.chatHelper import prepare_chat_context
+
+
 
 router = APIRouter()
 
-# Configure Gemini
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
-    raise ValueError("GEMINI_API_KEY environment variable not set.")
-genai.configure(api_key=GEMINI_API_KEY)
 
-# --- Fetch Firebase Image Bytes ---
-def fetch_image_bytes(url: str) -> bytes:
-    response = requests.get(url)
-    response.raise_for_status()
-    return response.content
 
-# --- Convert Chat History for Gemini (raw dicts only) ---
-def prepare_chat_context(chat_id: UUID, db: Session) -> List[Dict[str, Any]]:
-    chat = service.get_chat(db, chat_id)
-    if not chat:
-        return []
 
-    messages = sorted(
-        [msg for msg in chat.messages if msg.status == schema.StatusEnum.complete.value],
-        key=lambda m: m.timestamp
-    )[-20:]
 
-    history = []
-    for msg in messages:
-        role = "user" if msg.role == schema.RoleEnum.user.value else "model"
-        parts = []
 
-        if msg.text:
-            parts.append({"text": msg.text})
 
-        for file_entry in msg.files:
-            try:
-                mime_type, _ = mimetypes.guess_type(file_entry.file_url)
-                mime_type = mime_type or "application/octet-stream"
-                data = fetch_image_bytes(file_entry.file_url)
-
-                if mime_type.startswith("image/"):
-                    parts.append({
-                        "inline_data": {
-                            "mime_type": mime_type,
-                            "data": data
-                        }
-                    })
-                elif mime_type == "application/pdf":
-                    parts.append({"text": f"[Document: {file_entry.file_url}]"})
-                else:
-                    parts.append({"text": f"[Unsupported file: {file_entry.file_url}]"})
-            except Exception as e:
-                parts.append({"text": f"[Failed to load: {file_entry.file_url}, error: {e}]"})
-        history.append({"role": role, "parts": parts})
-
-    return history
-
-# --- Current Prompt Formatter (Part.from_bytes for images only) ---
-def prepare_gemini_parts(text: str, file_urls: List[str]) -> List[Dict[str, Any]]:
-    parts = []
-    if text:
-        parts.append({"text": text})  # ✅ Use dict
-
-    for url in file_urls:
-        mime_type, _ = mimetypes.guess_type(url)
-        mime_type = mime_type or "application/octet-stream"
-        try:
-            data = fetch_image_bytes(url)
-            if mime_type.startswith("image/"):
-                parts.append({
-                    "inline_data": {
-                        "mime_type": mime_type,
-                        "data": data
-                    }
-                })
-            elif mime_type == "application/pdf":
-                parts.append({"text": f"[Document: {url}]"})
-            else:
-                parts.append({"text": f"[Unsupported file: {url}]"})
-        except Exception as e:
-            parts.append({"text": f"[Failed to fetch file: {url}, error: {e}]"})
-    return parts
-
-# # --- Gemini Chat Client ---
-# class GeminiLLM:
-#     async def send_message(self, current_prompt_parts: List[Union[str, Part]], history: List[Dict[str, Any]] = None):
-#         model_name = "gemini-pro-vision" if any(isinstance(p, Part) for p in current_prompt_parts) else "gemini-2.0-flash"
-#         model = genai.GenerativeModel(model_name=model_name)
-#         convo = model.start_chat(history=history or [])
-#         try:
-#             response = await convo.send_message_async(current_prompt_parts)
-#             return response
-#         except Exception as e:
-#             raise HTTPException(status_code=500, detail=f"AI communication error: {e}")
-
-# _llm_instance: Optional[GeminiLLM] = None
-# def get_chat_llm() -> GeminiLLM:
-#     global _llm_instance
-#     if not _llm_instance:
-#         _llm_instance = GeminiLLM()
-#     return _llm_instance
-
-# --- Main Chat Endpoint ---
 @router.post("/ai/chat", response_model=schema.ChatOut, tags=["Chat"])
 async def create_or_continue_chat(
     text: str = Form(""),

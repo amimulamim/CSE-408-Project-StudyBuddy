@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Union
 class GeminiService(BaseChatService):
     def __init__(self):
         api_key = os.getenv("GEMINI_API_KEY")
-        self.model_name = os.getenv("GEMINI_MODEL", "models/gemini-pro")
+        self.model_name = os.getenv("GEMINI_MODEL", "models/gemini-2.0-flash")
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel(self.model_name)
 
