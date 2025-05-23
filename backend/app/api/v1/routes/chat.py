@@ -75,7 +75,8 @@ def prepare_chat_context(chat_id: UUID, db: Session) -> List[Dict[str, Any]]:
                 
                 if mime_type and mime_type.startswith('image/'):
                     # Use file_data with URI for public Firebase URLs
-                    msg_parts.append(Part(file_data={"mime_type": mime_type, "uri": file_entry.file_url}))
+                    msg_parts.append(Part(mime_type=mime_type, uri=file_entry.file_url)) # <-- This is the fix
+
                 elif mime_type == "application/pdf":
                     msg_parts.append(f"[Document: {file_entry.file_url}]") # Pass PDF URL as text
                 else:
@@ -109,7 +110,8 @@ def prepare_gemini_parts(
                 mime_type = "application/pdf"
 
         if mime_type and mime_type.startswith("image/"):
-            parts.append(Part(file_data={"mime_type": mime_type, "uri": url}))
+            # parts.append(Part("mime_type": mime_type, "uri": url))
+            parts.append(Part(mime_type=mime_type, uri=url)) # <-- This is the fix
         elif mime_type == "application/pdf":
             parts.append(f"[Document: {url}]") # Pass PDF URL as text
         else:
