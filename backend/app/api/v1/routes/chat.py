@@ -23,9 +23,6 @@ router = APIRouter()
 
 
 
-
-
-
 @router.post("/ai/chat", response_model=schema.ChatOut, tags=["Chat"])
 async def create_or_continue_chat(
     text: str = Form(""),
@@ -35,23 +32,29 @@ async def create_or_continue_chat(
     db: Session = Depends(get_db),
 ):
     if not text and not files:
-        raise HTTPException(status_code=400, detail="Message must include text or files.")
+        raise HTTPException(
+            status_code=400, detail="Message must include text or files."
+        )
 
     user_id = user_info["uid"]
     user_message_db = None
 
     try:
-        # Step 1: Chat session
-        current_chat = service.get_chat(db, chatId) if chatId else service.create_chat(
-            db, user_id=user_id, name=f"Chat with Gemini - {datetime.now():%Y-%m-%d %H:%M}"
-        )
-        if not current_chat:
-            raise HTTPException(status_code=404, detail="Chat not found.")
+        # Step 1: Create or fetch user's chat
+        if chatId:
+            current_chat = service.get_chat_of_user_or_404(db, chatId, user_id)
+        else:
+            chat_name = f"Chat with Gemini - {datetime.now():%Y-%m-%d %H:%M}"
+            current_chat = service.create_chat(db, user_id=user_id, name=chat_name)
 
-        # Step 2: Store user message and upload files
+        # Step 2: Save user message and uploaded files
         user_message_db, uploaded_file_urls = service.add_message(
-            db, chat_id=current_chat.id, role=schema.RoleEnum.user,
-            text=text, status=schema.StatusEnum.complete, files=files
+            db,
+            chat_id=current_chat.id,
+            role=schema.RoleEnum.user,
+            text=text,
+            status=schema.StatusEnum.complete,
+            files=files,
         )
         db.refresh(current_chat)
 
@@ -59,14 +62,18 @@ async def create_or_continue_chat(
         gemini_history = prepare_chat_context(current_chat.id, db)
         current_prompt_parts = prepare_gemini_parts(text=text, file_urls=uploaded_file_urls)
 
-        # Step 4: Send to Gemini
+        # Step 4: AI response
         llm = get_chat_llm()
         ai_response = await llm.send_message(current_prompt_parts, gemini_history)
 
-        # Step 5: Store assistant reply
+        # Step 5: Save assistant message
         service.add_message(
-            db, chat_id=current_chat.id, role=schema.RoleEnum.assistant,
-            text=ai_response.text, status=schema.StatusEnum.complete, files=None
+            db,
+            chat_id=current_chat.id,
+            role=schema.RoleEnum.assistant,
+            text=ai_response.text,
+            status=schema.StatusEnum.complete,
+            files=None,
         )
 
         db.refresh(current_chat)
@@ -75,8 +82,12 @@ async def create_or_continue_chat(
     except Exception as e:
         import traceback
         traceback.print_exc()
+
         if user_message_db:
             user_message_db.status = schema.StatusEnum.failed.value
             db.add(user_message_db)
             db.commit()
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        )

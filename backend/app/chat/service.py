@@ -2,7 +2,7 @@ from uuid import uuid4
 from typing import Optional, List
 from sqlalchemy.orm import Session
 from datetime import datetime
-from fastapi import UploadFile
+from fastapi import UploadFile, HTTPException
 
 from app.chat import model
 from app.utils.file_upload import upload_to_firebase
@@ -61,6 +61,15 @@ def create_chat(db: Session, user_id: str, name: Optional[str] = None):
 
 def get_chat(db: Session, chat_id: str):
     return chat_db.get_chat(db, chat_id)
+
+def get_chat_of_user_or_404(db: Session, chat_id: str, user_id: str) -> Chat:
+    chat = get_chat(db, chat_id)
+    if not chat or chat.user_id != user_id:
+        raise HTTPException(status_code=404, detail="Chat not found or unauthorized.")
+    return chat
+
+
+
 
 
 def add_message(
