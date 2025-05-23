@@ -1,6 +1,9 @@
 from app.ai.baseChatService import BaseChatService, AIResponse
-import google.generativeai as genai
 import os
+import google.generativeai as genai
+from google.genai.types import Part
+from fastapi import HTTPException
+from typing import List, Dict, Any, Union
 
 class GeminiService(BaseChatService):
     def __init__(self):
@@ -12,10 +15,12 @@ class GeminiService(BaseChatService):
         self.system_instruction = """You are an academic assistant that answers based on files and images provided...
         """
     
-    def send_message(self, contents, files=[]):
+
+    async def send_message(self, current_prompt_parts: List[Union[str, Part]], history: List[Dict[str, Any]]) -> Any:
+        
+        convo = self.model.start_chat(history=history or [])
+
         try:
-            chat = self.model.start_chat(history=[])
-            response = chat.send_message(contents, generation_config={"system_instruction": self.system_instruction})
-            return AIResponse(text=response.text, files=[])
+            return await convo.send_message_async(current_prompt_parts)
         except Exception as e:
-            raise RuntimeError(f"GeminiService error: {e}")
+            raise HTTPException(status_code=500, detail=f"AI communication error: {e}")

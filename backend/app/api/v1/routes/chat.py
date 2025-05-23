@@ -5,6 +5,8 @@ from datetime import datetime
 from typing import List, Optional, Union, Dict, Any
 from uuid import UUID
 
+from app.ai.chatFactory import get_chat_llm
+
 from fastapi import APIRouter, Depends, HTTPException, Path, Body, Form, UploadFile, File, status
 from sqlalchemy.orm import Session
 
@@ -98,24 +100,24 @@ def prepare_gemini_parts(text: str, file_urls: List[str]) -> List[Dict[str, Any]
             parts.append({"text": f"[Failed to fetch file: {url}, error: {e}]"})
     return parts
 
-# --- Gemini Chat Client ---
-class GeminiLLM:
-    async def send_message(self, current_prompt_parts: List[Union[str, Part]], history: List[Dict[str, Any]] = None):
-        model_name = "gemini-pro-vision" if any(isinstance(p, Part) for p in current_prompt_parts) else "gemini-2.0-flash"
-        model = genai.GenerativeModel(model_name=model_name)
-        convo = model.start_chat(history=history or [])
-        try:
-            response = await convo.send_message_async(current_prompt_parts)
-            return response
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"AI communication error: {e}")
+# # --- Gemini Chat Client ---
+# class GeminiLLM:
+#     async def send_message(self, current_prompt_parts: List[Union[str, Part]], history: List[Dict[str, Any]] = None):
+#         model_name = "gemini-pro-vision" if any(isinstance(p, Part) for p in current_prompt_parts) else "gemini-2.0-flash"
+#         model = genai.GenerativeModel(model_name=model_name)
+#         convo = model.start_chat(history=history or [])
+#         try:
+#             response = await convo.send_message_async(current_prompt_parts)
+#             return response
+#         except Exception as e:
+#             raise HTTPException(status_code=500, detail=f"AI communication error: {e}")
 
-_llm_instance: Optional[GeminiLLM] = None
-def get_chat_llm() -> GeminiLLM:
-    global _llm_instance
-    if not _llm_instance:
-        _llm_instance = GeminiLLM()
-    return _llm_instance
+# _llm_instance: Optional[GeminiLLM] = None
+# def get_chat_llm() -> GeminiLLM:
+#     global _llm_instance
+#     if not _llm_instance:
+#         _llm_instance = GeminiLLM()
+#     return _llm_instance
 
 # --- Main Chat Endpoint ---
 @router.post("/ai/chat", response_model=schema.ChatOut, tags=["Chat"])
