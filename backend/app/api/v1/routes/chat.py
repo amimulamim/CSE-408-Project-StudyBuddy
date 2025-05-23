@@ -1,23 +1,19 @@
-import os
-import requests
-import mimetypes
+
 from datetime import datetime
-from typing import List, Optional, Union, Dict, Any
+from typing import List, Optional,  Dict, Any
 from uuid import UUID
 
 from app.ai.chatFactory import get_chat_llm
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Body, Form, UploadFile, File, status
+from fastapi import APIRouter, Depends, HTTPException,  Form, UploadFile, File
 from sqlalchemy.orm import Session
 
-import google.generativeai as genai
-from google.genai.types import Part
+
 
 from app.chat import service, schema
-from app.chat import model as db_model
 from app.core.database import get_db
 from app.auth.firebase_auth import get_current_user
-from app.chat.utils.geminiFormatter import fetch_image_bytes, prepare_gemini_parts
+from app.chat.utils.geminiFormatter import  prepare_gemini_parts
 from app.chat.utils.chatHelper import prepare_chat_context
 
 
