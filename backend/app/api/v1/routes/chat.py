@@ -5,7 +5,7 @@ from uuid import UUID
 
 from app.ai.chatFactory import get_chat_llm
 
-from fastapi import APIRouter, Depends, HTTPException,  Form, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException,  Form, UploadFile, File , Query, Path
 from sqlalchemy.orm import Session
 
 
@@ -99,12 +99,18 @@ def list_chats(db: Session = Depends(get_db), user=Depends(get_current_user)):
     chats = service.get_chats_by_user(db,user["uid"])
     return {"chats": [{"id":str( c.id), "name": c.name} for c in chats]}
 
-# @router.get("/ai/chat/{chat_id}", response_model=schema.ChatOut)
-# def get_chat(chat_id: UUID = Path(...), db: Session = Depends(get_db), user=Depends(get_current_user)):
-#     chat = service.get_chat(db, chat_id)
-#     if not chat or chat.user_id != user.uid:
-#         raise HTTPException(status_code=404, detail="Chat not found")
-#     return chat
+
+
+@router.get("/ai/chat/{chat_id}", response_model=schema.ChatPaginatedOut)
+def get_chat_messages(
+    chat_id: UUID,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(20, le=100),
+    db: Session = Depends(get_db),
+    user_info: Dict[str, Any] = Depends(get_current_user)
+):
+    return service.get_chat_with_paginated_messages(db, chat_id, user_info["uid"], offset, limit)
+
 
 # @router.delete("/ai/chat/{chat_id}")
 # def delete_chat(chat_id: UUID = Path(...), db: Session = Depends(get_db), user=Depends(get_current_user)):

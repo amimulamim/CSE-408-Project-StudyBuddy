@@ -110,5 +110,22 @@ def get_chats_by_user(db: Session, user_id: str):
         .all()
     )
 
+def get_chat_with_paginated_messages(db: Session, chat_id: str, user_id: str, offset: int, limit: int):
+    chat = get_chat_of_user_or_404(db, chat_id, user_id)
+    
+    # Use selectinload to optimize relationship
+    from sqlalchemy.orm import selectinload
+    messages = (
+        db.query(Message)
+        .filter(Message.chat_id == chat_id)
+        .order_by(Message.timestamp.desc())
+        .offset(offset)
+        .limit(limit)
+        .options(selectinload(Message.files))
+        .all()
+    )
+
+    chat.messages = messages  # override for paginated result
+    return chat
 
 

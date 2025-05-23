@@ -43,6 +43,15 @@ class ChatOut(BaseModel):
     class Config:
         from_attributes = True
 
+class ChatPaginatedOut(BaseModel):
+    id: UUID
+    name: str
+    messages: List[MessageOut]
+
+    class Config:
+        from_attributes = True
+
+
 
 class ChatSummary(BaseModel):
     id: UUID
