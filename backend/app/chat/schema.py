@@ -36,7 +36,7 @@ class MessageOut(BaseModel):
 
 
 class ChatOut(BaseModel):
-    id: UUID = Field(..., alias="_id")
+    id: UUID #= Field(..., alias="_id")
     name: str
     messages: List[MessageOut]
 

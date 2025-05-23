@@ -102,3 +102,38 @@ def format_messages_for_gemini(messages: list) -> list[dict]:
             "parts": parts
         })
     return formatted
+
+
+def prepare_gemini_parts(context: list, text: str = "", file_urls: list[str] = []) -> list[types.Part]:
+    parts: list[types.Part] = []
+
+    for item in context:
+        if isinstance(item, str):
+            parts.append(types.Part.from_text(item))
+
+        elif isinstance(item, types.Part):
+            parts.append(item)
+
+        elif isinstance(item, dict) and "parts" in item:
+            # Flatten parts from Gemini chat-style history
+            for sub in item["parts"]:
+                if isinstance(sub, str):
+                    parts.append(types.Part.from_text(text=sub))
+                elif isinstance(sub, types.Part):
+                    parts.append(sub)
+                else:
+                    raise ValueError(f"Unsupported nested part type: {type(sub)}")
+
+
+        else:
+            raise ValueError(f"Unsupported context item type: {type(item)}")
+
+    if text:
+        parts.append(types.Part.from_text(text=text))
+
+    for url in file_urls:
+        mime = "application/pdf" if url.endswith(".pdf") else "image/png"
+        data = fetch_image_bytes(url)
+        parts.append(types.Part.from_bytes(data=data, mime_type=mime))
+
+    return parts

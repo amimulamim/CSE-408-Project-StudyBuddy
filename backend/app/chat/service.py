@@ -76,16 +76,19 @@ def add_message(
     db.add(message)
     db.flush()  # Ensure message.id is available
 
+    uploaded_files = []
+
     # Step 2: Upload Files and Associate
     if files:
         for file in files:
             file_url = upload_to_firebase(file)
             message_file = MessageFile(message_id=message.id, file_url=file_url)
             db.add(message_file)
+            uploaded_files.append(file_url)
 
     # Step 3: Commit
     db.commit()
     db.refresh(message)
-    return message
+    return message, uploaded_files
 
 
