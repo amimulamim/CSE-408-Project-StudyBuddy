@@ -34,31 +34,71 @@ if not GEMINI_API_KEY:
 genai.configure(api_key=GEMINI_API_KEY)
 
 
-# --- INLINED HELPER: prepare_chat_context (Revised for Gemini history format) ---
+# # --- INLINED HELPER: prepare_chat_context (Revised for Gemini history format) ---
+# def prepare_chat_context(chat_id: UUID, db: Session) -> List[Dict[str, Any]]:
+#     """
+#     Prepares chat history for Gemini in the format expected by model.start_chat(history=...).
+#     Fetches up to the last 20 complete messages from the chat.
+#     """
+#     chat = service.get_chat(db, chat_id) # Use service's get_chat
+#     if not chat:
+#         return []
+
+#     # Get last 20 complete messages, sorted chronologically
+#     # Exclude any messages that are still processing or failed from history
+#     history_messages = sorted(
+#         [msg for msg in chat.messages if msg.status == schema.StatusEnum.complete.value],
+#         key=lambda m: m.timestamp
+#     )[-20:] # Limit to last 20 for context window
+
+#     gemini_history = []
+#     for msg in history_messages:
+#         # Skip the very last user message if it's the one we just added (will be current prompt)
+#         # This check is less critical here if `user_message_db` is handled in the endpoint,
+#         # but good practice for preparing *past* history.
+#         # However, the loop logic in `create_or_continue_chat` should explicitly exclude
+#         # the current message from being part of `history` passed to `start_chat`.
+
+#         gemini_role = "user" if msg.role == schema.RoleEnum.user.value else "model"
+#         msg_parts: List[Union[str, Part]] = []
+#         if msg.text:
+#             msg_parts.append(msg.text)
+
+#         for file_entry in msg.files:
+#             if file_entry.file_url:
+#                 mime_type, _ = mimetypes.guess_type(file_entry.file_url)
+#                 if not mime_type:
+#                     if file_entry.file_url.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+#                         mime_type = "image/jpeg"
+#                     elif file_entry.file_url.lower().endswith('.pdf'):
+#                         mime_type = "application/pdf"
+                
+#                 if mime_type and mime_type.startswith('image/'):
+#                     # Use file_data with URI for public Firebase URLs
+#                     msg_parts.append(Part.from_uri(file_uri=file_entry.file_url,mime_type=mime_type)) # <-- This is the fix
+
+#                 elif mime_type == "application/pdf":
+#                     msg_parts.append(f"[Document: {file_entry.file_url}]") # Pass PDF URL as text
+#                 else:
+#                     msg_parts.append(f"[File: {file_entry.file_url}]")
+        
+#         if msg_parts:
+#             gemini_history.append({"role": gemini_role, "parts": msg_parts})
+
+#     return gemini_history
+
 def prepare_chat_context(chat_id: UUID, db: Session) -> List[Dict[str, Any]]:
-    """
-    Prepares chat history for Gemini in the format expected by model.start_chat(history=...).
-    Fetches up to the last 20 complete messages from the chat.
-    """
-    chat = service.get_chat(db, chat_id) # Use service's get_chat
+    chat = service.get_chat(db, chat_id)
     if not chat:
         return []
 
-    # Get last 20 complete messages, sorted chronologically
-    # Exclude any messages that are still processing or failed from history
     history_messages = sorted(
         [msg for msg in chat.messages if msg.status == schema.StatusEnum.complete.value],
         key=lambda m: m.timestamp
-    )[-20:] # Limit to last 20 for context window
+    )[-20:]
 
     gemini_history = []
     for msg in history_messages:
-        # Skip the very last user message if it's the one we just added (will be current prompt)
-        # This check is less critical here if `user_message_db` is handled in the endpoint,
-        # but good practice for preparing *past* history.
-        # However, the loop logic in `create_or_continue_chat` should explicitly exclude
-        # the current message from being part of `history` passed to `start_chat`.
-
         gemini_role = "user" if msg.role == schema.RoleEnum.user.value else "model"
         msg_parts: List[Union[str, Part]] = []
         if msg.text:
@@ -72,30 +112,63 @@ def prepare_chat_context(chat_id: UUID, db: Session) -> List[Dict[str, Any]]:
                         mime_type = "image/jpeg"
                     elif file_entry.file_url.lower().endswith('.pdf'):
                         mime_type = "application/pdf"
-                
-                if mime_type and mime_type.startswith('image/'):
-                    # Use file_data with URI for public Firebase URLs
-                    msg_parts.append(Part(mime_type=mime_type, uri=file_entry.file_url)) # <-- This is the fix
 
-                elif mime_type == "application/pdf":
-                    msg_parts.append(f"[Document: {file_entry.file_url}]") # Pass PDF URL as text
-                else:
-                    msg_parts.append(f"[File: {file_entry.file_url}]")
-        
+                try:
+                    response = requests.get(file_entry.file_url)
+                    response.raise_for_status()
+                    file_bytes = response.content
+
+                    if mime_type and mime_type.startswith('image/'):
+                        msg_parts.append(Part.from_bytes(data=file_bytes, mime_type=mime_type))
+                    elif mime_type == "application/pdf":
+                        msg_parts.append(Part.from_bytes(data=file_bytes, mime_type=mime_type))
+                    else:
+                        msg_parts.append(f"[Unsupported file type: {file_entry.file_url}]")
+                except Exception as e:
+                    msg_parts.append(f"[Failed to load file: {file_entry.file_url}, error: {str(e)}]")
+
         if msg_parts:
             gemini_history.append({"role": gemini_role, "parts": msg_parts})
 
     return gemini_history
+# # --- INLINED HELPER: prepare_gemini_parts (Revised for ONLY current prompt) ---
+# def prepare_gemini_parts(
+#     text: str,
+#     file_urls: List[str]
+# ) -> List[Union[str, Part]]:
+#     """
+#     Prepares ONLY the current user's prompt parts (text and newly uploaded files) for Gemini.
+#     This is the 'contents' argument for convo.send_message_async.
+#     """
+#     parts: List[Union[str, Part]] = []
+#     if text:
+#         parts.append(text)
+
+#     for url in file_urls:
+#         mime_type, _ = mimetypes.guess_type(url)
+#         if not mime_type:
+#             if url.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+#                 mime_type = "image/jpeg"
+#             elif url.lower().endswith('.pdf'):
+#                 mime_type = "application/pdf"
+
+#         if mime_type and mime_type.startswith("image/"):
+#             # parts.append(Part("mime_type": mime_type, "uri": url))
+#             parts.append(Part.from_uri(mime_type=mime_type, file_uri=url)) # <-- This is the fix
+#         elif mime_type == "application/pdf":
+#             parts.append(f"[Document: {url}]") # Pass PDF URL as text
+#         else:
+#             parts.append(f"[File: {url}]")
+#     return parts
 
 
-# --- INLINED HELPER: prepare_gemini_parts (Revised for ONLY current prompt) ---
 def prepare_gemini_parts(
     text: str,
     file_urls: List[str]
 ) -> List[Union[str, Part]]:
     """
     Prepares ONLY the current user's prompt parts (text and newly uploaded files) for Gemini.
-    This is the 'contents' argument for convo.send_message_async.
+    Fetches images and PDFs directly from URLs into binary blobs for Gemini compatibility.
     """
     parts: List[Union[str, Part]] = []
     if text:
@@ -109,13 +182,20 @@ def prepare_gemini_parts(
             elif url.lower().endswith('.pdf'):
                 mime_type = "application/pdf"
 
-        if mime_type and mime_type.startswith("image/"):
-            # parts.append(Part("mime_type": mime_type, "uri": url))
-            parts.append(Part(mime_type=mime_type, uri=url)) # <-- This is the fix
-        elif mime_type == "application/pdf":
-            parts.append(f"[Document: {url}]") # Pass PDF URL as text
-        else:
-            parts.append(f"[File: {url}]")
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            file_bytes = response.content
+
+            if mime_type and mime_type.startswith("image/"):
+                parts.append(Part.from_bytes(data=file_bytes, mime_type=mime_type))
+            elif mime_type == "application/pdf":
+                parts.append(Part.from_bytes(data=file_bytes, mime_type=mime_type))
+            else:
+                parts.append(f"[Unsupported file type: {url}]")
+        except Exception as e:
+            parts.append(f"[Failed to load file: {url}, error: {str(e)}]")
+
     return parts
 
 

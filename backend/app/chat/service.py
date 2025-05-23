@@ -82,8 +82,10 @@ def add_message(
     if files:
         for file in files:
             file_url = upload_to_firebase(file)
+            # file_url= 'gs://'+file_url
             message_file = MessageFile(message_id=message.id, file_url=file_url)
             db.add(message_file)
+            # uploaded_files.append('gs://'+file_url)
             uploaded_files.append(file_url)
 
     # Step 3: Commit
