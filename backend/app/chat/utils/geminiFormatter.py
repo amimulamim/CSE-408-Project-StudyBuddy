@@ -30,6 +30,10 @@ def prepare_gemini_parts(text: str, file_urls: List[str]) -> List[Dict[str, Any]
                 })
             elif mime_type == "application/pdf":
                 parts.append({"text": f"[Document: {url}]"})
+            elif mime_type.startswith("text/"):  # Support for .txt, .py, .cpp, etc.
+                parts.append({
+                    "text": data.decode("utf-8", errors="ignore")
+                })
             else:
                 parts.append({"text": f"[Unsupported file: {url}]"})
         except Exception as e:
