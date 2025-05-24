@@ -3,6 +3,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
+import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, sendEmailVerification } from "firebase/auth";
+import { signIn } from './api';
+import { validateForm, getFirebaseError, clearFieldError } from './validationHelper';
+import { auth, googleProvider } from '@/lib/firebase';
+import { ApiResponse } from '@/lib/api';
+import { errors } from "./errors";
+import { useNavigate } from 'react-router-dom';
+import { saveUserProfile } from '@/lib/userProfile';
+
 
 interface SignUpFormProps {
   onSignIn: () => void;
@@ -14,28 +25,63 @@ export function SignUpForm({ onSignIn, onClose }: SignUpFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<errors>({});
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Mock sign-up process
-    setTimeout(() => {
+
+    const userData = { name, email, password, agreedToTerms };
+    const validationErrors = validateForm({ userData });
+    setErrors(validationErrors);
+
+    if (Object.keys(validationErrors).length > 0) {
       setIsLoading(false);
-      onClose();
-      console.log('Sign up with:', { name, email, password });
-    }, 1000);
+      return;
+    }
+    
+    createUserWithEmailAndPassword(auth, email, password)
+      .then(userCredential => {
+        const user = userCredential.user;
+        sendEmailVerification(user);
+        saveUserProfile(user);
+        return updateProfile(user, { displayName: name });
+      })
+      .then(signIn)
+      .then((response:ApiResponse) => {
+        if (response.status === 'success') {
+          onClose();
+        } else {
+          setIsLoading(false);
+          setErrors({ ...errors, general: response.msg });
+        }
+      })
+      .catch(error => {
+        setIsLoading(false);
+        const firebaseError = getFirebaseError(error);
+        setErrors({ ...errors, [firebaseError.field]: firebaseError.message });
+      });
   };
   
   const handleGoogleSignUp = () => {
     setIsLoading(true);
     
-    // Mock Google sign-up process
-    setTimeout(() => {
-      setIsLoading(false);
-      onClose();
-      console.log('Sign up with Google');
-    }, 1000);
+    signInWithPopup(auth, googleProvider)
+      .then(signIn)
+      .then((response:ApiResponse) => {
+        if (response.status === 'success') {
+          onClose();
+        } else {
+          setIsLoading(false);
+          setErrors({ ...errors, general: response.msg });
+        }
+      })
+      .catch(error => {
+        setIsLoading(false);
+        const firebaseError = getFirebaseError(error);
+        setErrors({ ...errors, [firebaseError.field]: firebaseError.message });
+      });
   };
   
   return (
@@ -44,6 +90,15 @@ export function SignUpForm({ onSignIn, onClose }: SignUpFormProps) {
         <h3 className="text-2xl font-bold">Create an account</h3>
         <p className="text-muted-foreground mt-2">Join StuddyBuddy to start learning smarter</p>
       </div>
+
+      {errors.general && (
+        <Alert variant="destructive" className="bg-destructive/10 text-destructive border-destructive mb-4">
+          <AlertCircle className="h-4 w-4 mr-2" />
+          <AlertDescription>
+            {errors.general}
+          </AlertDescription>
+        </Alert>
+      )}
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
@@ -53,23 +108,33 @@ export function SignUpForm({ onSignIn, onClose }: SignUpFormProps) {
             type="text"
             placeholder="John Doe"
             value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            className="bg-muted/50"
+            onChange={(e) => {
+              clearFieldError(setErrors, ['name', 'general']);
+              setName(e.target.value)
+            }}
+            className={`bg-muted/50 ${errors.name ? "border-destructive" : ""}`}
           />
+          {errors.name && (
+            <p className="text-destructive text-xs mt-1">{errors.name}</p>
+          )}
         </div>
         
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"
-            type="email"
+            type="text"
             placeholder="you@example.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="bg-muted/50"
+            onChange={(e) => {
+              clearFieldError(setErrors, ['email', 'general']);
+              setEmail(e.target.value)
+            }}
+            className={`bg-muted/50 ${errors.email ? "border-destructive" : ""}`}
           />
+          {errors.email && (
+            <p className="text-destructive text-xs mt-1">{errors.email}</p>
+          )}
         </div>
         
         <div className="space-y-2">
@@ -77,19 +142,33 @@ export function SignUpForm({ onSignIn, onClose }: SignUpFormProps) {
           <Input
             id="password"
             type="password"
-            placeholder="••••••••"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="bg-muted/50"
+            onChange={(e) => {
+              clearFieldError(setErrors, ['password', 'general']);
+              setPassword(e.target.value)
+            }}
+            className={`bg-muted/50 ${errors.password ? "border-destructive" : ""}`}
           />
+          {errors.password && (
+            <p className="text-destructive text-xs mt-1">{errors.password}</p>
+          )}
         </div>
         
         <div className="flex items-center space-x-2">
-          <Checkbox id="terms" />
+          <Checkbox 
+            id="terms" 
+            checked={agreedToTerms}
+            onCheckedChange={() => {
+              clearFieldError(setErrors, ['terms', 'general']);
+              setAgreedToTerms(prev => !prev);
+            }}
+          />
           <Label htmlFor="terms" className="text-sm font-normal">
             I agree to the <a href="#" className="text-study-purple hover:underline">Terms of Service</a> and <a href="#" className="text-study-purple hover:underline">Privacy Policy</a>
           </Label>
+          {errors.terms && (
+            <p className="text-destructive text-xs mt-0">{errors.terms}</p>
+          )}
         </div>
         
         <Button 

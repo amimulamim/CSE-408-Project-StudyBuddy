@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navbar } from '@/components/landing/Navbar';
 import { Hero } from '@/components/landing/Hero';
 import { Features } from '@/components/landing/Features';
@@ -9,11 +9,37 @@ import { AuthModal } from '@/components/auth/AuthModal';
 import { GradientBackground } from '@/components/animations/GradientBackground';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { useNavigate } from 'react-router-dom';
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { fetchUserProfileData } from "@/lib/userProfile";
 
 const Index = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'signIn' | 'signUp'>('signIn');
+  const [authMode, setAuthMode] = useState<'signIn' | 'signUp' | 'onboarding'>('signIn');
   const { toast } = useToast();
+  const navigate = useNavigate();
+  useEffect(() => {
+    const setupAuthListener = async () => {
+      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        if (currentUser) {
+          fetchUserProfileData('onboardingDone').then((onboardingDone) => {
+            if (onboardingDone) {
+              navigate('/dashboard');
+            } else {
+              setAuthMode('onboarding');
+              setAuthModalOpen(true);
+            }
+          });
+        }
+      });
+
+      // Cleanup the listener when the component unmounts
+      return () => unsubscribe();
+    };
+
+    setupAuthListener();
+  }, [navigate]);
   
   const handleOpenSignIn = () => {
     setAuthMode('signIn');
