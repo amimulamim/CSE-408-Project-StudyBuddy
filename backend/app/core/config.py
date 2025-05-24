@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     DATABASE_URL: str
     FIREBASE_KEY_PATH: str
+    FIREBASE_STORAGE_BUCKET: str
 
     # Add the test-only fields so `.env` doesn't cause validation errors
     FIREBASE_API_KEY: str = ""
