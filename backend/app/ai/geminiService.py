@@ -10,10 +10,15 @@ class GeminiService(BaseChatService):
         api_key = os.getenv("GEMINI_API_KEY")
         self.model_name = os.getenv("GEMINI_MODEL", "models/gemini-2.0-flash")
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel(self.model_name)
 
-        self.system_instruction = """You are an academic assistant that answers based on files and images provided...
+        self.system_instruction = """You are an academic assistant specialized in physics,chemistry,math,biology and Computer Science. Do not respond to topics other than science,biology and engineering.User may upload files and you should answer based on  the files and images provided....
         """
+
+        self.model = genai.GenerativeModel(
+            self.model_name,
+            system_instruction=self.system_instruction,
+                                           )
+
     
 
     async def send_message(self, current_prompt_parts: List[Union[str, Part]], history: List[Dict[str, Any]]) -> Any:
