@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from app.users.model import User
 from app.users.schema import UserBase, UserUpdate
 from time import sleep
+from sqlalchemy.exc import OperationalError
 
 def get_or_create_user(db: Session, user_data: UserBase, retry: int = 3):
     attempt = 0
