@@ -2,6 +2,15 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { auth, googleProvider } from '@/lib/firebase'; 
+import { signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
+import { signIn } from './api';
+import { ApiResponse } from '@/lib/api';
+import { useNavigate } from 'react-router-dom';
+import { errors } from './errors';
+import { getFirebaseError, clearFieldError } from './validationHelper';
 
 interface SignInFormProps {
   onSignUp: () => void;
@@ -12,28 +21,48 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<errors>({});
+  const navigate = useNavigate();
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Mock sign-in process
-    setTimeout(() => {
-      setIsLoading(false);
-      onClose();
-      console.log('Sign in with:', { email, password });
-    }, 1000);
+    signInWithEmailAndPassword(auth, email, password)
+      .then(signIn)
+      .then((response:ApiResponse) => {
+        if (response.status === 'success') {
+          onClose();
+          navigate('/dashboard');
+        } else {
+          setIsLoading(false);
+          setErrors({ ...errors, general: response.msg });
+        }
+      })
+      .catch(error => {
+        setIsLoading(false);
+        const firebaseError = getFirebaseError(error);
+        setErrors({ ...errors, [firebaseError.field]: firebaseError.message });
+      });
   };
   
   const handleGoogleSignIn = () => {
-    setIsLoading(true);
-    
-    // Mock Google sign-in process
-    setTimeout(() => {
-      setIsLoading(false);
-      onClose();
-      console.log('Sign in with Google');
-    }, 1000);
+    signInWithPopup(auth, googleProvider)
+      .then(signIn)
+      .then((response:ApiResponse) => {
+        if (response.status === 'success') {
+          onClose();
+          navigate('/dashboard');
+        } else {
+          setIsLoading(false);
+          setErrors({ ...errors, general: response.msg });
+        }
+      })
+      .catch(error => {
+        setIsLoading(false);
+        const firebaseError = getFirebaseError(error);
+        setErrors({ ...errors, [firebaseError.field]: firebaseError.message });
+      });
   };
   
   return (
@@ -42,18 +71,29 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
         <h3 className="text-2xl font-bold">Welcome back</h3>
         <p className="text-muted-foreground mt-2">Sign in to your StuddyBuddy account</p>
       </div>
+
+      {errors.general && (
+        <Alert variant="destructive" className="bg-destructive/10 text-destructive border-destructive mb-4">
+          <AlertCircle className="h-4 w-4 mr-2" />
+          <AlertDescription>
+            {errors.general}
+          </AlertDescription>
+        </Alert>
+      )}
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"
-            type="email"
+            type="text"
             placeholder="you@example.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="bg-muted/50"
+            onChange={(e) => {
+              clearFieldError(setErrors, ['email', 'general']);
+              setEmail(e.target.value)
+            }}
+            className={`bg-muted/50 ${errors.email ? "border-destructive" : ""}`}
           />
         </div>
         
@@ -65,11 +105,12 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
           <Input
             id="password"
             type="password"
-            placeholder="••••••••"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="bg-muted/50"
+            onChange={(e) => {
+              clearFieldError(setErrors, ['password', 'general']);
+              setPassword(e.target.value)
+            }}
+            className={`bg-muted/50 ${errors.password ? "border-destructive" : ""}`}
           />
         </div>
         
