@@ -6,7 +6,9 @@ from app.core.config import settings
 # Initialize Firebase app only once
 if not firebase_admin._apps:
     cred = credentials.Certificate(settings.FIREBASE_KEY_PATH)
-    firebase_admin.initialize_app(cred)
+    firebase_admin.initialize_app(cred,{
+        'storageBucket': settings.FIREBASE_STORAGE_BUCKET
+    })
 
 def verify_firebase_token(token: str) -> dict:
     """
