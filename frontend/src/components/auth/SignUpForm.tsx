@@ -48,15 +48,15 @@ export function SignUpForm({ onSignIn, onClose }: SignUpFormProps) {
         saveUserProfile(user);
         return updateProfile(user, { displayName: name });
       })
-      .then(signIn)
-      .then((response:ApiResponse) => {
-        if (response.status === 'success') {
-          onClose();
-        } else {
-          setIsLoading(false);
-          setErrors({ ...errors, general: response.msg });
-        }
-      })    
+      // .then(signIn)
+      // .then((response:ApiResponse) => {
+      //   if (response.status === 'success') {
+      //     onClose();
+      //   } else {
+      //     setIsLoading(false);
+      //     setErrors({ ...errors, general: response.msg });
+      //   }
+      // })    
       .catch(error => {
         setIsLoading(false);
         const firebaseError = getFirebaseError(error);

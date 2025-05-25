@@ -94,4 +94,9 @@ const clearFieldError = (setErrors: React.Dispatch<React.SetStateAction<errors>>
     });
 }
 
-export { validateForm, getFirebaseError, clearFieldError };
+const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+export { validateForm, getFirebaseError, clearFieldError, validateEmail };
