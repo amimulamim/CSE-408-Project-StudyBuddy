@@ -56,7 +56,7 @@ export function SignUpForm({ onSignIn, onClose }: SignUpFormProps) {
           setIsLoading(false);
           setErrors({ ...errors, general: response.msg });
         }
-      })
+      })    
       .catch(error => {
         setIsLoading(false);
         const firebaseError = getFirebaseError(error);
@@ -66,22 +66,32 @@ export function SignUpForm({ onSignIn, onClose }: SignUpFormProps) {
   
   const handleGoogleSignUp = () => {
     setIsLoading(true);
+
+    try{
+      signInWithPopup(auth, googleProvider);
+    }
+    catch(error) {
+      setIsLoading(false);
+      const firebaseError = getFirebaseError(error);
+      setErrors({ ...errors, [firebaseError.field]: firebaseError.message });
+      return;
+    }
     
-    signInWithPopup(auth, googleProvider)
-      .then(signIn)
-      .then((response:ApiResponse) => {
-        if (response.status === 'success') {
-          onClose();
-        } else {
-          setIsLoading(false);
-          setErrors({ ...errors, general: response.msg });
-        }
-      })
-      .catch(error => {
-        setIsLoading(false);
-        const firebaseError = getFirebaseError(error);
-        setErrors({ ...errors, [firebaseError.field]: firebaseError.message });
-      });
+    // signInWithPopup(auth, googleProvider)
+    //   .then(signIn)
+    //   .then((response:ApiResponse) => {
+    //     if (response.status === 'success') {
+    //       onClose();
+    //     } else {
+    //       setIsLoading(false);
+    //       setErrors({ ...errors, general: response.msg });
+    //     }
+    //   })
+    //   .catch(error => {
+    //     setIsLoading(false);
+    //     const firebaseError = getFirebaseError(error);
+    //     setErrors({ ...errors, [firebaseError.field]: firebaseError.message });
+    //   });
   };
   
   return (
