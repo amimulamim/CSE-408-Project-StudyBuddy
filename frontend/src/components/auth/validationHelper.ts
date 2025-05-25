@@ -1,5 +1,6 @@
-import { set } from "date-fns";
 import { errors, firebaseError } from "./errors"
+
+const allowedTLDs = ['com', 'org', 'net', 'edu', 'io', 'dev', 'app', 'store', 'tech', 'xyz', 'co', 'us', 'uk', 'ca', 'au', 'in', 'de', 'fr', 'jp', 'bd', 'cn', 'ru', 'br', 'za', 'mx', 'it', 'es', 'nl', 'se', 'no', 'fi', 'dk', 'pl', 'tr', 'gr', 'hu', 'cz', 'ro', 'at', 'ch'];
 
 const validateForm = ({userData}):errors => {
     const newErrors: errors = {};
@@ -94,9 +95,17 @@ const clearFieldError = (setErrors: React.Dispatch<React.SetStateAction<errors>>
     });
 }
 
+// const validateEmail = (email: string): boolean => {
+//     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+//     return emailRegex.test(email);
+// }
 const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+  const emailRegex = /^[^\s@]+@[^\s@]+\.(\w{2,})$/i;
+  const match = email.match(emailRegex);
+  if (!match) return false;
+
+  const tld = match[1].toLowerCase();
+  return allowedTLDs.includes(tld);
 }
 
 export { validateForm, getFirebaseError, clearFieldError, validateEmail };
