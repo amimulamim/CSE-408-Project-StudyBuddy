@@ -18,6 +18,7 @@ import { updateUserField } from '@/lib/userProfile';
 import { useNavigate } from 'react-router-dom';
 import { ApiResponse } from '@/lib/api';
 import { signIn } from './api';
+import { signOut } from "firebase/auth";
 
 interface OnboardingStep {
   title: string;
@@ -101,6 +102,14 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
   
   const onValidationModalClose = () => {
     setValidationModalOpen(false);
+    if(!auth?.currentUser?.emailVerified){
+      signOut(auth).then(() => {
+        onClose();
+      })
+      .catch((error) => {
+        console.error("Error signing out:", error);
+      });
+    }
   };
 
   
@@ -174,7 +183,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
 
   return (
     <>
-      <Dialog open={validationModalOpen}>
+      <Dialog open={validationModalOpen} onOpenChange={onValidationModalClose}>
         <DialogContent className="sm:max-w-[600px] max-h-[95vh] overflow-y-auto bg-card border-white/10 p-6">
           <PendingEmailVerification />
         </DialogContent>

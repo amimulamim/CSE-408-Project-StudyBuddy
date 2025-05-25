@@ -11,7 +11,7 @@ import { ApiResponse } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import { errors } from './errors';
 import { getFirebaseError, clearFieldError, validateEmail } from './validationHelper';
-import { Loader2 } from "lucide-react"
+import { Loader2, Eye, EyeOff } from "lucide-react"
 import { useToast } from '@/hooks/use-toast';
 
 interface SignInFormProps {
@@ -25,6 +25,7 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<errors>({});
   const [resettingPass, setResettingPass] = useState(false);
+  const [showPassword, setShowPassword] = useState(false)
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -139,16 +140,25 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
             <Label htmlFor="password">Password</Label>
             <a onClick={handleForgetPassword} className="text-xs text-study-purple hover:underline">Forgot password?</a>
           </div>
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => {
-              clearFieldError(setErrors, ['password', 'general']);
-              setPassword(e.target.value)
-            }}
-            className={`bg-muted/50 ${errors.password ? "border-destructive" : ""}`}
-          />
+          <div className='relative'>
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => {
+                clearFieldError(setErrors, ['password', 'general']);
+                setPassword(e.target.value)
+              }}
+              className={`bg-muted/50 ${errors.password ? "border-destructive" : ""}`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           {errors.password && (
             <p className="text-destructive text-xs mt-1">{errors.password}</p>
           )}
