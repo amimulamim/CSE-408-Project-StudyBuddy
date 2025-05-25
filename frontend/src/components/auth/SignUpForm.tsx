@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, sendEmailVerification } from "firebase/auth";
 import { validateForm, getFirebaseError, clearFieldError } from './validationHelper';
 import { auth, googleProvider } from '@/lib/firebase';
@@ -24,6 +24,7 @@ export function SignUpForm({ onSignIn, onClose }: SignUpFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<errors>({});
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showPassword, setShowPassword] = useState(false)
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,16 +122,25 @@ export function SignUpForm({ onSignIn, onClose }: SignUpFormProps) {
         
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => {
-              clearFieldError(setErrors, ['password', 'general']);
-              setPassword(e.target.value)
-            }}
-            className={`bg-muted/50 ${errors.password ? "border-destructive" : ""}`}
-          />
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => {
+                clearFieldError(setErrors, ['password', 'general']);
+                setPassword(e.target.value)
+              }}
+              className={`bg-muted/50 ${errors.password ? "border-destructive" : ""}`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           {errors.password && (
             <p className="text-destructive text-xs mt-1">{errors.password}</p>
           )}
