@@ -16,6 +16,8 @@ import { auth } from "@/lib/firebase";
 import { PendingEmailVerification } from './PendingEmailVerification';
 import { updateUserField } from '@/lib/userProfile';
 import { useNavigate } from 'react-router-dom';
+import { ApiResponse } from '@/lib/api';
+import { signIn } from './api';
 
 interface OnboardingStep {
   title: string;
@@ -74,14 +76,21 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
     const interval = setInterval(async () => {
       if (auth.currentUser) {
         await auth.currentUser.reload();
-        console.log("after user reload...");
         if (auth.currentUser.emailVerified) {
-          console.log("User email verified, closing validation modal");
           clearInterval(interval);
-          onValidationModalClose();
+          signIn()
+          .then((response:ApiResponse) => {
+            if (response.status === 'success') {
+              onValidationModalClose();
+            } else {
+              toast({
+                title: "Sign Up Error",
+                description: response.msg || "An error occurred during sign up.",
+              });
+            }
+          });
         }
         else if(!validationModalOpen) {
-          console.log("User email not verified, opening validation modal");
           setValidationModalOpen(true);
         }
       }
