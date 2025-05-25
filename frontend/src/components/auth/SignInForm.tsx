@@ -3,14 +3,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { auth, googleProvider } from '@/lib/firebase'; 
-import { signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithPopup, signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { signIn } from './api';
 import { ApiResponse } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import { errors } from './errors';
-import { getFirebaseError, clearFieldError } from './validationHelper';
+import { getFirebaseError, clearFieldError, validateEmail } from './validationHelper';
+import { useToast } from '@/hooks/use-toast';
 
 interface SignInFormProps {
   onSignUp: () => void;
@@ -23,6 +24,7 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<errors>({});
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +66,25 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
         setErrors({ ...errors, [firebaseError.field]: firebaseError.message });
       });
   };
+
+  const handleForgetPassword = () => {
+    if(!validateEmail(email)){
+      setErrors({ ...errors, email: "Enter a valid email address to reset password" });
+    }
+    else{
+      try {
+        sendPasswordResetEmail(auth, email).then(()=>{
+          toast({
+            title: "Password recovery",
+            description: "Password recovery email sent to your email address",
+          });
+        });
+      } catch (err) {
+        const firebaseError = getFirebaseError(err);
+        setErrors({ ...errors, [firebaseError.field]: firebaseError.message });
+      }
+    }
+  };
   
   return (
     <div className="space-y-6">
@@ -95,12 +116,15 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
             }}
             className={`bg-muted/50 ${errors.email ? "border-destructive" : ""}`}
           />
+           {errors.email && (
+            <p className="text-destructive text-xs mt-1">{errors.email}</p>
+          )}
         </div>
         
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="password">Password</Label>
-            <a href="#" className="text-xs text-study-purple hover:underline">Forgot password?</a>
+            <a onClick={handleForgetPassword} className="text-xs text-study-purple hover:underline">Forgot password?</a>
           </div>
           <Input
             id="password"
@@ -112,6 +136,9 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
             }}
             className={`bg-muted/50 ${errors.password ? "border-destructive" : ""}`}
           />
+          {errors.password && (
+            <p className="text-destructive text-xs mt-1">{errors.password}</p>
+          )}
         </div>
         
         <Button 
