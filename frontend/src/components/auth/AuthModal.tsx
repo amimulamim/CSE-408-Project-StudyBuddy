@@ -28,6 +28,7 @@ export function AuthModal({ isOpen, onClose, mode, onChangeMode }: AuthModalProp
     } else {
       setShowOnboarding(false);
     }
+    console.log('in useEffect of auth modal', mode, showOnboarding);
   }, [mode]);
   
   const handleSignUpSuccess = () => {
@@ -35,7 +36,9 @@ export function AuthModal({ isOpen, onClose, mode, onChangeMode }: AuthModalProp
   };
   
   const handleAuthClose = () => {
+    console.log('Auth modal closing function');
     if (!showOnboarding) {
+      console.log('showOnboarding is false. Closing auth modal');
       onClose();
     }
   };
@@ -43,7 +46,6 @@ export function AuthModal({ isOpen, onClose, mode, onChangeMode }: AuthModalProp
   const handleOnboardingClose = () => {
     setShowOnboarding(false);
     onClose();
-    navigate('/dashboard');
   };
   
   return (
