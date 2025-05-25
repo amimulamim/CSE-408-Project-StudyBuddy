@@ -6,12 +6,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, sendEmailVerification } from "firebase/auth";
-import { signIn } from './api';
 import { validateForm, getFirebaseError, clearFieldError } from './validationHelper';
 import { auth, googleProvider } from '@/lib/firebase';
-import { ApiResponse } from '@/lib/api';
 import { errors } from "./errors";
-import { useNavigate } from 'react-router-dom';
 import { saveUserProfile } from '@/lib/userProfile';
 
 
@@ -47,16 +44,7 @@ export function SignUpForm({ onSignIn, onClose }: SignUpFormProps) {
         sendEmailVerification(user);
         saveUserProfile(user);
         return updateProfile(user, { displayName: name });
-      })
-      // .then(signIn)
-      // .then((response:ApiResponse) => {
-      //   if (response.status === 'success') {
-      //     onClose();
-      //   } else {
-      //     setIsLoading(false);
-      //     setErrors({ ...errors, general: response.msg });
-      //   }
-      // })    
+      })   
       .catch(error => {
         setIsLoading(false);
         const firebaseError = getFirebaseError(error);
@@ -76,22 +64,6 @@ export function SignUpForm({ onSignIn, onClose }: SignUpFormProps) {
       setErrors({ ...errors, [firebaseError.field]: firebaseError.message });
       return;
     }
-    
-    // signInWithPopup(auth, googleProvider)
-    //   .then(signIn)
-    //   .then((response:ApiResponse) => {
-    //     if (response.status === 'success') {
-    //       onClose();
-    //     } else {
-    //       setIsLoading(false);
-    //       setErrors({ ...errors, general: response.msg });
-    //     }
-    //   })
-    //   .catch(error => {
-    //     setIsLoading(false);
-    //     const firebaseError = getFirebaseError(error);
-    //     setErrors({ ...errors, [firebaseError.field]: firebaseError.message });
-    //   });
   };
   
   return (

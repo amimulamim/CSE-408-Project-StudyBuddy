@@ -11,6 +11,7 @@ import { ApiResponse } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import { errors } from './errors';
 import { getFirebaseError, clearFieldError, validateEmail } from './validationHelper';
+import { Loader2 } from "lucide-react"
 import { useToast } from '@/hooks/use-toast';
 
 interface SignInFormProps {
@@ -23,6 +24,7 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<errors>({});
+  const [resettingPass, setResettingPass] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -73,13 +75,16 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
     }
     else{
       try {
+        setResettingPass(true);
         sendPasswordResetEmail(auth, email).then(()=>{
+          setResettingPass(false);
           toast({
             title: "Password recovery",
             description: "Password recovery email sent to your email address",
           });
         });
       } catch (err) {
+        setResettingPass(false);
         const firebaseError = getFirebaseError(err);
         setErrors({ ...errors, [firebaseError.field]: firebaseError.message });
       }
@@ -101,6 +106,14 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
           </AlertDescription>
         </Alert>
       )}
+
+      { resettingPass && (
+        <div className="flex items-center bg-muted px-4 py-2 rounded-md text-muted-foreground text-sm mb-4">
+          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          Sending password recovery email...
+        </div>
+        )
+      }
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
