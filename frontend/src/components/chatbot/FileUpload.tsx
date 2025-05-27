@@ -1,7 +1,7 @@
 
 import React, { useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import type { FileAttachment } from './ChatContext';
+import type { FileAttachment } from './chat';
 
 interface FileUploadProps {
   onFilesSelected: (files: FileAttachment[]) => void;
@@ -52,13 +52,32 @@ export function FileUpload({ onFilesSelected, children }: FileUploadProps) {
         return;
       }
 
-      validFiles.push({
+      const currentFile: FileAttachment = {
         id: Date.now().toString() + Math.random(),
         name: file.name,
         size: file.size,
         type: file.type,
         url: URL.createObjectURL(file),
-      });
+      };
+
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        const arrayBuffer = event.target?.result as ArrayBuffer;
+        const byteArray = new Uint8Array(arrayBuffer);
+        currentFile.bytes = byteArray;
+  
+        // console.log(`File: ${file.name}`);
+        // console.log('Bytes:', byteArray);
+      };
+  
+      reader.onerror = () => {
+        errors.push(`Error reading file: ${file.name}`);
+      };
+  
+      reader.readAsArrayBuffer(file);
+      validFiles.push(currentFile);
+
     });
 
     if (errors.length > 0) {

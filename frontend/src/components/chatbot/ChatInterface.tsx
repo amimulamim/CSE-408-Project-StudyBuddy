@@ -7,7 +7,7 @@ import { useChat } from './ChatContext';
 import { ChatMessage } from './ChatMessage';
 import { FileUpload } from './FileUpload';
 import { ThinkingAnimation } from './ThinkingAnimation';
-import type { FileAttachment } from './ChatContext';
+import type { FileAttachment } from './chat';
 
 interface ChatInterfaceProps {
   sidebarOpen: boolean;

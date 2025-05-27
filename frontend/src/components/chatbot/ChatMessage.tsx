@@ -2,7 +2,7 @@
 import React from 'react';
 import { User, Bot, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { ChatMessage as ChatMessageType } from './ChatContext';
+import type { ChatMessage as ChatMessageType } from './chat';
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -101,7 +101,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         </div>
         
         <div className="text-xs text-muted-foreground mt-1 px-1">
-          {message.timestamp.toLocaleTimeString()}
+          {new Date(message.timestamp).toLocaleTimeString()}
         </div>
       </div>
 
