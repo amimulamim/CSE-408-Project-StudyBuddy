@@ -42,3 +42,6 @@ psycopg2-binary
 google-genai
 google-generativeai
 # python-multipart
+
+# pdf
+PyPDF2
