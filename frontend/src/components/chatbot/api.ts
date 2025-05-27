@@ -20,4 +20,25 @@ async function getResponse(content: string, files?: FileAttachment[], currentCha
     return makeRequest(url, "POST", reqBody);
 }
 
-export { getResponse };
+async function getChatList() {
+    const url = `${API_BASE_URL}/api/v1/ai/chat/list`;
+    return makeRequest(url, "GET", null);
+}
+
+async function reqDeleteChat(chatId: string) {
+    const url = `${API_BASE_URL}/api/v1/ai/chat/${chatId}`;
+    return makeRequest(url, "DELETE", null);
+}
+
+async function reqRenameChat(chatId: string, newTitle: string) {
+    const url = `${API_BASE_URL}/api/v1/ai/chat/${chatId}/rename`;
+    const reqBody = { name: newTitle };
+    return makeRequest(url, "PATCH", reqBody);
+}
+
+async function getChatHistory(chatId: string, offset: number = 0, limit: number = 20) {
+    const url = `${API_BASE_URL}/api/v1/ai/chat/${chatId}?offset=${offset}&limit=${limit}`;
+    return makeRequest(url, "GET", null);
+}
+
+export { getResponse, getChatList, reqDeleteChat, reqRenameChat, getChatHistory };

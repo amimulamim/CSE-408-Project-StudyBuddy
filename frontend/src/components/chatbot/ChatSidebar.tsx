@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus, MessageSquare, Pencil, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,7 @@ interface ChatSidebarProps {
 }
 
 export function ChatSidebar({ isOpen, onToggle }: ChatSidebarProps) {
-  const { chats, currentChatId, createNewChat, selectChat, deleteChat, renameChat } = useChat();
+  const { chatList, currentChatId, createNewChat, selectChat, deleteChat, renameChat } = useChat();
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
 
@@ -68,12 +68,12 @@ export function ChatSidebar({ isOpen, onToggle }: ChatSidebarProps) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-2 min-w-0">
-          {chats.map((chat) => (
+          {chatList.map((chat,index) => (
             <div
               key={chat.id}
               className={cn(
                 "group relative p-3 rounded-lg mb-2 cursor-pointer transition-colors min-w-0",
-                currentChatId === chat.id 
+                currentChatId === chat.id || chat.id === 'start'
                   ? "bg-study-purple/20 border border-study-purple/30" 
                   : "hover:bg-white/5"
               )}

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Menu, Send, Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { ChatMessage } from './ChatMessage';
 import { FileUpload } from './FileUpload';
 import { ThinkingAnimation } from './ThinkingAnimation';
 import type { FileAttachment } from './chat';
+import { set } from 'date-fns';
 
 interface ChatInterfaceProps {
   sidebarOpen: boolean;
@@ -15,18 +15,52 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfaceProps) {
-  const { currentChat, isLoading, sendMessage, createNewChat } = useChat();
+  const { currentChat, isLoading, sendMessage, createNewChat, 
+    loadMoreMessages, isChatLoading, setIsChatLoading } = useChat();
   const [message, setMessage] = useState('');
+  // const [canScrollToBottom, setCanScrollToBottom] = useState(true);
   const [attachedFiles, setAttachedFiles] = useState<FileAttachment[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const handleScroll = () => {
+    const container = chatContainerRef.current;
+    if (!container || isChatLoading) return;
+    if (container.scrollTop < 5) {
+      setIsChatLoading(true);
+      const prevHeight = container.scrollHeight;
+      const length = currentChat?.messages.length || 0;
+      loadMoreMessages(currentChat?.id || '', 5);
+      if( currentChat?.messages.length === length ) {
+        console.log('No more messages to load');
+        setIsChatLoading(false);
+        // setCanScrollToBottom(true);
+        return;
+      }
+      requestAnimationFrame(() => {
+        // const newHeight = container.scrollHeight;
+        container.scrollTop = 500;
+        // console.log(container.scrollTop, newHeight, prevHeight);
+        setIsChatLoading(false);
+      });
+    }
+  };
+
   useEffect(() => {
-    scrollToBottom();
+    // const container = chatContainerRef.current;
+    // if (container) {
+    //   container.scrollTop = container.scrollHeight;
+    // }
+    if (messagesEndRef.current) {
+      scrollToBottom();
+      // setCanScrollToBottom(false);
+      // console.log('Setting canScrollToBottom to false');
+    }
   }, [currentChat?.messages]);
 
   const handleSend = async () => {
@@ -45,6 +79,7 @@ export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfacePro
       await sendMessage(message, attachedFiles);
       setMessage('');
       setAttachedFiles([]);
+      scrollToBottom();
     }
   };
 
@@ -135,6 +170,9 @@ export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfacePro
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* {isChatLoading && (
+          <div className="text-center text-sm text-gray-500 mb-2">Loading...</div>
+        )} */}
         {!currentChat || currentChat.messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">

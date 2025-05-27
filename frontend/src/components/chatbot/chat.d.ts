@@ -22,3 +22,8 @@ export interface Chat {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface ChatIdentifier {
+    id: string;
+    title: string;
+}

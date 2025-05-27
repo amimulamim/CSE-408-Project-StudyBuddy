@@ -1,29 +1,36 @@
 import { ApiResponse } from '@/lib/api';
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
-import type { FileAttachment } from './chat';
+import type { ChatIdentifier, FileAttachment } from './chat';
 import type { ChatMessage } from './chat';
 import type { Chat } from './chat';
-import { getResponse } from './api';
+import { getChatHistory, getChatList, getResponse, reqDeleteChat, reqRenameChat } from './api';
 
 interface ChatContextType {
+  chatList: ChatIdentifier[];
   chats: Chat[];
   currentChatId: string | null;
   currentChat: Chat | null;
   isLoading: boolean;
+  isChatLoading: boolean;
+  setIsChatLoading: React.Dispatch<React.SetStateAction<boolean>>;
   createNewChat: () => void;
+  fetchChats: () => void;
   selectChat: (chatId: string) => void;
   deleteChat: (chatId: string) => void;
   renameChat: (chatId: string, newTitle: string) => void;
   sendMessage: (content: string, files?: FileAttachment[]) => Promise<void>;
-  loadMoreMessages: (chatId: string, offset: number) => Promise<void>;
+  loadMoreMessages: (chatId: string, limit: number) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
+  const [chatList, setChatList] = useState<ChatIdentifier[]>([]);
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  // Initialize currentChat with a default structure
   const [currentChat, setCurrentChat] = useState<Chat | null>({
     id: null,
     title: 'New Chat',
@@ -33,39 +40,92 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  // const currentChat = chats.find(chat => chat.id === currentChatId) || null;
+  const fetchChats = useCallback(() => {
+    getChatList().then((response: ApiResponse) => {
+      if (response.status === 'success') {
+        setChatList([
+          ...response.data.chats.map(chat => ({
+            id: chat.id,
+            title: chat.name,
+          }))
+        ]);
+      } else {
+        console.error('Error fetching chat list:', response.msg);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    fetchChats();
+  }, [fetchChats]);
+
+  useEffect(() => {
+    if (currentChatId) {
+      loadMoreMessages(currentChatId, 20);
+    } else {
+      setCurrentChat({
+        id: null,
+        title: 'New Chat',
+        messages: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    }
+  }, [currentChatId]);
 
   const createNewChat = useCallback(() => {
-    const newChat: Chat = {
-      id: null,
-      title: 'New Chat',
-      messages: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    setChats(prev => [newChat, ...prev]);
-    setCurrentChat(newChat);
-    console.log('New chat created:');
-    setCurrentChatId(newChat.id);
+    selectChat(null); // Reset current chat
+    fetchChats(); // Refresh chat list
   }, []);
 
   const selectChat = useCallback((chatId: string) => {
     setCurrentChatId(chatId);
+    setCurrentChat((prev)=>{
+      return{
+        ...prev,
+        id: chatId,
+        messages: [],
+      }
+    })
+    fetchChats(); // Refresh chat list
   }, []);
 
   const deleteChat = useCallback((chatId: string) => {
-    setChats(prev => prev.filter(chat => chat.id !== chatId));
-    if (currentChatId === chatId) {
-      setCurrentChatId(null);
+    reqDeleteChat(chatId).then((response: ApiResponse) => {
+      if (response.status === 'success') {
+        if (currentChatId === chatId) {
+          setCurrentChatId(null);
+          setCurrentChat(null);
+        }
+        fetchChats(); // Refresh chat list after deletion
+      } else {
+        console.error('Error deleting chat:', response.msg);
+      }
     }
+    );
   }, [currentChatId]);
 
   const renameChat = useCallback((chatId: string, newTitle: string) => {
-    setChats(prev => prev.map(chat => 
-      chat.id === chatId 
-        ? { ...chat, title: newTitle, updatedAt: new Date() }
-        : chat
-    ));
+    reqRenameChat(chatId, newTitle).then((response: ApiResponse) => {
+      if ( response.status === 'success' ){
+        if (currentChatId === chatId) {
+          setCurrentChat((prev) => {
+            if (prev) {
+              return {
+                ...prev,
+                title: newTitle,
+                updatedAt: new Date(),
+              };
+            }
+            return prev;
+          });
+        }
+        fetchChats(); // Refresh chat list after renaming
+      } else {
+        console.error('Error renaming chat:', response.msg);
+        // Handle error appropriately, e.g., show a toast notification
+      }
+    })
   }, []);
 
   const sendMessage = useCallback(async (content: string, files?: FileAttachment[]) => {
@@ -76,18 +136,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date(),
       files,
     };
-
-    // Add user message
-    // setChats(prev => prev.map(chat => 
-    //   chat.id === currentChatId 
-    //     ? { 
-    //         ...chat, 
-    //         messages: [...chat.messages, userMessage],
-    //         title: chat.title === 'New Chat' ? content.slice(0, 30) + '...' : chat.title,
-    //         updatedAt: new Date()
-    //       }
-    //     : chat
-    // ));
 
     setCurrentChat((prev)=>{
       return {
@@ -133,6 +181,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         console.error('Error sending message:', response.msg);
         // Handle error appropriately, e.g., show a toast notification
       }
+      setIsLoading(false);
     }).catch((error) => {
       console.error('Error sending message:', error);
       // Handle error appropriately, e.g., show a toast notification
@@ -160,25 +209,72 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     //       }
     //     : chat
     // ));
-
-    setIsLoading(false);
   }, [currentChatId]);
 
-  const loadMoreMessages = useCallback(async (chatId: string, offset: number) => {
-    // Simulate paginated API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // In real implementation, this would load older messages
-    console.log(`Loading more messages for chat ${chatId} with offset ${offset}`);
-  }, []);
+  const loadMoreMessages = useCallback((chatId: string, limit: number) => {
+    setCurrentChat((prev) => {
+      if (!prev) return prev;
+  
+      const currentOffset = prev.messages.length;
+  
+      getChatHistory(chatId, currentOffset, limit).then((response: ApiResponse) => {
+        if (response.status === 'success') {
+          const id = response.data.id;
+          const chatTitle = response.data.name || 'Chat';
+  
+          const newMessages = response.data.messages.map((msg: any) => ({
+            id: msg.id || (Date.now() + Math.random()).toString(),
+            content: msg.text,
+            role: msg.role,
+            timestamp: new Date(msg.timestamp),
+            files: msg.files.map((file: any) => ({
+              id: file?.id || Date.now().toString(),
+              name: file?.name || 'file',
+              size: file?.size || 0,
+              type: file?.type || 'unknown',
+              url: file?.file_url || '',
+              bytes: file?.bytes ? new Uint8Array(file.bytes) : undefined,
+            })),
+          })).reverse();
+  
+          setCurrentChat((prevChat) => {
+            if (!prevChat) return prevChat;
+  
+            return {
+              ...prevChat,
+              id: id || prevChat.id,
+              title: chatTitle || prevChat.title,
+              messages: [...newMessages, ...prevChat.messages],
+              updatedAt: new Date(),
+            };
+          });
+        } else {
+          console.error('Error loading more messages:', response.msg);
+        }
+  
+        setIsChatLoading(false);
+      }).catch((error) => {
+        console.error('Error loading more messages:', error);
+        setIsChatLoading(false);
+      });
+  
+      // Return current chat immediately, actual update will happen in nested setCurrentChat
+      return prev;
+    });
+  }, [getChatHistory, setCurrentChat, setIsChatLoading]);
+  
 
   return (
     <ChatContext.Provider value={{
       chats,
+      chatList,
       currentChatId,
       currentChat,
       isLoading,
+      isChatLoading,
+      setIsChatLoading,
       createNewChat,
+      fetchChats,
       selectChat,
       deleteChat,
       renameChat,

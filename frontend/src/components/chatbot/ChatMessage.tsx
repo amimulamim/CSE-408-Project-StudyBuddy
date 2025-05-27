@@ -3,6 +3,7 @@ import React from 'react';
 import { User, Bot, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ChatMessage as ChatMessageType } from './chat';
+import MarkdownRenderer from './MarkdownRenderer';
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -12,7 +13,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === 'user';
 
   const renderFileAttachment = (file: any) => {
-    if (file.type.startsWith('image/')) {
+    if (file?.type?.startsWith('image/')) {
       return (
         <div className="relative w-32 h-32 rounded-lg overflow-hidden border">
           <img
@@ -34,7 +35,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
       );
     }
 
-    if (file.type === 'application/pdf') {
+    if (file?.type === 'application/pdf') {
       return (
         <div className="w-32 h-32 rounded-lg bg-red-500/20 border border-red-500/30 flex flex-col items-center justify-center p-2">
           <div className="text-red-400 text-lg font-bold mb-1">PDF</div>
@@ -54,15 +55,19 @@ export function ChatMessage({ message }: ChatMessageProps) {
     }
 
     return (
-      <div className="flex items-center gap-2 p-2 bg-black/20 rounded border">
-        <span className="flex-1 text-sm truncate">{file.name}</span>
-        <span className="text-xs text-muted-foreground">
-          {(file.size / 1024).toFixed(1)} KB
-        </span>
+      <div className="relative w-32 h-32 rounded-lg overflow-hidden border">
+        <img
+          src={file.url}
+          alt={file.name}
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute bottom-0 left-0 right-0 bg-black/50 p-1">
+          <span className="text-xs text-white truncate block">{file.name}</span>
+        </div>
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 text-muted-foreground hover:text-white"
+          className="absolute top-1 right-1 h-6 w-6 bg-black/50 hover:bg-black/70 text-white"
         >
           <Download className="h-3 w-3" />
         </Button>
@@ -86,7 +91,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
               : 'bg-white/5 text-white'
           }`}
         >
-          <p className="whitespace-pre-wrap">{message.content}</p>
+          <p className="whitespace-pre-wrap"><MarkdownRenderer content={message.content} /></p>
           
           {/* File attachments */}
           {message.files && message.files.length > 0 && (
