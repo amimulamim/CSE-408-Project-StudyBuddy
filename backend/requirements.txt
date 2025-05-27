@@ -43,5 +43,15 @@ google-genai
 google-generativeai
 # python-multipart
 
-# pdf
-PyPDF2
+
+# For progress display during batch inserts (optional but helpful)
+tqdm
+
+
+PyPDF2==3.0.1
+qdrant-client==1.12.0
+pdf2image==1.17.0
+pytesseract==0.3.13
+Pillow==10.4.0
+google-generativeai==0.8.3
+
