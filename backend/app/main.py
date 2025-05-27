@@ -5,6 +5,7 @@ from fastapi.openapi.utils import get_openapi
 from app.api.v1.routes import user
 from app.api.v1.routes.chat import router as chat_router
 from app.core.database import engine, Base
+from app.api.v1.routes.quiz import router as quiz_router 
 
 # Create DB tables
 Base.metadata.create_all(bind=engine)
@@ -31,6 +32,7 @@ app.add_middleware(
 # ✅ Include routes
 app.include_router(user.router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")  # Chat router handles its own /ai prefix
+app.include_router(quiz_router, prefix="/api/v1", tags=["Quiz"])
 
 # ✅ Sanity root endpoint
 @app.get("/")
