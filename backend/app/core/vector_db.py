@@ -1,0 +1,112 @@
+import uuid
+from typing import List, Dict, Any
+from qdrant_client import QdrantClient
+from qdrant_client.http import models
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+class VectorDatabaseManager:
+    """Manages interactions with Qdrant vector database."""
+    
+    def __init__(self, qdrant_url: str, qdrant_api_key: str, collection_name: str):
+        try:
+            self.client = QdrantClient(
+                url=qdrant_url,
+                api_key=qdrant_api_key
+            )
+            self.collection_name = collection_name
+        except Exception as e:
+            raise Exception(f"Error initializing Qdrant client: {str(e)}")
+    
+    def create_collection(self):
+        """Creates a Qdrant collection if it doesn't exist."""
+        try:
+            collections = self.client.get_collections()
+            if self.collection_name not in [c.name for c in collections.collections]:
+                self.client.create_collection(
+                    collection_name=self.collection_name,
+                    vectors_config=models.VectorParams(size=768, distance=models.Distance.COSINE)
+                )
+                logger.info(f"Created collection: {self.collection_name}")
+            else:
+                logger.info(f"Collection {self.collection_name} already exists")
+            return {"message": f"Collection {self.collection_name} created or already exists"}
+        except Exception as e:
+            logger.error(f"Error creating collection: {str(e)}")
+            raise Exception(f"Error creating collection: {str(e)}")
+    
+    def delete_collection(self):
+        """Deletes a Qdrant collection."""
+        try:
+            self.client.delete_collection(collection_name=self.collection_name)
+            logger.info(f"Deleted collection: {self.collection_name}")
+            return {"message": f"Collection {self.collection_name} deleted"}
+        except Exception as e:
+            logger.error(f"Error deleting collection: {str(e)}")
+            raise Exception(f"Error deleting collection: {str(e)}")
+    
+    def list_collections(self):
+        """Lists all Qdrant collections."""
+        try:
+            collections = self.client.get_collections()
+            collection_names = [c.name for c in collections.collections]
+            logger.info(f"Listed collections: {collection_names}")
+            return collection_names
+        except Exception as e:
+            logger.error(f"Error listing collections: {str(e)}")
+            raise Exception(f"Error listing collections: {str(e)}")
+    
+    def upsert_vectors(self, document_id: str, chunks: List[str], embeddings: List[List[float]]):
+        """Upserts text chunks and their embeddings to Qdrant."""
+        try:
+            points = [
+                models.PointStruct(
+                    id=str(uuid.uuid4()),
+                    vector=embedding,
+                    payload={
+                        "document_id": document_id,
+                        "chunk_index": idx,
+                        "text": chunk
+                    }
+                )
+                for idx, (chunk, embedding) in enumerate(zip(chunks, embeddings))
+            ]
+            self.client.upsert(
+                collection_name=self.collection_name,
+                points=points
+            )
+            logger.info(f"Upserted {len(points)} points for document {document_id}")
+            return {"message": f"Upserted {len(points)} points for document {document_id}"}
+        except Exception as e:
+            logger.error(f"Error upserting vectors for document {document_id}: {str(e)}")
+            raise Exception(f"Error upserting vectors: {str(e)}")
+    
+    def search_vectors(self, query_embedding: List[float], limit: int = 5) -> List[Dict[str, Any]]:
+        """Performs similarity search in Qdrant."""
+        try:
+            search_result = self.client.search(
+                collection_name=self.collection_name,
+                query_vector=query_embedding,
+                limit=limit
+            )
+            results = []
+            for hit in search_result:
+                if hit.payload is None or not all(key in hit.payload for key in ["text", "document_id", "chunk_index"]):
+                    logger.warning(f"Skipping point {hit.id} with missing or invalid payload")
+                    continue
+                results.append({
+                    "text": hit.payload["text"],
+                    "document_id": hit.payload["document_id"],
+                    "chunk_index": hit.payload["chunk_index"],
+                    "score": hit.score
+                })
+            if not results:
+                logger.warning(f"No valid results found for query in collection {self.collection_name}")
+            return results
+        except Exception as e:
+            logger.error(f"Error searching vectors: {str(e)}")
+            raise Exception(f"Error searching vectors: {str(e)}")
