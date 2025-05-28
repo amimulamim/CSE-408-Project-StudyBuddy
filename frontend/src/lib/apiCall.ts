@@ -18,7 +18,6 @@ async function makeRequest<T = unknown>(
 
   try {
     const idToken = await user.getIdToken();
-    console.log(idToken);
     const isFormData = body instanceof FormData;
 
     const req: RequestInit = {

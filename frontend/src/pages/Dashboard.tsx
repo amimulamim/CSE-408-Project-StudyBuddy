@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { getAuth, signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
+import { ChatbotFAB } from '@/components/chatbot/ChatbotFAB';
 
 export default function Dashboard() {
     const navigate = useNavigate();
@@ -25,6 +26,7 @@ export default function Dashboard() {
             >
                 Sign out
             </Button>
+            <ChatbotFAB />
         </div>
     )
 }
