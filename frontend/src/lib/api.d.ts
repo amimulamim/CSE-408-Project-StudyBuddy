@@ -5,7 +5,7 @@ type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 interface ApiResponse {
   status: "success" | "error";
   msg: string;
-  data: object; // optional, in case you return a custom object (e.g. conflict info)
+  data: any; // optional, in case you return a custom object (e.g. conflict info)
 }
 
 export type { HttpMethod, ApiResponse };
