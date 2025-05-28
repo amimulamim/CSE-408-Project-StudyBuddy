@@ -11,7 +11,7 @@ TEXT_EXTENSIONS = {
 }
 
 # Configuration for PDF processing
-MAX_PDF_PAGES_AS_IMAGES = 20  # Max PDF pages to convert to images per PDF document
+MAX_PDF_PAGES_AS_IMAGES = 50  # Max PDF pages to convert to images per PDF document
 INCLUDE_PDF_TEXT_CONTENT = True
 INCLUDE_PDF_PAGE_IMAGES = True
 
