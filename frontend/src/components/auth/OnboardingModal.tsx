@@ -95,7 +95,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
           setValidationModalOpen(true);
         }
       }
-    }, 4000); // poll every 4 seconds
+    }, 2000); // poll every 2 seconds
   
     return () => clearInterval(interval);
   }, [validationModalOpen]);
