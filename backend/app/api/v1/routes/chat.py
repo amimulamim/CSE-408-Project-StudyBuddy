@@ -44,7 +44,7 @@ async def create_or_continue_chat(
         if chatId:
             current_chat = service.get_chat_of_user_or_404(db, chatId, user_id)
         else:
-            chat_name = f"Chat with Gemini - {datetime.now():%Y-%m-%d %H:%M}"
+            chat_name = f"Chat with StudyBuddy- {datetime.now():%Y-%m-%d %H:%M}"
             current_chat = service.create_chat(db, user_id=user_id, name=chat_name)
 
         # Step 2: Save user message and uploaded files
