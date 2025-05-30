@@ -5,3 +5,7 @@ coverage_reports/
 venv/
 .env*
 keys/
+test_env/
+
+test_env*
+scripts/
