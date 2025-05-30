@@ -30,7 +30,7 @@ app.add_middleware(
 )
 
 # ✅ Include routes
-app.include_router(user.router, prefix="/api/v1")
+app.include_router(user.router, prefix="/api/v1/user", tags=["User"])
 app.include_router(chat_router, prefix="/api/v1")  # Chat router handles its own /ai prefix
 app.include_router(quiz_router, prefix="/api/v1", tags=["Quiz"])
 
