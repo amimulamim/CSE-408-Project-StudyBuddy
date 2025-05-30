@@ -9,3 +9,5 @@ test_env/
 
 test_env*
 scripts/
+
+*.cpython*
