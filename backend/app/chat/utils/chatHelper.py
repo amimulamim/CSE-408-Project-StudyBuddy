@@ -1,4 +1,3 @@
-from app.chat.db import get_chat # Assuming this import is correct
 from app.chat.utils.geminiFormatter import TEXT_EXTENSIONS, fetch_file_bytes, _process_pdf_data # Import necessary items
 from app.chat import model as db_model # Assuming this import is correct
 from app.chat import schema # Assuming this import is correct
