@@ -25,7 +25,13 @@ jobs:
       run: |
         echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
         echo "FIREBASE_KEY_PATH=/app/keys/firebaseKey.json" >> .env
-    
+            echo "FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}" >> .env
+            echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+            echo "GEMINI_MODEL=${{ secrets.GEMINI_MODEL }}" >> .env
+            echo "QUERY_EMBEDDING_MODEL=${{ secrets.QUERY_EMBEDDING_MODEL }}" >> .env
+            echo "QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}" >> .env
+            echo "QDRANT_HOST=${{ secrets.QDRANT_HOST }}" >> .env
+            echo "QDRANT_COLLECTION_NAME=${{ secrets.QDRANT_COLLECTION_NAME }}" >> .env
     - name: Upload env file
       uses: actions/upload-artifact@v4
       with:
@@ -88,7 +94,16 @@ jobs:
         echo "FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}" >> .env.test
         echo "FIREBASE_TEST_EMAIL=${{ secrets.FIREBASE_TEST_EMAIL }}" >> .env.test
         echo "FIREBASE_TEST_PASSWORD=${{ secrets.FIREBASE_TEST_PASSWORD }}" >> .env.test
-    
+        echo "FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}" >> .env.test
+        echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env.test
+        echo "GEMINI_MODEL=${{ secrets.GEMINI_MODEL }}" >> .env.test
+        echo "QUERY_EMBEDDING_MODEL=${{ secrets.QUERY_EMBEDDING_MODEL }}" >> .env.test
+        echo "QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}" >> .env.test
+        echo "QDRANT_HOST=${{ secrets.QDRANT_HOST }}" >> .env.test
+        echo "QDRANT_COLLECTION_NAME=${{ secrets.QDRANT_COLLECTION_NAME }}" >> .env.test
+
+
+
     - name: Upload .env.test file
       uses: actions/upload-artifact@v4
       with:
