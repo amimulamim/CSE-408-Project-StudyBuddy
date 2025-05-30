@@ -23,7 +23,7 @@ def get_chats_by_user(user_id: str, db: Session) -> List[model.Chat]:
 
 
 def delete_chat(chat_id: UUID, db: Session) -> bool:
-    chat = get_chat(chat_id, db)
+    chat = get_chat(db, chat_id)
     if chat:
         db.delete(chat)
         db.commit()
@@ -32,7 +32,7 @@ def delete_chat(chat_id: UUID, db: Session) -> bool:
 
 
 def rename_chat(chat_id: UUID, new_name: str, db: Session) -> model.Chat:
-    chat = get_chat(chat_id, db)
+    chat = get_chat(db, chat_id)
     if chat:
         chat.name = new_name
         db.commit()
