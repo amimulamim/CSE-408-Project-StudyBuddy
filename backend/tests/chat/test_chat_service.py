@@ -150,49 +150,33 @@ class TestChatService:
         assert exc_info.value.status_code == 404
         assert "Chat not found or unauthorized" in str(exc_info.value.detail)
 
+    @patch('app.chat.service.chat_db.add_message')
     @patch('app.chat.service.upload_to_firebase')
-    def test_add_message_without_files(self, mock_upload):
+    def test_add_message_without_files(self, mock_upload, mock_add_message):
         """Test adding message without files"""
         mock_db = Mock(spec=Session)
-        mock_db.add = Mock()
-        mock_db.flush = Mock()
-        mock_db.commit = Mock()
-        mock_db.refresh = Mock()
-        
         chat_id = str(uuid4())
         role = "user"
         text = "Test message"
         status = "complete"
         
-        # Mock the Message creation
-        with patch('app.chat.service.Message') as mock_message_class:
-            mock_message = Mock()
-            mock_message.id = uuid4()
-            mock_message_class.return_value = mock_message
-            
-            result = service.add_message(mock_db, chat_id, role, text, status)
-            
-            mock_message_class.assert_called_once_with(
-                chat_id=chat_id, role=role, text=text, status=status
-            )
-            mock_db.add.assert_called_once_with(mock_message)
-            mock_db.flush.assert_called_once()
-            mock_db.commit.assert_called_once()
-            mock_db.refresh.assert_called_once_with(mock_message)
-            
-            message, uploaded_files = result
-            assert message == mock_message
-            assert uploaded_files == []
+        mock_message = Mock()
+        mock_add_message.return_value = mock_message
+        
+        result = service.add_message(mock_db, chat_id, role, text, status)
+        
+        mock_add_message.assert_called_once_with(mock_db, chat_id, role, text, status)
+        mock_upload.assert_not_called()
+        
+        message, uploaded_files = result
+        assert message == mock_message
+        assert uploaded_files == []
 
+    @patch('app.chat.service.chat_db.add_message_with_files')
     @patch('app.chat.service.upload_to_firebase')
-    def test_add_message_with_files(self, mock_upload):
+    def test_add_message_with_files(self, mock_upload, mock_add_message_with_files):
         """Test adding message with files"""
         mock_db = Mock(spec=Session)
-        mock_db.add = Mock()
-        mock_db.flush = Mock()
-        mock_db.commit = Mock()
-        mock_db.refresh = Mock()
-        
         chat_id = str(uuid4())
         role = "user"
         text = "Test message with file"
@@ -203,55 +187,37 @@ class TestChatService:
         files = [mock_file]
         mock_upload.return_value = "https://firebase.com/uploaded-file.pdf"
         
-        # Mock the Message and MessageFile creation
-        with patch('app.chat.service.Message') as mock_message_class, \
-             patch('app.chat.service.MessageFile') as mock_message_file_class:
-            
-            mock_message = Mock()
-            mock_message.id = uuid4()
-            mock_message_class.return_value = mock_message
-            
-            mock_message_file = Mock()
-            mock_message_file_class.return_value = mock_message_file
-            
-            result = service.add_message(mock_db, chat_id, role, text, status, files)
-            
-            mock_message_class.assert_called_once_with(
-                chat_id=chat_id, role=role, text=text, status=status
-            )
-            mock_upload.assert_called_once_with(mock_file)
-            mock_message_file_class.assert_called_once_with(
-                message_id=mock_message.id, 
-                file_url="https://firebase.com/uploaded-file.pdf"
-            )
-            
-            message, uploaded_files = result
-            assert message == mock_message
-            assert uploaded_files == ["https://firebase.com/uploaded-file.pdf"]
+        mock_message = Mock()
+        mock_add_message_with_files.return_value = mock_message
+        
+        result = service.add_message(mock_db, chat_id, role, text, status, files)
+        
+        mock_upload.assert_called_once_with(mock_file)
+        mock_add_message_with_files.assert_called_once_with(
+            mock_db, chat_id, role, text, status, ["https://firebase.com/uploaded-file.pdf"]
+        )
+        
+        message, uploaded_files = result
+        assert message == mock_message
+        assert uploaded_files == ["https://firebase.com/uploaded-file.pdf"]
 
-    def test_get_chats_by_user(self):
+    @patch('app.chat.service.chat_db.get_chats_by_user')
+    def test_get_chats_by_user(self, mock_get_chats_by_user):
         """Test getting chats by user ID"""
         mock_db = Mock(spec=Session)
         user_id = "test_user_123"
         mock_chats = [Mock(spec=Chat), Mock(spec=Chat)]
         
-        # Mock the query chain
-        mock_query = Mock()
-        mock_filter = Mock()
-        mock_order_by = Mock()
-        
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_filter
-        mock_filter.order_by.return_value = mock_order_by
-        mock_order_by.all.return_value = mock_chats
+        mock_get_chats_by_user.return_value = mock_chats
         
         result = service.get_chats_by_user(mock_db, user_id)
         
-        mock_db.query.assert_called_once_with(Chat)
+        mock_get_chats_by_user.assert_called_once_with(mock_db, user_id)
         assert result == mock_chats
 
+    @patch('app.chat.service.chat_db.get_chat_with_paginated_messages')
     @patch('app.chat.service.get_chat_of_user_or_404')
-    def test_get_chat_with_paginated_messages(self, mock_get_chat):
+    def test_get_chat_with_paginated_messages(self, mock_get_chat, mock_get_paginated):
         """Test getting chat with paginated messages"""
         mock_db = Mock(spec=Session)
         chat_id = str(uuid4())
@@ -260,123 +226,72 @@ class TestChatService:
         limit = 20
         
         mock_chat = Mock(spec=Chat)
+        mock_chat.id = chat_id
         mock_get_chat.return_value = mock_chat
         
-        mock_messages = [Mock(spec=Message), Mock(spec=Message)]
-        
-        # Mock the query chain for messages
-        mock_query = Mock()
-        mock_filter = Mock()
-        mock_order_by = Mock()
-        mock_offset = Mock()
-        mock_limit = Mock()
-        mock_options = Mock()
-        
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_filter
-        mock_filter.order_by.return_value = mock_order_by
-        mock_order_by.offset.return_value = mock_offset
-        mock_offset.limit.return_value = mock_limit
-        mock_limit.options.return_value = mock_options
-        mock_options.all.return_value = mock_messages
+        mock_paginated_chat = Mock(spec=Chat)
+        mock_get_paginated.return_value = mock_paginated_chat
         
         result = service.get_chat_with_paginated_messages(
             mock_db, chat_id, user_id, offset, limit
         )
         
         mock_get_chat.assert_called_once_with(mock_db, chat_id, user_id)
-        mock_db.query.assert_called_once_with(Message)
-        assert result == mock_chat
-        assert result.messages == mock_messages
+        mock_get_paginated.assert_called_once_with(mock_db, chat_id, offset, limit)
+        assert result == mock_paginated_chat
 
-    def test_rename_chat(self):
+    @patch('app.chat.service.chat_db.rename_chat')
+    def test_rename_chat(self, mock_rename_chat):
         """Test renaming a chat"""
         mock_db = Mock(spec=Session)
         chat_id = str(uuid4())
         new_name = "New Chat Name"
         
         mock_chat = Mock(spec=Chat)
-        mock_chat.name = "Old Name"
-        
-        # Mock the query chain
-        mock_query = Mock()
-        mock_filter = Mock()
-        
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_filter
-        mock_filter.first.return_value = mock_chat
-        
-        mock_db.commit = Mock()
-        mock_db.refresh = Mock()
+        mock_chat.name = new_name
+        mock_rename_chat.return_value = mock_chat
         
         result = service.rename_chat(chat_id, new_name, mock_db)
         
-        mock_db.query.assert_called_once_with(Chat)
-        assert mock_chat.name == new_name
-        mock_db.commit.assert_called_once()
-        mock_db.refresh.assert_called_once_with(mock_chat)
+        mock_rename_chat.assert_called_once_with(chat_id, new_name, mock_db)
         assert result == mock_chat
 
-    def test_rename_chat_not_found(self):
+    @patch('app.chat.service.chat_db.rename_chat')
+    def test_rename_chat_not_found(self, mock_rename_chat):
         """Test renaming a chat that doesn't exist"""
         mock_db = Mock(spec=Session)
         chat_id = str(uuid4())
         new_name = "New Chat Name"
         
-        # Mock the query chain to return None
-        mock_query = Mock()
-        mock_filter = Mock()
-        
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_filter
-        mock_filter.first.return_value = None
+        mock_rename_chat.return_value = None
         
         result = service.rename_chat(chat_id, new_name, mock_db)
         
+        mock_rename_chat.assert_called_once_with(chat_id, new_name, mock_db)
         assert result is None
 
-    def test_delete_chat(self):
+    @patch('app.chat.service.chat_db.delete_chat')
+    def test_delete_chat(self, mock_delete_chat):
         """Test deleting a chat"""
         mock_db = Mock(spec=Session)
         chat_id = str(uuid4())
         
-        mock_chat = Mock(spec=Chat)
+        mock_delete_chat.return_value = True
         
-        # Mock the query chain
-        mock_query = Mock()
-        mock_filter = Mock()
+        result = service.delete_chat(chat_id, mock_db)
         
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_filter
-        mock_filter.first.return_value = mock_chat
-        
-        mock_db.delete = Mock()
-        mock_db.commit = Mock()
-        
-        service.delete_chat(chat_id, mock_db)
-        
-        mock_db.query.assert_called_once_with(Chat)
-        mock_db.delete.assert_called_once_with(mock_chat)
-        mock_db.commit.assert_called_once()
+        mock_delete_chat.assert_called_once_with(chat_id, mock_db)
+        assert result is True
 
-    def test_delete_chat_not_found(self):
+    @patch('app.chat.service.chat_db.delete_chat')
+    def test_delete_chat_not_found(self, mock_delete_chat):
         """Test deleting a chat that doesn't exist"""
         mock_db = Mock(spec=Session)
         chat_id = str(uuid4())
         
-        # Mock the query chain to return None
-        mock_query = Mock()
-        mock_filter = Mock()
+        mock_delete_chat.return_value = False
         
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_filter
-        mock_filter.first.return_value = None
+        result = service.delete_chat(chat_id, mock_db)
         
-        mock_db.delete = Mock()
-        mock_db.commit = Mock()
-        
-        service.delete_chat(chat_id, mock_db)
-        
-        # Should not call delete or commit if chat not found
-        mock_db.delete.assert_not_called()
-        mock_db.commit.assert_not_called()
+        mock_delete_chat.assert_called_once_with(chat_id, mock_db)
+        assert result is False
