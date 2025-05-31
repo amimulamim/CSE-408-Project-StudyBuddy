@@ -5,3 +5,6 @@ coverage_reports/
 venv/
 .env*
 keys/
+*test_env/*
+*.cpython-*
+scripts/
