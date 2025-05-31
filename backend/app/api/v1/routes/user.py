@@ -6,11 +6,11 @@ from app.auth.firebase_auth import get_current_user
 from app.core.database import get_db
 from app.utils.rate_limiter import check_profile_rate_limit
 from app.users.schema import (
-    UserBase, UserUpdate, ProfileEditRequest, UserProfile, 
+    UserBase, UserUpdate, UserProfile, 
     SecureProfileEdit, AdminUserEdit
 )
 from app.users.service import (
-    get_or_create_user, update_user, update_user_profile, get_user_by_uid,
+    get_or_create_user, update_user, get_user_by_uid,
     update_user_profile_secure, admin_update_user, is_user_admin
 )
 
@@ -42,35 +42,6 @@ def login(
         interests=[],
     )
     return get_or_create_user(db, user_data)
-
-
-
-
-@router.put("/profile/edit", response_model=UserProfile)
-def edit_profile_advanced(
-    profile_data: ProfileEditRequest,
-    user_info: Dict[str, Any] = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Advanced profile edit endpoint with array operations support.
-    
-    For interests field:
-    - "+item" adds item to array
-    - "-item" removes item from array  
-    - "item1,item2" adds items to array
-    
-    Example request body:
-    {
-        "study_domain": "Physics", 
-        "interests": "+quantum physics,-mechanics,thermodynamics"
-    }
-    """
-    updated_user = update_user_profile(db, user_info["uid"], profile_data)
-    if not updated_user:
-        raise HTTPException(status_code=404, detail=USER_NOT_FOUND)
-    
-    return updated_user
 
 
 @router.put("/profile", response_model=UserProfile)

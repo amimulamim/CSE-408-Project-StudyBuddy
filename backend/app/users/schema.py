@@ -42,22 +42,6 @@ class UserUpdate(BaseModel):
     interests: Optional[str] = None  # Changed to str to support +/- syntax
 
 
-class ProfileEditRequest(BaseModel):
-    """
-    Schema for profile edit endpoint that supports array operations.
-    For interests field: "+item" adds item, "-item" removes item, "item1,item2" replaces entire list
-    """
-    name: Optional[str] = None
-    bio: Optional[str] = None
-    institution: Optional[str] = None
-    role: Optional[str] = None
-    avatar: Optional[str] = None
-    current_plan: Optional[str] = None
-    location: Optional[str] = None
-    study_domain: Optional[str] = None
-    interests: Optional[str] = Field(None, description="Comma-separated interests. Use +item to add, -item to remove")
-
-
 class SecureProfileEdit(BaseModel):
     """
     Secure schema for regular user profile edits - only allows safe fields.
