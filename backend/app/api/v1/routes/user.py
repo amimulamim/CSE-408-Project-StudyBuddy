@@ -34,13 +34,6 @@ def login(
     return get_or_create_user(db, user_data)
 
 
-@router.put("/profile", response_model=UserBase)
-def edit_profile(
-    updates: UserUpdate,
-    user_info: Dict[str, Any] = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    return update_user(db, user_info["uid"], updates)
 
 
 @router.put("/profile/edit", response_model=UserProfile)
