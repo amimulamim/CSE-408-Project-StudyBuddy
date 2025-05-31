@@ -13,6 +13,8 @@ class UserRole(str, Enum):
     OTHER = "other"
 
 class UserBase(BaseModel):
+    model_config = {"extra": "forbid"}
+    
     uid: str
     email: EmailStr
     name: str = ""
@@ -30,23 +32,13 @@ class UserBase(BaseModel):
     interests: List[str] = []
 
 
-class UserUpdate(BaseModel):
-    name: Optional[str] = None
-    bio: Optional[str] = None
-    institution: Optional[str] = None
-    role: Optional[str] = None
-    avatar: Optional[str] = None
-    current_plan: Optional[str] = None
-    location: Optional[str] = None
-    study_domain: Optional[str] = None
-    interests: Optional[str] = None  # Changed to str to support +/- syntax
-
-
 class SecureProfileEdit(BaseModel):
     """
     Secure schema for regular user profile edits - only allows safe fields.
     Excludes administrative and system fields for security.
     """
+    model_config = {"extra": "forbid"}
+    
     name: Optional[str] = Field(None, min_length=1, max_length=100, description="User's display name")
     bio: Optional[str] = Field(None, max_length=500, description="User's bio/description")
     avatar: Optional[str] = Field(None, description="Profile picture URL")
@@ -91,6 +83,8 @@ class AdminUserEdit(BaseModel):
     Schema for admin edits - includes administrative fields.
     Only admins should be able to use this schema.
     """
+    model_config = {"extra": "forbid"}
+    
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     bio: Optional[str] = Field(None, max_length=500)
     avatar: Optional[str] = None
@@ -124,6 +118,8 @@ class AdminUserEdit(BaseModel):
 
 class UserProfile(BaseModel):
     """Response schema for user profile"""
+    model_config = {"extra": "forbid", "from_attributes": True}
+    
     uid: str
     email: EmailStr
     name: str
@@ -135,13 +131,12 @@ class UserProfile(BaseModel):
     location: str
     study_domain: str
     interests: List[str]
-    
-    class Config:
-        from_attributes = True
 
 
 class AuditLogEntry(BaseModel):
     """Schema for audit logging"""
+    model_config = {"extra": "forbid"}
+    
     user_id: str
     action: str = Field(..., description="Action performed (e.g., 'profile_update', 'email_change')")
     changes: dict = Field(..., description="Dictionary of field changes")

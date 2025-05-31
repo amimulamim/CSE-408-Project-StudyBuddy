@@ -6,11 +6,11 @@ from app.auth.firebase_auth import get_current_user
 from app.core.database import get_db
 from app.utils.rate_limiter import check_profile_rate_limit
 from app.users.schema import (
-    UserBase, UserUpdate, UserProfile, 
+    UserBase, UserProfile, 
     SecureProfileEdit, AdminUserEdit
 )
 from app.users.service import (
-    get_or_create_user, update_user, get_user_by_uid,
+    get_or_create_user, get_user_by_uid,
     update_user_profile_secure, admin_update_user, is_user_admin
 )
 
