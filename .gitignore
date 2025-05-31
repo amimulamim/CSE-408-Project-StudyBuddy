@@ -2,3 +2,4 @@
 fastapi_project/
 .coverage
 temporary-test/
+test_env*
