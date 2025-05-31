@@ -15,7 +15,7 @@ def fake_token(monkeypatch):
     return "mocked_token"
 
 def test_login_creates_user(fake_token):
-    response = client.post("/api/v1/user/login", headers={
+    response = client.post("/api/v1/auth/login", headers={
         "Authorization": f"Bearer {fake_token}"
     })
     assert response.status_code == 200
