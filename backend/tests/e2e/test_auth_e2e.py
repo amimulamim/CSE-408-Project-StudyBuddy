@@ -13,6 +13,6 @@ token = get_id_token(
 
 def test_login_real_token():
     headers = {"Authorization": f"Bearer {token}"}
-    res = requests.post(f"{BASE_URL}/login", headers=headers)
+    res = requests.post(f"{BASE_URL}/user/login", headers=headers)
     assert res.status_code == 200
     assert res.json()["email"] == os.getenv("FIREBASE_TEST_EMAIL")
