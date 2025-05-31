@@ -20,30 +20,6 @@ USER_NOT_FOUND = "User not found"
 router = APIRouter()
 
 
-@router.post("/login", response_model=UserBase)
-def login(
-    user_info: Dict[str, Any] = Depends(get_current_user), 
-    db: Session = Depends(get_db)
-):
-    user_data = UserBase(
-        uid=user_info["uid"],
-        email=user_info["email"],
-        name=user_info.get("name", "User") or "",
-        avatar=user_info.get("picture") or "",  
-        institution=user_info.get("institution", "") or "",
-        role="student",  # or infer from user_info if available
-        auth_provider=user_info.get("firebase", {}).get("sign_in_provider", "email") or "email",
-        is_admin=False,
-        is_moderator=False,
-        moderator_id=None,
-        current_plan="free",
-        location="",
-        study_domain="",
-        interests=[],
-    )
-    return get_or_create_user(db, user_data)
-
-
 @router.put("/profile", response_model=UserProfile)
 def edit_profile_secure(
     profile_data: SecureProfileEdit,
