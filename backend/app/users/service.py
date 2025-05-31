@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from app.users.model import User
-from app.users.schema import UserBase, UserUpdate, ProfileEditRequest, SecureProfileEdit, AdminUserEdit
+from app.users.schema import UserBase, UserUpdate, SecureProfileEdit, AdminUserEdit
 from time import sleep
 from sqlalchemy.exc import OperationalError
 from typing import List, Optional
@@ -65,39 +65,6 @@ def parse_interests_operations(interests_str: str, current_interests: List[str])
 def get_user_by_uid(db: Session, uid: str) -> Optional[User]:
     """Get user by UID"""
     return db.query(User).filter_by(uid=uid).first()
-
-
-def update_user_profile(db: Session, uid: str, profile_data: ProfileEditRequest) -> Optional[User]:
-    """
-    Update user profile with support for array operations on interests
-    """
-    user = get_user_by_uid(db, uid)
-    if not user:
-        return None
-
-    # Handle all fields except interests normally
-    update_data = profile_data.model_dump(exclude_unset=True, exclude={"interests"})
-    
-    for field, value in update_data.items():
-        if hasattr(user, field):
-            setattr(user, field, value)
-
-    # Handle interests with special operations
-    if profile_data.interests is not None:
-        current_interests = user.interests or []
-        new_interests = parse_interests_operations(profile_data.interests, current_interests)
-        user.interests = new_interests
-    
-    try:
-        db.commit()
-        db.refresh(user)
-        return user
-    except Exception as e:
-        db.rollback()
-        raise e
-
-
-
 
 
 def admin_update_user(db: Session, uid: str, admin_data: AdminUserEdit) -> Optional[User]:
