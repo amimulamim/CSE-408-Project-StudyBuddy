@@ -138,14 +138,6 @@ class AdminUserEdit(BaseModel):
         return v
 
 
-class EmailChangeRequest(BaseModel):
-    """
-    Schema for email change requests - should trigger verification process
-    """
-    new_email: EmailStr = Field(..., description="New email address")
-    password: Optional[str] = Field(None, description="Current password for verification")
-
-
 class UserProfile(BaseModel):
     """Response schema for user profile"""
     uid: str
@@ -162,27 +154,6 @@ class UserProfile(BaseModel):
     
     class Config:
         from_attributes = True
-
-
-class EmailVerificationToken(BaseModel):
-    """Schema for email verification tokens"""
-    token: str = Field(..., description="Verification token")
-    uid: str = Field(..., description="User ID")
-    new_email: EmailStr = Field(..., description="New email to verify")
-    expires_at: str = Field(..., description="Token expiration timestamp")
-
-
-class EmailVerificationResponse(BaseModel):
-    """Response schema for email verification"""
-    message: str
-    status: str
-    verification_sent_to: str
-    expires_in_minutes: int = 30
-
-
-class VerifyEmailChangeRequest(BaseModel):
-    """Schema for verifying email change with token"""
-    token: str = Field(..., description="Verification token received via email")
 
 
 class AuditLogEntry(BaseModel):
