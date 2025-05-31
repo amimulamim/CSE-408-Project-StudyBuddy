@@ -3,8 +3,10 @@ Tests for the secure profile editing system including:
 - Pydantic V2 field validators
 - Input sanitization
 - Rate limiting
-- Email verification workflow
 - Audit logging
+- API endpoint security
+
+Note: Email is immutable - no email change functionality included.
 """
 import pytest
 from datetime import datetime, timezone, timedelta
@@ -18,17 +20,12 @@ with patch('firebase_admin.credentials.Certificate'), \
     from app.main import app
 from app.users.schema import (
     SecureProfileEdit,
-    EmailVerificationToken,
-    VerifyEmailChangeRequest,
     AuditLogEntry
 )
 from app.users.service import (
-    generate_verification_token,
-    hash_token,
-    create_email_change_request,
-    verify_email_change_token,
     log_profile_change,
-    update_user_profile_secure_with_audit
+    update_user_profile_secure,
+    get_user_by_uid
 )
 from app.utils.rate_limiter import RateLimiter, check_profile_rate_limit
 
@@ -142,71 +139,6 @@ class TestRateLimiter:
         assert remaining >= 0
 
 
-class TestEmailVerification:
-    """Test email verification workflow"""
-    
-    def test_generate_verification_token(self):
-        """Test verification token generation"""
-        token = generate_verification_token()
-        
-        assert isinstance(token, str)
-        assert len(token) > 20  # Should be a substantial token
-        
-        # Each call should generate a different token
-        token2 = generate_verification_token()
-        assert token != token2
-    
-    def test_hash_token(self):
-        """Test token hashing is consistent"""
-        token = "test_token_123"
-        hash1 = hash_token(token)
-        hash2 = hash_token(token)
-        
-        assert hash1 == hash2
-        assert len(hash1) == 64  # SHA-256 hex digest length
-        assert hash1 != token  # Should be different from original
-    
-    @patch('app.users.service.get_user_by_uid')
-    def test_create_email_change_request(self, mock_get_user):
-        """Test email change request creation"""
-        # Mock user
-        mock_user = MagicMock()
-        mock_user.email = "user@example.com"
-        mock_get_user.return_value = mock_user
-        
-        # Mock database session
-        mock_db = MagicMock()
-        
-        user_id = "456"
-        new_email = "newuser@example.com"
-        
-        result = create_email_change_request(mock_db, user_id, new_email)
-        
-        assert "token" in result
-        assert "expires_at" in result
-        assert result["new_email"] == new_email
-        assert result["current_email"] == "user@example.com"
-    
-    def test_verify_email_change_token_valid(self):
-        """Test email verification with valid token"""
-        # Generate a token
-        token = generate_verification_token()
-        
-        # Test the verification (this is a placeholder implementation)
-        result = verify_email_change_token(token)
-        
-        assert result["status"] == "verified"
-        assert "message" in result
-    
-    def test_verify_email_change_token_invalid(self):
-        """Test email verification with invalid token"""
-        result = verify_email_change_token("invalid_token_123")
-        
-        # Since current implementation always returns success, we'll test the structure
-        assert "status" in result
-        assert "message" in result
-
-
 class TestAuditLogging:
     """Test audit logging functionality"""
     
@@ -275,7 +207,7 @@ class TestSecureProfileIntegration:
         )
         
         # Call the secure update function
-        result = update_user_profile_secure_with_audit(
+        result = update_user_profile_secure(
             db=mock_db,
             uid=user_id,
             profile_data=update_data,
@@ -296,7 +228,7 @@ class TestAPIEndpoints:
         self.client = TestClient(app)
     
     @patch('app.api.v1.routes.user.get_current_user')
-    @patch('app.api.v1.routes.user.update_user_profile_secure_with_audit')
+    @patch('app.api.v1.routes.user.update_user_profile_secure')
     def test_secure_profile_endpoint_with_rate_limiting(self, mock_update, mock_user):
         """Test secure profile endpoint respects rate limiting"""
         # Mock user authentication
@@ -361,20 +293,6 @@ class TestEdgeCases:
         allowed, remaining = limiter.is_allowed(user2)
         assert allowed is True
         assert remaining == 1
-    
-    def test_email_verification_edge_cases(self):
-        """Test email verification edge cases"""
-        # Test token generation doesn't fail
-        token1 = generate_verification_token()
-        token2 = generate_verification_token()
-        
-        # Tokens should be different
-        assert token1 != token2
-        
-        # Test token hashing
-        hash1 = hash_token(token1)
-        hash2 = hash_token(token1)  # Same token should produce same hash
-        assert hash1 == hash2
     
     def test_input_sanitization_edge_cases(self):
         """Test input sanitization with various edge cases"""

@@ -61,16 +61,10 @@ class RateLimiter:
             return reset_time
 
 
-# Global rate limiter instances for different operations
+# Global rate limiter instance for profile operations
 profile_rate_limiter = RateLimiter(max_requests=10, time_window_minutes=1)
-email_change_rate_limiter = RateLimiter(max_requests=3, time_window_minutes=60)
 
 
 def check_profile_rate_limit(user_id: str) -> Tuple[bool, int]:
     """Check rate limit for profile operations"""
     return profile_rate_limiter.is_allowed(user_id)
-
-
-def check_email_change_rate_limit(user_id: str) -> Tuple[bool, int]:
-    """Check rate limit for email change operations"""
-    return email_change_rate_limiter.is_allowed(user_id)

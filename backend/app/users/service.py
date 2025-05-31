@@ -4,9 +4,7 @@ from app.users.schema import UserBase, UserUpdate, ProfileEditRequest, SecurePro
 from time import sleep
 from sqlalchemy.exc import OperationalError
 from typing import List, Optional
-import secrets
-import hashlib
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Dict, Any
 import json
 
@@ -99,35 +97,7 @@ def update_user_profile(db: Session, uid: str, profile_data: ProfileEditRequest)
         raise e
 
 
-def update_user_profile_secure(db: Session, uid: str, profile_data: SecureProfileEdit) -> Optional[User]:
-    """
-    Secure update user profile - only allows safe fields that regular users should be able to edit.
-    Excludes administrative fields like is_admin, is_moderator, current_plan, etc.
-    """
-    user = get_user_by_uid(db, uid)
-    if not user:
-        return None
 
-    # Handle all fields except interests normally
-    update_data = profile_data.model_dump(exclude_unset=True, exclude={"interests"})
-    
-    for field, value in update_data.items():
-        if hasattr(user, field):
-            setattr(user, field, value)
-
-    # Handle interests with special operations
-    if profile_data.interests is not None:
-        current_interests = user.interests or []
-        new_interests = parse_interests_operations(profile_data.interests, current_interests)
-        user.interests = new_interests
-    
-    try:
-        db.commit()
-        db.refresh(user)
-        return user
-    except Exception as e:
-        db.rollback()
-        raise e
 
 
 def admin_update_user(db: Session, uid: str, admin_data: AdminUserEdit) -> Optional[User]:
@@ -172,64 +142,7 @@ def is_user_moderator(db: Session, uid: str) -> bool:
     return user and (user.is_moderator or user.is_admin)
 
 
-def generate_verification_token() -> str:
-    """Generate a secure verification token"""
-    return secrets.token_urlsafe(32)
 
-
-def hash_token(token: str) -> str:
-    """Hash a token for secure storage"""
-    return hashlib.sha256(token.encode()).hexdigest()
-
-
-def create_email_change_request(db: Session, uid: str, new_email: str) -> Dict[str, Any]:
-    """
-    Create a pending email change request with verification token.
-    In a production system, this would:
-    1. Store the token in a separate table
-    2. Send verification email
-    3. Set expiration time
-    """
-    user = get_user_by_uid(db, uid)
-    if not user:
-        return None
-    
-    # Generate verification token
-    token = generate_verification_token()
-    expires_at = datetime.now(timezone.utc) + timedelta(minutes=30)
-    
-    # In production, you would store this in a email_verification_tokens table
-    # For now, we'll return the information needed for the response
-    return {
-        "token": token,  # This would not be returned in production
-        "new_email": new_email,
-        "current_email": user.email,
-        "expires_at": expires_at.isoformat(),
-        "status": "pending_verification"
-    }
-
-
-def verify_email_change_token(token: str) -> Dict[str, Any]:
-    """
-    Verify email change token and update user email.
-    In production, this would:
-    1. Look up the token in the verification tokens table
-    2. Check if it's expired
-    3. Update the user's email
-    4. Remove the token from the table
-    """
-    # This is a placeholder implementation
-    # In production, you would:
-    # 1. Query email_verification_tokens table for this token
-    # 2. Check expiration
-    # 3. Get the associated user and new email
-    # 4. Update user.email
-    # 5. Delete the verification token
-    
-    return {
-        "message": "Email verification successful",
-        "status": "verified"
-    }
 
 
 def log_profile_change(user_id: str, changes: Dict[str, Any], 
@@ -253,10 +166,13 @@ def log_profile_change(user_id: str, changes: Dict[str, Any],
     print(f"AUDIT LOG: {json.dumps(audit_entry, indent=2)}")
 
 
-def update_user_profile_secure_with_audit(db: Session, uid: str, profile_data: SecureProfileEdit,
-                                        ip_address: str = None, user_agent: str = None) -> Optional[User]:
+def update_user_profile_secure(db: Session, uid: str, profile_data: SecureProfileEdit,
+                                ip_address: str = None, user_agent: str = None) -> Optional[User]:
     """
-    Enhanced secure profile update with audit logging
+    Secure profile update with audit logging.
+    Only allows editing safe fields that regular users should be able to edit.
+    Excludes administrative fields like is_admin, is_moderator, current_plan, etc.
+    Email is immutable and cannot be changed.
     """
     user = get_user_by_uid(db, uid)
     if not user:
