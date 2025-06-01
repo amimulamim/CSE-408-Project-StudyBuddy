@@ -27,9 +27,4 @@ async def get_current_user(request: Request):
 
     token = auth_header.split(" ")[1]
     user_info = verify_firebase_token(token)
-    # extract and return user UID only
-    # uid = user_info.get("uid")
-    # if not uid:
-    #     raise HTTPException(status_code=401, detail="Invalid Firebase token payload")
-    # return uid
     return user_info

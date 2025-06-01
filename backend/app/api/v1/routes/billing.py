@@ -14,7 +14,7 @@ async def create_subscription(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # extract user_id from Firebase token
+    # extract user_id from Firebase token payload
     user_id = current_user.get("uid")
     try:
         result = await billing_service.create_checkout_session(
@@ -35,19 +35,16 @@ def get_subscription_status(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> Optional[schema.SubscriptionResponse]:
-    # extract user_id from Firebase token
+    # extract user_id from Firebase token payload
     user_id = current_user.get("uid")
-    subscription = billing_service.get_subscription_status(db_session=db, user_id=user_id)
-    if not subscription:
-        raise HTTPException(status_code=404, detail="No active subscription found")
-    return subscription
+    return billing_service.get_subscription_status(db_session=db, user_id=user_id)
 
 @router.post("/cancel")
 def cancel_subscription(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # extract user_id from Firebase token
+    # extract user_id from Firebase token payload
     user_id = current_user.get("uid")
     if billing_service.cancel_subscription(db_session=db, user_id=user_id):
         return {"message": "Subscription cancelled successfully"}

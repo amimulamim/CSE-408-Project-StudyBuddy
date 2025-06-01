@@ -55,14 +55,13 @@ export async function createCheckoutSession(session: CheckoutSession): Promise<C
 
 export async function getSubscriptionStatus(): Promise<SubscriptionStatus | null> {
   const url = `${API_BASE_URL}/api/v1/billing/status`;
-  const response = await makeRequest<SubscriptionStatus>(url, "GET", null);
-  
-  // Handle 404 response (no subscription) gracefully
-  if (typeof response === 'object' && 'status' in response && response.status === 'error') {
-    return null;
+  const result = await makeRequest<SubscriptionStatus>(url, "GET", null);
+  // Unwrap ApiResponse: return data on success, else null
+  if (typeof result === 'object' && 'status' in result) {
+    return result.status === 'success' ? result.data : null;
   }
-  
-  return response as SubscriptionStatus;
+  // Should not happen: treat as no subscription
+  return null;
 }
 
 export async function cancelSubscription(): Promise<{ message: string }> {
