@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.auth.firebase_auth import get_current_user
-from app.billing import service, schema
+from app.billing import service, schema, db
 from typing import Optional
 
 router = APIRouter()
@@ -58,5 +58,35 @@ async def handle_webhook(
     try:
         result = await billing_service.handle_webhook(db_session=db, payload=payload)
         return result
-    except Exception:
+    except Exception as e:
+        print(f"Webhook error: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to process webhook")
+
+@router.get("/success")
+async def payment_success(
+    subscription_id: str = None,
+    tran_id: str = None,
+    db: Session = Depends(get_db)
+):
+    """Handle successful payment redirect from SSLCommerz"""
+    # In a real implementation, you might want to verify the payment status here
+    return {"message": "Payment successful", "subscription_id": subscription_id, "transaction_id": tran_id}
+
+@router.get("/cancel") 
+async def payment_cancel(
+    subscription_id: str = None,
+    tran_id: str = None,
+    db: Session = Depends(get_db)
+):
+    """Handle payment cancellation redirect from SSLCommerz"""
+    # Mark the subscription as failed if it exists
+    if subscription_id:
+        try:
+            subscription = db.query(db.Subscription).filter(db.Subscription.id == subscription_id).first()
+            if subscription and subscription.status == "incomplete":
+                subscription.status = "failed"
+                db.commit()
+        except Exception:
+            pass  # Don't fail the redirect if DB update fails
+    
+    return {"message": "Payment cancelled", "subscription_id": subscription_id, "transaction_id": tran_id}

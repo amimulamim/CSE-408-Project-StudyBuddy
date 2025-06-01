@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -50,7 +50,7 @@ const AVAILABLE_PLANS = [
   }
 ];
 
-export function BillingSubscription() {
+export const BillingSubscription = forwardRef<{ refreshSubscriptionStatus: () => void }>((props, ref) => {
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -80,6 +80,11 @@ export function BillingSubscription() {
     }
   };
 
+  // Expose refresh method via ref
+  useImperativeHandle(ref, () => ({
+    refreshSubscriptionStatus: loadSubscriptionStatus
+  }));
+
   const handleSubscribe = async (planId: string) => {
     try {
       setProcessing(true);
@@ -87,8 +92,8 @@ export function BillingSubscription() {
       const currentUrl = window.location.origin;
       const session = {
         plan_id: planId,
-        success_url: `${currentUrl}/dashboard/billing?success=true`,
-        cancel_url: `${currentUrl}/dashboard/billing?canceled=true`
+        success_url: `${currentUrl}/dashboard/billing?success=true&subscription_id=${encodeURIComponent('pending')}`,
+        cancel_url: `${currentUrl}/dashboard/billing?canceled=true&subscription_id=${encodeURIComponent('pending')}`
       };
 
       const result = await createCheckoutSession(session);
@@ -310,4 +315,4 @@ export function BillingSubscription() {
       )}
     </div>
   );
-}
+});

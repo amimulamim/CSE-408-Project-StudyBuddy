@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field
-from uuid import UUID
 
 class PlanBase(BaseModel):
     id: str
@@ -30,7 +29,7 @@ class SubscriptionCreate(SubscriptionBase):
     pass
 
 class SubscriptionResponse(SubscriptionBase):
-    id: UUID
+    id: str
     created_at: datetime
     updated_at: datetime
 
@@ -44,7 +43,7 @@ class CheckoutSession(BaseModel):
 
 class PaymentBase(BaseModel):
     user_id: str
-    subscription_id: Optional[UUID] = None
+    subscription_id: Optional[str] = None
     amount_cents: int
     currency: str = "BDT"
     provider: str
@@ -55,7 +54,7 @@ class PaymentCreate(PaymentBase):
     pass
 
 class PaymentResponse(PaymentBase):
-    id: UUID
+    id: str
     created_at: datetime
     updated_at: datetime
 
