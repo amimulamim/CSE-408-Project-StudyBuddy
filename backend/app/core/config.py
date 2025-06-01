@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
 
 class Settings(BaseSettings):
     DATABASE_URL: str
@@ -11,6 +12,13 @@ class Settings(BaseSettings):
     FIREBASE_TEST_PASSWORD: str = ""
     E2E_BASE_URL: str = ""
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")  #  key line for extra vars
+    SSLCOMMERZ_STORE_ID: str
+    SSLCOMMERZ_STORE_PASSWORD: str
+    SSLCOMMERZ_SANDBOX: bool = True
+
+    model_config = SettingsConfigDict(
+        env_file=os.getenv("ENV_FILE", ".env"), 
+        extra="ignore"
+    )
 
 settings = Settings()
