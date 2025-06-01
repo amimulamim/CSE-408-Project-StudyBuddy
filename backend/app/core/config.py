@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     FIREBASE_KEY_PATH: str
     FIREBASE_STORAGE_BUCKET: str
+    BACKEND_URL: str = "http://localhost:8000"  # Default for development
 
     # Add the test-only fields so `.env` doesn't cause validation errors
     FIREBASE_API_KEY: str = ""

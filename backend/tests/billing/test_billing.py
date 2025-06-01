@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from unittest.mock import patch, MagicMock
 import httpx
+import hashlib
 
 # Mock Firebase initialization before importing app modules
 with patch('firebase_admin.credentials.Certificate'), \
@@ -97,6 +98,19 @@ def sample_subscription(mock_db, sample_plan, test_user):
     subscription = db.Subscription(
         user_id=test_user.uid,
         plan_id=sample_plan.id,
+        status="incomplete",  # Changed from "active" to "incomplete" for webhook testing
+        start_date=datetime.now(),
+        end_date=datetime.now() + timedelta(days=30)
+    )
+    mock_db.add(subscription)
+    mock_db.commit()
+    return subscription
+
+@pytest.fixture  
+def active_subscription(mock_db, sample_plan, test_user):
+    subscription = db.Subscription(
+        user_id=test_user.uid,
+        plan_id=sample_plan.id,
         status="active",
         start_date=datetime.now(),
         end_date=datetime.now() + timedelta(days=30)
@@ -128,17 +142,17 @@ def test_create_checkout_session(client, mock_db, sample_plan, test_user, mock_a
         assert "checkout_url" in data
         assert "subscription_id" in data
 
-def test_get_subscription_status(client, mock_db, sample_subscription, mock_auth):
+def test_get_subscription_status(client, mock_db, active_subscription, mock_auth):
     response = client.get(
         "/api/v1/billing/status",
         headers={"Authorization": "Bearer test_token"}
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["plan_id"] == sample_subscription.plan_id
+    assert data["plan_id"] == active_subscription.plan_id
     assert data["status"] == "active"
 
-def test_cancel_subscription(client, mock_db, sample_subscription, mock_auth):
+def test_cancel_subscription(client, mock_db, active_subscription, mock_auth):
     response = client.post(
         "/api/v1/billing/cancel",
         headers={"Authorization": "Bearer test_token"}
@@ -148,13 +162,35 @@ def test_cancel_subscription(client, mock_db, sample_subscription, mock_auth):
     assert data["message"] == "Subscription cancelled successfully"
 
 def test_handle_webhook(client, mock_db, sample_subscription, mock_auth):
+    from app.billing.service import BillingService
+    
+    billing_service = BillingService()
+    
+    # Create webhook payload with valid signature
     webhook_payload = {
         "status": "VALID",
-        "subscription_id": str(sample_subscription.id),
+        "val_id": "123456789",
+        "store_id": billing_service.store_id,
+        "value_c": str(sample_subscription.id),
         "amount": "1000.00",
         "currency": "BDT",
-        "tran_id": "TEST_TRANS_123"
+        "tran_date": "2024-01-01 12:00:00",
+        "tran_id": "TEST_TRANS_123",
+        "verify_key": billing_service.store_password
     }
+    
+    # Calculate correct signature
+    signature_string = (
+        str(webhook_payload["val_id"]) +
+        str(webhook_payload["store_id"]) +
+        str(billing_service.store_password) +
+        str(webhook_payload["amount"]) +
+        str(webhook_payload["currency"]) +
+        str(webhook_payload["tran_date"]) +
+        str(webhook_payload["tran_id"])
+    )
+    webhook_payload["verify_sign"] = hashlib.md5(signature_string.encode()).hexdigest()
+    
     response = client.post(
         "/api/v1/billing/webhook",
         json=webhook_payload
@@ -164,6 +200,27 @@ def test_handle_webhook(client, mock_db, sample_subscription, mock_auth):
     assert data["status"] == "success"
 
 def test_invalid_plan_id(client, mock_db, test_user, mock_auth):
+    # Ensure no active subscriptions exist for this test
+    # First delete related payments to avoid foreign key constraint violations
+    active_subscriptions = mock_db.query(db.Subscription).filter(
+        db.Subscription.user_id == test_user.uid,
+        db.Subscription.status == "active"
+    ).all()
+    
+    for subscription in active_subscriptions:
+        # Delete related payments first
+        mock_db.query(db.Payment).filter(
+            db.Payment.subscription_id == subscription.id
+        ).delete()
+        mock_db.flush()  # Ensure payments are deleted before subscription
+    
+    # Now delete subscriptions
+    mock_db.query(db.Subscription).filter(
+        db.Subscription.user_id == test_user.uid,
+        db.Subscription.status == "active"
+    ).delete()
+    mock_db.commit()
+    
     response = client.post(
         "/api/v1/billing/subscribe",
         json={
@@ -176,3 +233,76 @@ def test_invalid_plan_id(client, mock_db, test_user, mock_auth):
     assert response.status_code == 400
     data = response.json()
     assert "Invalid plan ID" in data["detail"]
+
+def test_webhook_signature_validation(mock_db, sample_subscription):
+    """Test webhook signature validation"""
+    from app.billing.service import BillingService
+    
+    billing_service = BillingService()
+    
+    # Create a valid webhook payload with proper signature
+    test_payload = {
+        "val_id": "123456789",
+        "store_id": billing_service.store_id,
+        "amount": "1000.00",
+        "currency": "BDT",
+        "tran_date": "2024-01-01 12:00:00",
+        "tran_id": "TEST_TRANS_123",
+        "status": "VALID",
+        "value_c": str(sample_subscription.id),
+        "verify_key": billing_service.store_password
+    }
+    
+    # Calculate correct signature
+    signature_string = (
+        str(test_payload["val_id"]) +
+        str(test_payload["store_id"]) +
+        str(billing_service.store_password) +
+        str(test_payload["amount"]) +
+        str(test_payload["currency"]) +
+        str(test_payload["tran_date"]) +
+        str(test_payload["tran_id"])
+    )
+    test_payload["verify_sign"] = hashlib.md5(signature_string.encode()).hexdigest()
+    
+    # Test valid signature
+    assert billing_service._validate_webhook_signature(test_payload) == True
+    
+    # Test invalid signature
+    test_payload["verify_sign"] = "invalid_signature"
+    assert billing_service._validate_webhook_signature(test_payload) == False
+    
+    # Test missing verify_sign
+    del test_payload["verify_sign"]
+    assert billing_service._validate_webhook_signature(test_payload) == False
+    
+    # Test missing verify_key
+    test_payload["verify_sign"] = hashlib.md5(signature_string.encode()).hexdigest()
+    del test_payload["verify_key"]
+    assert billing_service._validate_webhook_signature(test_payload) == False
+    
+    # Test invalid verify_key
+    test_payload["verify_key"] = "wrong_password"
+    assert billing_service._validate_webhook_signature(test_payload) == False
+
+def test_handle_webhook_with_invalid_signature(client, mock_db, sample_subscription):
+    """Test webhook handling rejects invalid signatures"""
+    webhook_payload = {
+        "status": "VALID",
+        "value_c": str(sample_subscription.id),
+        "amount": "1000.00",
+        "currency": "BDT",
+        "tran_id": "TEST_TRANS_123",
+        "verify_sign": "invalid_signature",
+        "verify_key": "wrong_password"
+    }
+    
+    response = client.post(
+        "/api/v1/billing/webhook",
+        json=webhook_payload
+    )
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "failed"
+    assert "Invalid webhook signature" in data["message"]

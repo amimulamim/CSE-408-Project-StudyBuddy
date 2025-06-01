@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ export default function BillingPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const billingRef = useRef<{ refreshSubscriptionStatus: () => void }>(null);
 
   useEffect(() => {
     // Handle payment success/failure
@@ -23,6 +24,10 @@ export default function BillingPage() {
       });
       // Clean up URL
       navigate('/dashboard/billing', { replace: true });
+      // Refresh subscription status after a short delay
+      setTimeout(() => {
+        billingRef.current?.refreshSubscriptionStatus();
+      }, 1000);
     } else if (canceled === 'true') {
       toast({
         title: "Payment Canceled",
@@ -55,7 +60,7 @@ export default function BillingPage() {
         </p>
       </div>
 
-      <BillingSubscription />
+      <BillingSubscription ref={billingRef} />
     </div>
   );
 }
