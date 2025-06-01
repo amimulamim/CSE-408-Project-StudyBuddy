@@ -1,11 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1.routes import user
-from app.api.v1.routes.auth import router as auth_router
-from app.api.v1.routes.chat import router as chat_router
+from app.api.v1.api import api_router
 from app.core.database import engine, Base
-from app.api.v1.routes.quiz import router as quiz_router
 from app.config.openapi import setup_openapi
 
 # Create DB tables
@@ -29,12 +26,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routes
-
-app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"]) 
-app.include_router(user.router, prefix="/api/v1/user", tags=["User"])
-app.include_router(chat_router, prefix="/api/v1/ai/chat",tags=["Chat"])  # Chat router handles its own /ai prefix
-app.include_router(quiz_router, prefix="/api/v1/quiz", tags=["Quiz"])
+# Include API v1 routes
+app.include_router(api_router, prefix="/api/v1")
 
 # Setup OpenAPI configuration
 setup_openapi(app)
