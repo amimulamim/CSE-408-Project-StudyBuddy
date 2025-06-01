@@ -38,7 +38,19 @@ export interface CheckoutResponse {
 // API functions
 export async function createCheckoutSession(session: CheckoutSession): Promise<CheckoutResponse> {
   const url = `${API_BASE_URL}/api/v1/billing/subscribe`;
-  return makeRequest<CheckoutResponse>(url, "POST", session);
+  const response = await makeRequest<CheckoutResponse>(url, "POST", session);
+
+  // If wrapped in ApiResponse format, extract data or throw
+  if ('status' in response) {
+    if (response.status === 'success') {
+      return response.data;
+    }
+    const detail = response.data?.detail ?? response.data?.errorMessage ?? response.msg;
+    throw new Error(detail ?? 'Failed to create checkout session');
+  }
+
+  // raw CheckoutResponse
+  return response;
 }
 
 export async function getSubscriptionStatus(): Promise<SubscriptionStatus | null> {
@@ -55,7 +67,19 @@ export async function getSubscriptionStatus(): Promise<SubscriptionStatus | null
 
 export async function cancelSubscription(): Promise<{ message: string }> {
   const url = `${API_BASE_URL}/api/v1/billing/cancel`;
-  return makeRequest<{ message: string }>(url, "POST", null);
+  const response = await makeRequest<{ message: string }>(url, "POST", null);
+
+  // If wrapped in ApiResponse format, extract data or throw
+  if ('status' in response) {
+    if (response.status === 'success') {
+      return response.data;
+    }
+    const detail = response.data?.detail ?? response.data?.errorMessage ?? response.msg;
+    throw new Error(detail ?? 'Failed to cancel subscription');
+  }
+
+  // raw response
+  return response;
 }
 
 // Utility functions
@@ -65,7 +89,9 @@ export function formatPrice(price_cents: number, currency: string = "BDT"): stri
 }
 
 export function formatInterval(interval: string): string {
-  return interval === "monthly" ? "month" : interval === "yearly" ? "year" : interval;
+  if (interval === 'monthly') return 'month';
+  if (interval === 'yearly') return 'year';
+  return interval;
 }
 
 export function getStatusColor(status: string): string {

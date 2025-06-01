@@ -73,17 +73,20 @@ class BillingService:
             )
             response.raise_for_status()
             result = response.json()
+            # Debug: log the raw response from SSLCommerz
+            print(f"[BillingService] SSLCommerz response: {result}")
 
-            if result.get("status") == "VALID":
+            # Return checkout URL if provided by SSLCommerz
+            if result.get("GatewayPageURL"):
                 return {
                     "checkout_url": result["GatewayPageURL"],
                     "subscription_id": str(subscription.id)
                 }
-            else:
-                # Update subscription status to failed
-                subscription.status = "failed"
-                db_session.commit()
-                raise ValueError("Failed to create checkout session")
+            # Otherwise mark subscription failed and raise error with reason
+            subscription.status = "failed"
+            db_session.commit()
+            reason = result.get("failedreason") or result.get("status") or "No checkout URL received"
+            raise ValueError(f"Failed to create checkout session: {reason}")
 
     async def handle_webhook(self, db_session: Session, payload: dict) -> dict:
         # Store webhook event
@@ -150,4 +153,4 @@ class BillingService:
         subscription.status = "canceled"
         subscription.cancel_at = datetime.now()
         db_session.commit()
-        return True 
+        return True
