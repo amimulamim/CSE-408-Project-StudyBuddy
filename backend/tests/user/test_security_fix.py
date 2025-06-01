@@ -8,8 +8,9 @@ through profile update requests.
 import sys
 import os
 
-# Add the app directory to the Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'app'))
+# Add the backend directory to the Python path so we can import app modules
+backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, backend_dir)
 
 def test_secure_profile_edit_rejects_admin_fields():
     """Test that SecureProfileEdit rejects admin fields"""
