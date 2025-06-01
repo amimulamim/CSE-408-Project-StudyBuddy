@@ -47,7 +47,7 @@ def mock_db():
 @pytest.fixture
 def mock_auth():
     def mock_get_current_user():
-        return "test_user"  # Return user ID string, not dict
+        return {"uid": "test_user"}  # Return dict mimicking Firebase token structure
     
     app.dependency_overrides[get_current_user] = mock_get_current_user
     yield
