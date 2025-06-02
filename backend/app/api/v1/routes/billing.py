@@ -5,6 +5,7 @@ from app.auth.firebase_auth import get_current_user
 from app.billing import service, schema, db
 from typing import Optional
 from datetime import datetime, timedelta
+from fastapi.responses import RedirectResponse
 
 router = APIRouter()
 billing_service = service.BillingService()
@@ -140,3 +141,14 @@ async def payment_cancel(
             pass  # Don't fail the redirect if DB update fails
     
     return {"message": "Payment cancelled", "subscription_id": subscription_id, "transaction_id": tran_id}
+
+@router.post("/redirect")
+async def payment_redirect(request: Request):
+    form = await request.form()
+    status = form.get("status", "")
+    is_success = status.upper() in ["VALID", "VALIDATED"]
+    # Get the frontend base URL from the query parameter
+    frontend_base_url = request.query_params.get("frontend", "/")
+    # Redirect to the SPA billing page with the success param
+    url = f"{frontend_base_url}/dashboard/billing?success={'true' if is_success else 'false'}"
+    return RedirectResponse(url=url, status_code=303)

@@ -1,17 +1,31 @@
-import React from 'react';
+// src/components/PaymentResult.tsx
+import React, { useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useNavigate } from "react-router-dom";
 import { CheckCircle, XCircle, ArrowLeft } from "lucide-react";
 
-interface PaymentResultProps {
-  success: boolean;
-  title: string;
-  description: string;
-}
-
-export function PaymentResult({ success, title, description }: PaymentResultProps) {
+export function PaymentResult() {
+  const location = useLocation();
   const navigate = useNavigate();
+  const query = new URLSearchParams(location.search);
+
+  const success = query.get("success") === "true";
+  const title = query.get("title") || (success ? "Payment Successful" : "Payment Failed");
+  const description = query.get("description") || (success ? "Your subscription is now active." : "Something went wrong during payment.");
+
+  const safeText = (text: string, max = 100) => text.slice(0, max);
+
+  useEffect(() => {
+    if (!query.has("success")) {
+      navigate("/dashboard/billing");
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => navigate('/dashboard/billing'), 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div className="container mx-auto py-12">
@@ -25,27 +39,21 @@ export function PaymentResult({ success, title, description }: PaymentResultProp
             )}
           </div>
           <CardTitle className={success ? "text-green-700" : "text-red-700"}>
-            {title}
+            {safeText(title)}
           </CardTitle>
           <CardDescription>
-            {description}
+            {safeText(description, 200)}
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center space-y-4">
-          <Button 
-            onClick={() => navigate('/dashboard/billing')}
-            className="w-full"
-          >
+          <Button onClick={() => navigate('/dashboard/billing')} className="w-full">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Billing
           </Button>
-          <Button 
-            variant="outline"
-            onClick={() => navigate('/dashboard')}
-            className="w-full"
-          >
+          <Button variant="outline" onClick={() => navigate('/dashboard')} className="w-full">
             Go to Dashboard
           </Button>
+          <p className="text-sm text-muted-foreground mt-2">Redirecting to billing...</p>
         </CardContent>
       </Card>
     </div>
