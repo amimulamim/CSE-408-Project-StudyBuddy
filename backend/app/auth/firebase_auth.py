@@ -1,6 +1,6 @@
 import firebase_admin
 from firebase_admin import credentials, auth
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request,exceptions
 from app.core.config import settings
 
 
