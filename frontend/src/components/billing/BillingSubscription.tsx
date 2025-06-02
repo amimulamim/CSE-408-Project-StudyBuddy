@@ -90,10 +90,10 @@ export const BillingSubscription = forwardRef<{ refreshSubscriptionStatus: () =>
       setProcessing(true);
       
       const currentUrl = window.location.origin;
+      // Only send plan_id and frontend_base_url
       const session = {
         plan_id: planId,
-        success_url: `${currentUrl}/dashboard/billing?success=true&subscription_id=${encodeURIComponent('pending')}`,
-        cancel_url: `${currentUrl}/dashboard/billing?canceled=true&subscription_id=${encodeURIComponent('pending')}`
+        frontend_base_url: currentUrl
       };
 
       const result = await createCheckoutSession(session);
