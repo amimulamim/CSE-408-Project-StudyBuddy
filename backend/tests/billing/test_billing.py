@@ -132,8 +132,9 @@ def test_create_checkout_session(client, mock_db, sample_plan, test_user, mock_a
             "/api/v1/billing/subscribe",
             json={
                 "plan_id": sample_plan.id,
-                "success_url": "http://localhost:3000/success",
-                "cancel_url": "http://localhost:3000/cancel"
+                "frontend_base_url": "http://localhost:3000"
+                # "success_url": "http://localhost:3000/success",
+                # "cancel_url": "http://localhost:3000/cancel"
             },
             headers={"Authorization": "Bearer test_token"}
         )
@@ -225,8 +226,9 @@ def test_invalid_plan_id(client, mock_db, test_user, mock_auth):
         "/api/v1/billing/subscribe",
         json={
             "plan_id": "invalid_plan",
-            "success_url": "http://localhost:3000/success",
-            "cancel_url": "http://localhost:3000/cancel"
+            "frontend_base_url": "http://localhost:3000"
+            # "success_url": "http://localhost:3000/success",
+            # "cancel_url": "http://localhost:3000/cancel"
         },
         headers={"Authorization": "Bearer test_token"}
     )

@@ -4,6 +4,7 @@ from app.core.database import get_db
 from app.auth.firebase_auth import get_current_user
 from app.billing import service, schema, db
 from typing import Optional
+from datetime import datetime, timedelta
 
 router = APIRouter()
 billing_service = service.BillingService()
@@ -21,8 +22,7 @@ async def create_subscription(
             db_session=db,
             user_id=user_id,
             plan_id=checkout.plan_id,
-            success_url=checkout.success_url,
-            cancel_url=checkout.cancel_url
+            frontend_base_url=checkout.frontend_base_url
         )
         return result
     except ValueError as e:
@@ -69,8 +69,54 @@ async def payment_success(
     db: Session = Depends(get_db)
 ):
     """Handle successful payment redirect from SSLCommerz"""
-    # In a real implementation, you might want to verify the payment status here
-    return {"message": "Payment successful", "subscription_id": subscription_id, "transaction_id": tran_id}
+    try:
+        # Get subscription
+        subscription = db.query(db.Subscription).filter(db.Subscription.id == subscription_id).first()
+        if not subscription:
+            raise HTTPException(status_code=404, detail="Subscription not found")
+
+        # If subscription is already active, just return success
+        if subscription.status == "active":
+            return {"message": "Payment already processed", "subscription_id": subscription_id}
+
+        # If subscription is incomplete, update it to active
+        if subscription.status == "incomplete":
+            subscription.status = "active"
+            # Set end date based on plan interval
+            if subscription.plan_id.endswith("_yearly"):
+                subscription.end_date = datetime.now() + timedelta(days=365)
+            else:
+                subscription.end_date = datetime.now() + timedelta(days=30)
+            db.commit()
+
+        # Create payment record if not exists
+        existing_payment = db.query(db.Payment).filter(
+            db.Payment.subscription_id == subscription_id,
+            db.Payment.provider_payment_id == tran_id
+        ).first()
+
+        if not existing_payment:
+            payment = db.Payment(
+                user_id=subscription.user_id,
+                subscription_id=subscription.id,
+                amount_cents=0,  # Amount will be updated by webhook
+                currency="BDT",
+                provider="sslcommerz",
+                provider_payment_id=tran_id,
+                status="success"
+            )
+            db.add(payment)
+            db.commit()
+
+        return {
+            "message": "Payment successful",
+            "subscription_id": subscription_id,
+            "transaction_id": tran_id,
+            "status": "success"
+        }
+    except Exception as e:
+        print(f"Payment success error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to process payment success")
 
 @router.get("/cancel") 
 async def payment_cancel(

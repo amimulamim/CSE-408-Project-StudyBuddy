@@ -19,8 +19,7 @@ class BillingService:
         db_session: Session,
         user_id: str,
         plan_id: str,
-        success_url: str,
-        cancel_url: str
+        frontend_base_url: str
     ) -> dict:
         # Check for existing active subscription
         existing_subscription = db_session.query(db.Subscription).filter(
@@ -53,6 +52,10 @@ class BillingService:
         db_session.add(subscription)
         db_session.commit()
         db_session.refresh(subscription)
+
+        # Construct success and cancel URLs using the real subscription_id
+        success_url = f"{frontend_base_url}/dashboard/billing?success=true&subscription_id={subscription.id}"
+        cancel_url = f"{frontend_base_url}/dashboard/billing?canceled=true&subscription_id={subscription.id}"
 
         # Prepare SSLCommerz payload
         payload = {
@@ -105,19 +108,26 @@ class BillingService:
             raise ValueError(f"Failed to create checkout session: {reason}")
 
     async def handle_webhook(self, db_session: Session, payload: dict) -> dict:
-        # Store webhook event
+        # Store webhook event with timestamp
         import json
-        webhook_event = db.WebhookEvent(raw_payload=json.dumps(payload))
+        webhook_event = db.WebhookEvent(
+            raw_payload=json.dumps(payload),
+            received_at=datetime.now()
+        )
         db_session.add(webhook_event)
         db_session.commit()
 
+        print(f"[BillingService] Received webhook: {json.dumps(payload, indent=2)}")
+
         # Validate webhook signature for security
         if not self._validate_webhook_signature(payload):
+            print("[BillingService] Invalid webhook signature")
             return {"status": "failed", "message": "Invalid webhook signature"}
 
         # SSLCommerz sends different status values, check for successful payment
         status = payload.get("status", "").upper()
         if status not in ["VALID", "VALIDATED"]:
+            print(f"[BillingService] Invalid transaction status: {status}")
             return {"status": "failed", "message": f"Invalid transaction status: {status}"}
 
         # Get subscription ID - check different possible field names
@@ -136,9 +146,10 @@ class BillingService:
         print(f"[BillingService] Found subscription_id: {subscription_id}")
         
         if not subscription_id:
+            print("[BillingService] No subscription ID found in webhook payload")
             return {"status": "failed", "message": "No subscription ID found in webhook payload"}
 
-        # Convert string to UUID string for database query (no UUID conversion needed)
+        # Convert string to UUID string for database query
         try:
             if isinstance(subscription_id, str):
                 # Validate it's a valid UUID string format
@@ -158,37 +169,57 @@ class BillingService:
         print(f"[BillingService] Found subscription: {subscription}")
 
         if not subscription:
+            print(f"[BillingService] Subscription not found: {subscription_id}")
             return {"status": "failed", "message": f"Subscription not found: {subscription_id}"}
 
-        # Update subscription status
-        subscription.status = "active"
-        
-        # Set end date based on plan interval
-        if subscription.plan_id.endswith("_yearly"):
-            subscription.end_date = datetime.now() + timedelta(days=365)
-        else:
-            subscription.end_date = datetime.now() + timedelta(days=30)
+        # Update subscription status if it's not already active
+        if subscription.status != "active":
+            subscription.status = "active"
             
-        db_session.commit()
+            # Set end date based on plan interval
+            if subscription.plan_id.endswith("_yearly"):
+                subscription.end_date = datetime.now() + timedelta(days=365)
+            else:
+                subscription.end_date = datetime.now() + timedelta(days=30)
+                
+            db_session.commit()
+            print(f"[BillingService] Updated subscription status to active: {subscription_id}")
 
-        # Create payment record
+        # Create or update payment record
         amount_str = payload.get("amount", "0")
         try:
             amount_cents = int(float(amount_str) * 100)
         except (ValueError, TypeError):
             amount_cents = 0
 
-        payment = db.Payment(
-            user_id=subscription.user_id,
-            subscription_id=subscription.id,
-            amount_cents=amount_cents,
-            currency=payload.get("currency", "BDT"),
-            provider="sslcommerz",
-            provider_payment_id=payload.get("tran_id"),
-            status="success"
-        )
-        db_session.add(payment)
+        # Check for existing payment
+        existing_payment = db_session.query(db.Payment).filter(
+            db.Payment.subscription_id == subscription.id,
+            db.Payment.provider_payment_id == payload.get("tran_id")
+        ).first()
+
+        if existing_payment:
+            # Update existing payment
+            existing_payment.amount_cents = amount_cents
+            existing_payment.status = "success"
+            existing_payment.updated_at = datetime.now()
+            print(f"[BillingService] Updated existing payment record: {existing_payment.id}")
+        else:
+            # Create new payment record
+            payment = db.Payment(
+                user_id=subscription.user_id,
+                subscription_id=subscription.id,
+                amount_cents=amount_cents,
+                currency=payload.get("currency", "BDT"),
+                provider="sslcommerz",
+                provider_payment_id=payload.get("tran_id"),
+                status="success"
+            )
+            db_session.add(payment)
+            print(f"[BillingService] Created new payment record for subscription: {subscription_id}")
+
         db_session.commit()
+        print(f"[BillingService] Successfully processed webhook for subscription: {subscription_id}")
 
         return {"status": "success", "message": "Webhook processed successfully"}
 

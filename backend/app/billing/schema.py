@@ -38,8 +38,7 @@ class SubscriptionResponse(SubscriptionBase):
 
 class CheckoutSession(BaseModel):
     plan_id: str
-    success_url: str
-    cancel_url: str
+    frontend_base_url: str
 
 class PaymentBase(BaseModel):
     user_id: str
