@@ -32,6 +32,11 @@ jobs:
             echo "QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}" >> .env
             echo "QDRANT_HOST=${{ secrets.QDRANT_HOST }}" >> .env
             echo "QDRANT_COLLECTION_NAME=${{ secrets.QDRANT_COLLECTION_NAME }}" >> .env
+            echo "SSLCOMMERZ_STORE_ID=${{ secrets.SSLCOMMERZ_STORE_ID }}" >> .env
+            echo "SSLCOMMERZ_STORE_PASSWORD=${{ secrets.SSLCOMMERZ_STORE_PASSWORD }}" >> .env
+            echo "SSLCOMMERZ_SANDBOX=${{ secrets.SSLCOMMERZ_SANDBOX }}" >> .env
+            echo "BACKEND_URL=${{ secrets.BACKEND_URL }}" >> .env
+
     - name: Upload env file
       uses: actions/upload-artifact@v4
       with:
@@ -101,6 +106,11 @@ jobs:
         echo "QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}" >> .env.test
         echo "QDRANT_HOST=${{ secrets.QDRANT_HOST }}" >> .env.test
         echo "QDRANT_COLLECTION_NAME=${{ secrets.QDRANT_COLLECTION_NAME }}" >> .env.test
+        echo "SSLCOMMERZ_STORE_ID=${{ secrets.SSLCOMMERZ_STORE_ID }}" >> .env.test
+        echo "SSLCOMMERZ_STORE_PASSWORD=${{ secrets.SSLCOMMERZ_STORE_PASSWORD }}" >> .env.test
+        echo "SSLCOMMERZ_SANDBOX=${{ secrets.SSLCOMMERZ_SANDBOX }}" >> .env.test
+        echo "BACKEND_URL=${{ secrets.BACKEND_URL }}" >> .env.test
+
 
 
 
