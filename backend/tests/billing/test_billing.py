@@ -5,6 +5,13 @@ from unittest.mock import patch, MagicMock
 import httpx
 import hashlib
 
+def generate_sslcommerz_signature(payload, store_password):
+    verify_key = payload["verify_key"]
+    keys = verify_key.split(",")
+    base_string = "&".join(f"{k}={payload.get(k, '')}" for k in keys)
+    base_string += f"&store_passwd={store_password}"
+    return hashlib.md5(base_string.encode()).hexdigest()
+
 # Mock Firebase initialization before importing app modules
 with patch('firebase_admin.credentials.Certificate'), \
      patch('firebase_admin.initialize_app'), \
@@ -164,10 +171,8 @@ def test_cancel_subscription(client, mock_db, active_subscription, mock_auth):
 
 def test_handle_webhook(client, mock_db, sample_subscription, mock_auth):
     from app.billing.service import BillingService
-    
     billing_service = BillingService()
-    
-    # Create webhook payload with valid signature
+
     webhook_payload = {
         "status": "VALID",
         "val_id": "123456789",
@@ -177,21 +182,10 @@ def test_handle_webhook(client, mock_db, sample_subscription, mock_auth):
         "currency": "BDT",
         "tran_date": "2024-01-01 12:00:00",
         "tran_id": "TEST_TRANS_123",
-        "verify_key": billing_service.store_password
+        "verify_key": "val_id,store_id,amount,currency,tran_date,tran_id"
     }
-    
-    # Calculate correct signature
-    signature_string = (
-        str(webhook_payload["val_id"]) +
-        str(webhook_payload["store_id"]) +
-        str(billing_service.store_password) +
-        str(webhook_payload["amount"]) +
-        str(webhook_payload["currency"]) +
-        str(webhook_payload["tran_date"]) +
-        str(webhook_payload["tran_id"])
-    )
-    webhook_payload["verify_sign"] = hashlib.md5(signature_string.encode()).hexdigest()
-    
+    webhook_payload["verify_sign"] = generate_sslcommerz_signature(webhook_payload, billing_service.store_password)
+
     response = client.post(
         "/api/v1/billing/webhook",
         data=webhook_payload
@@ -239,10 +233,8 @@ def test_invalid_plan_id(client, mock_db, test_user, mock_auth):
 def test_webhook_signature_validation(mock_db, sample_subscription):
     """Test webhook signature validation"""
     from app.billing.service import BillingService
-    
     billing_service = BillingService()
-    
-    # Create a valid webhook payload with proper signature
+
     test_payload = {
         "val_id": "123456789",
         "store_id": billing_service.store_id,
@@ -252,58 +244,49 @@ def test_webhook_signature_validation(mock_db, sample_subscription):
         "tran_id": "TEST_TRANS_123",
         "status": "VALID",
         "value_c": str(sample_subscription.id),
-        "verify_key": billing_service.store_password
+        "verify_key": "val_id,store_id,amount,currency,tran_date,tran_id"
     }
-    
-    # Calculate correct signature
-    signature_string = (
-        str(test_payload["val_id"]) +
-        str(test_payload["store_id"]) +
-        str(billing_service.store_password) +
-        str(test_payload["amount"]) +
-        str(test_payload["currency"]) +
-        str(test_payload["tran_date"]) +
-        str(test_payload["tran_id"])
-    )
-    test_payload["verify_sign"] = hashlib.md5(signature_string.encode()).hexdigest()
-    
-    # Test valid signature
+    test_payload["verify_sign"] = generate_sslcommerz_signature(test_payload, billing_service.store_password)
     assert billing_service._validate_webhook_signature(test_payload) == True
-    
+
     # Test invalid signature
     test_payload["verify_sign"] = "invalid_signature"
     assert billing_service._validate_webhook_signature(test_payload) == False
-    
+
     # Test missing verify_sign
     del test_payload["verify_sign"]
     assert billing_service._validate_webhook_signature(test_payload) == False
-    
+
     # Test missing verify_key
-    test_payload["verify_sign"] = hashlib.md5(signature_string.encode()).hexdigest()
+    test_payload["verify_sign"] = generate_sslcommerz_signature(test_payload, billing_service.store_password)
     del test_payload["verify_key"]
     assert billing_service._validate_webhook_signature(test_payload) == False
-    
+
     # Test invalid verify_key
-    test_payload["verify_key"] = "wrong_password"
+    test_payload["verify_key"] = "wrong_key1,wrong_key2"
+    test_payload["verify_sign"] = generate_sslcommerz_signature(test_payload, billing_service.store_password)
     assert billing_service._validate_webhook_signature(test_payload) == False
 
 def test_handle_webhook_with_invalid_signature(client, mock_db, sample_subscription):
     """Test webhook handling rejects invalid signatures"""
+    from app.billing.service import BillingService
+    billing_service = BillingService()
     webhook_payload = {
         "status": "VALID",
+        "val_id": "123456789",
+        "store_id": billing_service.store_id,
         "value_c": str(sample_subscription.id),
         "amount": "1000.00",
         "currency": "BDT",
+        "tran_date": "2024-01-01 12:00:00",
         "tran_id": "TEST_TRANS_123",
-        "verify_sign": "invalid_signature",
-        "verify_key": "wrong_password"
+        "verify_key": "val_id,store_id,amount,currency,tran_date,tran_id",
+        "verify_sign": "invalid_signature"
     }
-    
     response = client.post(
         "/api/v1/billing/webhook",
-        json=webhook_payload
+        data=webhook_payload
     )
-    
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "failed"
