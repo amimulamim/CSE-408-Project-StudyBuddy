@@ -112,6 +112,23 @@ class BillingService:
             reason = result.get("failedreason") or result.get("status") or "No checkout URL received"
             raise ValueError(f"Failed to create checkout session: {reason}")
 
+    async def _validate_with_sslcommerz_api(self, val_id: str) -> dict:
+        """
+        Call the SSLCommerz validation API to confirm transaction status.
+        """
+        url = f"{self.base_url}/validator/api/validationserverAPI.php"
+        params = {
+            "val_id": val_id,
+            "store_id": self.store_id,
+            "store_passwd": self.store_password,
+            "v": 1,
+            "format": "json"
+        }
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params)
+            response.raise_for_status()
+            return response.json()
+
     async def handle_webhook(self, db_session: Session, payload: dict) -> dict:
         import json
         webhook_event = db.WebhookEvent(
@@ -123,11 +140,23 @@ class BillingService:
 
         print(f"[BillingService] Received webhook: {json.dumps(payload, indent=2)}")
 
-        # Validate webhook signature for security - TEMPORARILY DISABLED FOR DEBUGGING
+        # Signature validation (log only, do not enforce)
         signature_valid = self._validate_webhook_signature(payload)
-        if not signature_valid:
-            print("[BillingService] Invalid webhook signature - continuing for debugging.")
-            # return {"status": "failed", "message": "Invalid webhook signature"}
+        print(f"[BillingService] Signature valid: {signature_valid}")
+
+        # Validate with SSLCommerz API
+        val_id = payload.get("val_id")
+        if not val_id:
+            return {"status": "failed", "message": "No val_id in payload"}
+        try:
+            validation_response = await self._validate_with_sslcommerz_api(val_id)
+        except Exception as e:
+            print(f"[BillingService] Error calling SSLCommerz validation API: {e}")
+            return {"status": "failed", "message": "Could not validate payment with SSLCommerz"}
+
+        print(f"[BillingService] SSLCommerz validation response: {validation_response}")
+        if validation_response.get("status") not in ["VALID", "VALIDATED"]:
+            return {"status": "failed", "message": "Payment not validated by SSLCommerz"}
 
         # SSLCommerz sends different status values, check for successful payment
         status = payload.get("status", "").upper()
@@ -269,36 +298,41 @@ class BillingService:
         Validate SSLCommerz webhook signature using verify_key and verify_sign.
         Supports both verify_sign (MD5) and verify_sign_sha2 (SHA256).
         """
-        verify_key = payload.get("verify_key")
-        verify_sign = payload.get("verify_sign")
-        verify_sign_sha2 = payload.get("verify_sign_sha2")
+        verify_key        = payload.get("verify_key")
+        verify_sign       = payload.get("verify_sign")
+        verify_sign_sha2  = payload.get("verify_sign_sha2")
 
         if not verify_key or not (verify_sign or verify_sign_sha2):
-            print(f"[BillingService] Missing signature parameters. verify_key: {verify_key}, verify_sign: {verify_sign}, verify_sign_sha2: {verify_sign_sha2}")
+            print(
+                f"[BillingService] Missing signature parameters. "
+                f"verify_key: {verify_key}, verify_sign: {verify_sign}, verify_sign_sha2: {verify_sign_sha2}"
+            )
             return False
 
         try:
-            # Step 1: Extract keys from verify_key
+            # Step 1: Extract keys from verify_key (CSV list)
             keys = verify_key.split(",")
 
-            # Step 2: Build string like key1=value1&key2=value2...
+            # Step 2: Build "key1=value1&key2=value2&..." in exact order
             base_string = "&".join(f"{k}={payload[k]}" for k in keys if k in payload)
             print(f"[BillingService] Base string before password: {base_string}")
 
-            # Step 3: Append raw store password (NOT hashed)
-            base_string += f"&store_passwd={self.store_password}"
+            # ----- MODIFIED: Append MD5(store_password) instead of raw password -----
+            hashed_pass = hashlib.md5(self.store_password.encode()).hexdigest()
+            base_string += f"&store_passwd={hashed_pass}"
             print(f"[BillingService] Base string for hashing: {base_string}")
 
-            # Step 4: Generate hashes
-            md5_hash = hashlib.md5(base_string.encode()).hexdigest()
+            # Step 4: Generate both MD5 and SHA256 of that full string
+            md5_hash  = hashlib.md5(base_string.encode()).hexdigest()
             sha2_hash = hashlib.sha256(base_string.encode()).hexdigest()
 
-            # Step 5: Match with provided hash
-            print(f"[BillingService] Expected MD5: {md5_hash}")
+            # Debug prints
+            print(f"[BillingService] Expected MD5:   {md5_hash}")
             print(f"[BillingService] Expected SHA256: {sha2_hash}")
-            print(f"[BillingService] Provided MD5: {verify_sign}")
+            print(f"[BillingService] Provided MD5:   {verify_sign}")
             print(f"[BillingService] Provided SHA256: {verify_sign_sha2}")
 
+            # Step 5: Compare against provided signatures
             if verify_sign and md5_hash.lower() == verify_sign.lower():
                 print("[BillingService] MD5 signature verification successful")
                 return True
