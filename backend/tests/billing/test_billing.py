@@ -194,7 +194,7 @@ def test_handle_webhook(client, mock_db, sample_subscription, mock_auth):
     
     response = client.post(
         "/api/v1/billing/webhook",
-        json=webhook_payload
+        data=webhook_payload
     )
     assert response.status_code == 200
     data = response.json()

@@ -108,7 +108,6 @@ class BillingService:
             raise ValueError(f"Failed to create checkout session: {reason}")
 
     async def handle_webhook(self, db_session: Session, payload: dict) -> dict:
-        # Store webhook event with timestamp
         import json
         webhook_event = db.WebhookEvent(
             raw_payload=json.dumps(payload),
@@ -121,45 +120,42 @@ class BillingService:
 
         # Validate webhook signature for security
         if not self._validate_webhook_signature(payload):
-            print("[BillingService] Invalid webhook signature")
+            print("[BillingService] Invalid webhook signature. Aborting update.")
             return {"status": "failed", "message": "Invalid webhook signature"}
 
         # SSLCommerz sends different status values, check for successful payment
         status = payload.get("status", "").upper()
+        print(f"[BillingService] Webhook status: {status}")
         if status not in ["VALID", "VALIDATED"]:
-            print(f"[BillingService] Invalid transaction status: {status}")
+            print(f"[BillingService] Invalid transaction status: {status}. Aborting update.")
             return {"status": "failed", "message": f"Invalid transaction status: {status}"}
 
         # Get subscription ID - check different possible field names
         subscription_id = None
-        
-        # Try different field names in order
         if payload.get("subscription_id"):
             subscription_id = payload.get("subscription_id")
         elif payload.get("value_c"):  # SSLCommerz custom field
             subscription_id = payload.get("value_c")
-        elif payload.get("value_d"):  # SSLCommerz custom field
+        elif payload.get("value_d"):
             subscription_id = payload.get("value_d")
         elif payload.get("tran_id", "").startswith("SUB_"):
             subscription_id = payload.get("tran_id", "").replace("SUB_", "")
-        
+
         print(f"[BillingService] Found subscription_id: {subscription_id}")
-        
         if not subscription_id:
-            print("[BillingService] No subscription ID found in webhook payload")
+            print("[BillingService] No subscription ID found in webhook payload. Aborting update.")
             return {"status": "failed", "message": "No subscription ID found in webhook payload"}
 
         # Convert string to UUID string for database query
         try:
             if isinstance(subscription_id, str):
-                # Validate it's a valid UUID string format
                 uuid.UUID(subscription_id)  # Just for validation
                 subscription_uuid_str = subscription_id
             else:
                 subscription_uuid_str = str(subscription_id)
             print(f"[BillingService] Using subscription ID: {subscription_uuid_str}")
         except (ValueError, TypeError) as e:
-            print(f"[BillingService] UUID validation failed: {e}")
+            print(f"[BillingService] UUID validation failed: {e}. Aborting update.")
             return {"status": "failed", "message": f"Invalid subscription ID format: {subscription_id}"}
 
         subscription = db_session.query(db.Subscription).filter(
@@ -167,23 +163,21 @@ class BillingService:
         ).first()
 
         print(f"[BillingService] Found subscription: {subscription}")
-
         if not subscription:
-            print(f"[BillingService] Subscription not found: {subscription_id}")
+            print(f"[BillingService] Subscription not found: {subscription_id}. Aborting update.")
             return {"status": "failed", "message": f"Subscription not found: {subscription_id}"}
 
         # Update subscription status if it's not already active
         if subscription.status != "active":
             subscription.status = "active"
-            
-            # Set end date based on plan interval
             if subscription.plan_id.endswith("_yearly"):
                 subscription.end_date = datetime.now() + timedelta(days=365)
             else:
                 subscription.end_date = datetime.now() + timedelta(days=30)
-                
             db_session.commit()
             print(f"[BillingService] Updated subscription status to active: {subscription_id}")
+        else:
+            print(f"[BillingService] Subscription already active: {subscription_id}")
 
         # Create or update payment record
         amount_str = payload.get("amount", "0")
@@ -192,20 +186,17 @@ class BillingService:
         except (ValueError, TypeError):
             amount_cents = 0
 
-        # Check for existing payment
         existing_payment = db_session.query(db.Payment).filter(
             db.Payment.subscription_id == subscription.id,
             db.Payment.provider_payment_id == payload.get("tran_id")
         ).first()
 
         if existing_payment:
-            # Update existing payment
             existing_payment.amount_cents = amount_cents
             existing_payment.status = "success"
             existing_payment.updated_at = datetime.now()
             print(f"[BillingService] Updated existing payment record: {existing_payment.id}")
         else:
-            # Create new payment record
             payment = db.Payment(
                 user_id=subscription.user_id,
                 subscription_id=subscription.id,
