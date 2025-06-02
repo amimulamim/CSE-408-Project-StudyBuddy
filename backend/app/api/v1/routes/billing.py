@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException,Request
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.auth.firebase_auth import get_current_user
@@ -52,14 +52,18 @@ def cancel_subscription(
 
 @router.post("/webhook")
 async def handle_webhook(
-    payload: dict,
+    request: Request,
     db: Session = Depends(get_db)
 ):
     try:
+        form = await request.form()
+        payload = dict(form)  # Convert form data to dict
+        print("[Webhook] Received payload:", payload)
+
         result = await billing_service.handle_webhook(db_session=db, payload=payload)
         return result
     except Exception as e:
-        print(f"Webhook error: {str(e)}")
+        print(f"[Webhook] Error: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to process webhook")
 
 @router.get("/success")
