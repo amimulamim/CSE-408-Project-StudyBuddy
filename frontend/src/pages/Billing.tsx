@@ -15,8 +15,6 @@ export default function BillingPage() {
   useEffect(() => {
     // Handle payment success/failure
     const success = searchParams.get('success');
-    const canceled = searchParams.get('canceled');
-    
     if (success === 'true') {
       toast({
         title: "Payment Successful!",
@@ -28,10 +26,10 @@ export default function BillingPage() {
       setTimeout(() => {
         billingRef.current?.refreshSubscriptionStatus();
       }, 1000);
-    } else if (canceled === 'true') {
+    } else if (success === 'false') {
       toast({
-        title: "Payment Canceled",
-        description: "Your payment was canceled. No charges were made.",
+        title: "Payment Failed or Canceled",
+        description: "Your payment was not successful or was canceled. No charges were made.",
         variant: "destructive",
       });
       // Clean up URL

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.billing import db, schema
 from app.core.config import settings
 from typing import Optional
+from urllib.parse import urlencode
 
 class BillingService:
     def __init__(self):
@@ -53,14 +54,12 @@ class BillingService:
         db_session.commit()
         db_session.refresh(subscription)
 
-        # Construct success and cancel URLs using the real subscription_id
-        # success_url = f"{frontend_base_url}/dashboard/billing?success=true&subscription_id={subscription.id}"
-        
-        success_url = f"{frontend_base_url}/redirect?to=/dashboard/billing/result&success=true&title=Payment+Success&description=Your+subscription+is+active"
-
-        cancel_url = f"{frontend_base_url}/redirect?to=/dashboard/billing/result&success=false&title=Payment+Failed&description=Something+went+wrong"
-
-
+        # Construct success and cancel URLs to point to the backend redirect endpoint
+        # Pass the frontend_base_url as a query parameter so the redirect endpoint can redirect to the SPA
+        redirect_base = f"{settings.BACKEND_URL}/api/v1/billing/redirect"
+        frontend_param = urlencode({'frontend': frontend_base_url})
+        success_url = f"{redirect_base}?{frontend_param}"
+        cancel_url = f"{redirect_base}?{frontend_param}"
 
         # Prepare SSLCommerz payload
         payload = {
