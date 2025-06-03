@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+    image: fastapi-app:test
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.test
+
+  test:
+    build:
+      context: .
+    depends_on:
+      - app
+    env_file:
+      - .env.test
+    command: >
+      sh -c "sleep 5; coverage run -m pytest; coverage report; coverage xml;
+      sed -i 's|<source>app</source>|<source>backend/app</source>|' coverage_reports/coverage.xml"
+    volumes:
+      - .:/app
