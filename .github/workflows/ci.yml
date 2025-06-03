@@ -25,17 +25,17 @@ jobs:
       run: |
         echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
         echo "FIREBASE_KEY_PATH=/app/keys/firebaseKey.json" >> .env
-            echo "FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}" >> .env
-            echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
-            echo "GEMINI_MODEL=${{ secrets.GEMINI_MODEL }}" >> .env
-            echo "QUERY_EMBEDDING_MODEL=${{ secrets.QUERY_EMBEDDING_MODEL }}" >> .env
-            echo "QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}" >> .env
-            echo "QDRANT_HOST=${{ secrets.QDRANT_HOST }}" >> .env
-            echo "QDRANT_COLLECTION_NAME=${{ secrets.QDRANT_COLLECTION_NAME }}" >> .env
-            echo "SSLCOMMERZ_STORE_ID=${{ secrets.SSLCOMMERZ_STORE_ID }}" >> .env
-            echo "SSLCOMMERZ_STORE_PASSWORD=${{ secrets.SSLCOMMERZ_STORE_PASSWORD }}" >> .env
-            echo "SSLCOMMERZ_SANDBOX=${{ secrets.SSLCOMMERZ_SANDBOX }}" >> .env
-            echo "BACKEND_URL=${{ secrets.BACKEND_URL }}" >> .env
+        echo "FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}" >> .env
+        echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+        echo "GEMINI_MODEL=${{ secrets.GEMINI_MODEL }}" >> .env
+        echo "QUERY_EMBEDDING_MODEL=${{ secrets.QUERY_EMBEDDING_MODEL }}" >> .env
+        echo "QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}" >> .env
+        echo "QDRANT_HOST=${{ secrets.QDRANT_HOST }}" >> .env
+        echo "QDRANT_COLLECTION_NAME=${{ secrets.QDRANT_COLLECTION_NAME }}" >> .env
+        echo "SSLCOMMERZ_STORE_ID=${{ secrets.SSLCOMMERZ_STORE_ID }}" >> .env
+        echo "SSLCOMMERZ_STORE_PASSWORD=${{ secrets.SSLCOMMERZ_STORE_PASSWORD }}" >> .env
+        echo "SSLCOMMERZ_SANDBOX=${{ secrets.SSLCOMMERZ_SANDBOX }}" >> .env
+        echo "BACKEND_URL=${{ secrets.BACKEND_URL }}" >> .env
 
     - name: Upload env file
       uses: actions/upload-artifact@v4
@@ -111,40 +111,12 @@ jobs:
         echo "SSLCOMMERZ_SANDBOX=${{ secrets.SSLCOMMERZ_SANDBOX }}" >> .env.test
         echo "BACKEND_URL=${{ secrets.BACKEND_URL }}" >> .env.test
 
-
-
-
     - name: Upload .env.test file
       uses: actions/upload-artifact@v4
       with:
         name: env-test-file
         path: backend/.env.test
 
-
-    # - name: Set up Python
-    #   uses: actions/setup-python@v4
-    #   with:
-    #     python-version: '3.11'
-
-    # - name: Install dependencies
-    #   run: |
-    #     python -m pip install --upgrade pip
-    #     pip install -r requirements.txt
-
-    # - name: Run tests with coverage
-    #   run: |
-    #     cd ..
-    #     coverage run -m pytest
-    #     coverage xml
-
-    # - name: Clean up .coverage if needed
-    #   run: rm -f .coverage
-
-    # - name: Upload coverage report artifact
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: backend-coverage-report
-    #     path: backend/coverage_reports/coverage.xml
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
@@ -191,8 +163,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run Unit Tests
-        run: npm run test
+      - name: Run Unit Tests & Generate Coverage Report
+        run: npm run coverage
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
