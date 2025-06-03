@@ -1,3 +1,4 @@
 .vscode/
 fastapi_project/
 .coverage
+*.env*
