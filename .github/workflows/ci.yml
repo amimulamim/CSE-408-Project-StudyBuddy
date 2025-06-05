@@ -85,7 +85,7 @@ jobs:
 
     - name: Build and test with Docker Compose
       run: |
-        docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test
+        TAG=${{ github.sha }} docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test
 
     - name: Upload coverage report artifact
       uses: actions/upload-artifact@v4
@@ -109,7 +109,7 @@ jobs:
       
     - name: Push Backend Image
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      run: docker push studybuddyimagecontainer.azurecr.io/backend:latest
+      run: docker push studybuddyimagecontainer.azurecr.io/backend:${{ github.sha }}
 
 
   frontend_pipeline:
@@ -156,11 +156,11 @@ jobs:
       
       - name: Build Frontend Image
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: docker build -t studybuddyimagecontainer.azurecr.io/frontend:latest .
+        run: docker build -t studybuddyimagecontainer.azurecr.io/frontend:${{ github.sha }} .
       
       - name: Push Frontend Image
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: docker push studybuddyimagecontainer.azurecr.io/frontend:latest
+        run: docker push studybuddyimagecontainer.azurecr.io/frontend:${{ github.sha }}
 
   sonarcloud-scan:
     name: SonarCloud Scan
