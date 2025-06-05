@@ -13,6 +13,7 @@ services:
     volumes:
       - ./.env:/app/.env:ro                # Mount `.env` file into container root
       - ./keys:/app/keys:ro
+    working_dir: /app
 
   test:
     build:
@@ -29,3 +30,4 @@ services:
       - .:/app
       - ./.env:/app/.env:ro
       - ./keys:/app/keys:ro
+    working_dir: /app
