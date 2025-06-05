@@ -4,7 +4,7 @@ import type { FileAttachment } from "./chat";
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
 async function getResponse(content: string, files?: FileAttachment[], currentChatId?: string) {
-    const url = `${API_BASE_URL}/api/v1/ai/chat`;
+    const url = `${API_BASE_URL}/api/v1/ai/chat/`;
     const reqBody = new FormData();
     reqBody.append("text", content);
     if (currentChatId) {
