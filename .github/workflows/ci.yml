@@ -78,6 +78,12 @@ jobs:
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
+    
+    - name: Pre-create coverage_reports dir with correct permissions
+      run: |
+        mkdir -p coverage_reports
+        chmod -R 777 coverage_reports
+
 
     - name: Build and test with Docker Compose
       run: |
