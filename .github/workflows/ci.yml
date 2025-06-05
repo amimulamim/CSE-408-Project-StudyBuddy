@@ -81,7 +81,7 @@ jobs:
     
     - name: Fix permissions for backend volume
       run: |
-        chmod -R 777 backend/
+        chmod -R 777 .
 
     - name: Build and test with Docker Compose
       run: |
