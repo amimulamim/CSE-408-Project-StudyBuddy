@@ -103,7 +103,7 @@ jobs:
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: docker/login-action@v2
       with:
-        username: ${{ secrets.REGISTRY_USERNAME }}
+        username: ${{ secrets.REGISTRY_NAME }}
         password: ${{ secrets.REGISTRY_PASSWORD }}
       
     - name: Push Backend Image
@@ -149,7 +149,7 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.REGISTRY_USERNAME }}
+          username: ${{ secrets.REGISTRY_NAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
       
       - name: Build Frontend Image
