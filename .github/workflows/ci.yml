@@ -103,6 +103,7 @@ jobs:
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: docker/login-action@v2
       with:
+        registry: studybuddyimagecontainer.azurecr.io
         username: ${{ secrets.REGISTRY_NAME }}
         password: ${{ secrets.REGISTRY_PASSWORD }}
       
@@ -149,6 +150,7 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/login-action@v2
         with:
+          registry: studybuddyimagecontainer.azurecr.io
           username: ${{ secrets.REGISTRY_NAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
       
