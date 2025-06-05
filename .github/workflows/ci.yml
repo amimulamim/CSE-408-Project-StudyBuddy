@@ -92,7 +92,21 @@ jobs:
       with:
         name: backend-coverage-report
         path: backend/coverage_reports/coverage.xml
-    
+
+    - name: Log in to Azure
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+    - name: Log in to Azure Container Registry
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: azure/docker-login@v1
+      with:
+        login-server: myregistry.azurecr.io
+        username: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}
+        password: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
+      
     - name: Push Backend Image
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: docker push studybuddyimagecontainer.azurecr.io/backend:latest
@@ -125,6 +139,20 @@ jobs:
         with:
           name: frontend-coverage-report
           path: frontend/coverage_reports/lcov.info
+      
+      - name: Log in to Azure
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+      - name: Log in to Azure Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: azure/docker-login@v1
+        with:
+          login-server: myregistry.azurecr.io
+          username: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}
+          password: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
       
       - name: Build Frontend Image
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
