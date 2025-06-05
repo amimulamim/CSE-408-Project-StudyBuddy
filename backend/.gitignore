@@ -1,0 +1,10 @@
+.pytest_cache/
+__pycache__/
+coverage_reports/
+.coverage
+venv/
+.env*
+keys/
+*test_env/*
+*.cpython-*
+scripts/

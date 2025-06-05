@@ -1,0 +1,82 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 260 30% 12%;
+    --foreground: 210 40% 98%;
+
+    --card: 260 30% 14%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 260 30% 10%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 262 83% 58%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 240 10% 20%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 260 20% 20%;
+    --muted-foreground: 210 10% 70%;
+
+    --accent: 262 83% 58%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 260 20% 22%;
+    --input: 260 20% 22%;
+    --ring: 262 83% 58%;
+
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer utilities {
+  .glass-effect {
+    @apply bg-opacity-20 backdrop-blur-lg bg-study-darker border border-white/10;
+  }
+  
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-study-purple to-study-blue;
+  }
+  
+  .hero-gradient {
+    @apply bg-gradient-to-br from-study-darker via-study-dark to-study-purple/20;
+  }
+  
+  .button-gradient {
+    @apply bg-gradient-to-r from-study-purple to-study-blue hover:from-study-purple/90 hover:to-study-blue/90 transition-all;
+  }
+
+  .animate-carousel {
+    animation: carousel 60s linear infinite;
+  }
+
+  @keyframes carousel {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(calc(-100% - 1rem));
+    }
+  }
+}

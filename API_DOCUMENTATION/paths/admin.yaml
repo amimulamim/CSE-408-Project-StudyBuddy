@@ -1,0 +1,264 @@
+paths:
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: View All Users
+      description: Paginated list of all users with their full profile info.
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: offset
+          in: query
+          schema: { type: integer }
+          required: true
+        - name: size
+          in: query
+          schema: { type: integer }
+          required: true
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/UserInfo' }
+
+  /admin/users/{userId}:
+    put:
+      tags: [Admin]
+      summary: Edit User Profile
+      description: Modify fields of any user profile.
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserInfo' }
+      responses:
+        '200':
+          description: Profile updated
+
+    delete:
+      tags: [Admin]
+      summary: Delete User
+      description: Delete a specific user account.
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: User deleted
+
+  /admin/content:
+    get:
+      tags: [Admin]
+      summary: View All Generated Content
+      description: Paginated content across all users.
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: offset
+          in: query
+          schema: { type: integer }
+          required: true
+        - name: size
+          in: query
+          schema: { type: integer }
+          required: true
+      responses:
+        '200':
+          description: List of contents
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ContentItem' }
+
+  /admin/quiz-results:
+    get:
+      tags: [Admin]
+      summary: View All Quiz Results
+      description: Paginated results of all quizzes by all users.
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: offset
+          in: query
+          schema: { type: integer }
+          required: true
+        - name: size
+          in: query
+          schema: { type: integer }
+          required: true
+      responses:
+        '200':
+          description: List of quiz results
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/QuizResult' }
+
+  /admin/chats:
+    get:
+      tags: [Admin]
+      summary: View All Chats
+      description: Paginated chat history across all users.
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: offset
+          in: query
+          schema: { type: integer }
+          required: true
+        - name: size
+          in: query
+          schema: { type: integer }
+          required: true
+      responses:
+        '200':
+          description: Chat history
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Message' }
+
+  /admin/llm/invoke:
+    post:
+      tags: [Admin]
+      summary: Invoke LLM or Parser
+      description: Send prompts or content to LLM or parser APIs.
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                target:
+                  type: string
+                  enum: [llm, parser]
+                payload:
+                  type: object
+      responses:
+        '200':
+          description: Response from LLM or parser
+
+  /admin/stats/usage:
+    get:
+      tags: [Admin]
+      summary: Usage Statistics
+      description: Get usage stats between a time range.
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: query
+          name: startTime
+          required: true
+          schema: { type: string, format: date-time }
+        - in: query
+          name: endTime
+          required: true
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          description: Usage data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  usersAdded: { type: integer }
+                  contentGenerated: { type: integer }
+                  quizGenerated: { type: integer }
+                  contentUploaded: { type: integer }
+                  chatsDone: { type: integer }
+
+  /admin/notifications:
+    post:
+      tags: [Admin]
+      summary: Send Notification
+      description: Send a notification to a specific user.
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+                notification:
+                  # schema:
+                    $ref: '#/components/schemas/Notification'
+      responses:
+        '200':
+          description: Notification sent
+
+  /admin/notifications/{notificationId}:
+    put:
+      tags: [Admin]
+      summary: Edit Notification
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: notificationId
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notification:
+                  # schema:
+                    $ref: '#/components/schemas/Notification'
+      responses:
+        '200':
+          description: Notification updated
+
+    delete:
+      tags: [Admin]
+      summary: Delete Notification
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: notificationId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Notification deleted
+
+  /admin/promote:
+    post:
+      tags: [Admin]
+      summary: Promote User to Admin
+      description: Allows an admin to promote an existing user to an admin role using their username or email.
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                identifier:
+                  type: string
+                  description: Username or email of the user to be promoted
+              required:
+                - identifier
+      responses:
+        '200':
+          description: User successfully promoted to admin
+        '400':
+          description: Invalid user or promotion failed
+        '403':
+          description: Unauthorized or not an admin

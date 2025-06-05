@@ -1,0 +1,20 @@
+# StudyBuddy API Docs
+
+This repo contains the OpenAPI documentation for the StudyBuddy project.
+
+## Structure
+
+- `openapi.yaml`: Master file for Swagger UI
+- `paths/`: Modular endpoint files
+- `components/`: Shared schemas
+- `scripts/`: Helper script to merge files
+- 
+
+## How to Contribute
+
+Each contributor edits their own file inside `paths/`.  
+Use `merge_paths.py` to build the final merged file before pushing.
+
+## Preview
+
+Paste `openapi.yaml` into https://editor.swagger.io to view.

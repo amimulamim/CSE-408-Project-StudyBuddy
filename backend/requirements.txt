@@ -1,0 +1,60 @@
+# Core FastAPI
+fastapi
+uvicorn[standard]
+
+# PostgreSQL + ORM
+sqlalchemy
+psycopg2-binary
+
+# Config / Env Management
+python-dotenv
+pydantic[email]>=2.0
+pydantic-settings>=2.0
+
+# Firebase Admin SDK
+firebase-admin
+
+# Optional but helpful
+httpx  # for async requests (useful for external APIs)
+python-multipart  # for form/image upload (if needed)
+passlib[bcrypt]  # for password hashing (if you add user auth later)
+
+# Testing
+pytest
+pytest-cov
+coverage
+pytest-asyncio
+pytest-mock
+pytest-dotenv
+
+# Linting / Code Quality (Optional, for SonarCloud)
+flake8
+
+
+#vector database
+chromadb[postgresql]>=0.4.24
+psycopg2-binary
+
+# scanpy
+
+#chat
+# google
+google-genai
+google-generativeai
+# python-multipart
+
+
+
+# For progress display during batch inserts (optional but helpful)
+tqdm
+
+
+PyPDF2==3.0.1
+qdrant-client==1.12.0
+pdf2image==1.17.0
+pytesseract==0.3.13
+Pillow==10.4.0
+google-generativeai==0.8.3
+
+PyMuPDF
+

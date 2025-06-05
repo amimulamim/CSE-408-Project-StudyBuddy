@@ -1,0 +1,156 @@
+
+paths:
+  /api/auth/signup:
+    post:
+      tags: [Auth]
+      summary: Sign up using email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '201':
+          description: User created successfully
+        '400':
+          description: Invalid input (missing fields, weak password)
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in using email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Login successful
+        '401':
+          description: Unauthorized (invalid credentials)
+
+  /api/auth/google:
+    post:
+      tags: [Auth]
+      summary: Google Sign-in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [idToken]
+              properties:
+                idToken:
+                  type: string
+                  description: Firebase ID token from Google
+      responses:
+        '200':
+          description: Google login/signup handled successfully
+        '401':
+          description: Invalid or expired Google token
+
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out the current user
+      description: |
+        Logs the user out by invalidating session or clearing refresh tokens.
+        In stateless auth systems (like Firebase), logout is handled on client side.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Logged out successfully."
+        '401':
+          description: Unauthorized (invalid or missing token)
+
+  # /api/auth/user-info:
+  #   get:
+  #     tags: [Auth]
+  #     summary: Get current authenticated user's info
+  #     security:
+  #       - bearerAuth: []
+  #     responses:
+  #       '200':
+  #         description: Fetched user profile successfully
+  #         content:
+  #           application/json:
+  #             schema:
+  #               $ref: '#/components/schemas/UserInfo'
+  #       '401':
+  #         description: Unauthorized (token missing or invalid)
+
+  #   patch:
+  #     tags: [Auth]
+  #     summary: Update authenticated user's profile info
+  #     security:
+  #       - bearerAuth: []
+  #     requestBody:
+  #       required: true
+  #       content:
+  #         multipart/form-data:
+  #           schema:
+  #             type: object
+  #             properties:
+  #               name:
+  #                 type: string
+  #                 description: New name of the user
+  #               bio:
+  #                 type: string
+  #                 description: Short bio or description
+  #               institution:
+  #                 type: string
+  #                 description: Institution or organization name
+  #               role:
+  #                 type: string
+  #                 description: User's role (e.g., student, teacher,developer)
+  #               photo:
+  #                 type: string
+  #                 format: binary
+  #                 description: Upload a new profile photo (optional)
+  #     responses:
+  #       '200':
+  #         description: Profile updated successfully
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+  #               properties:
+  #                 message:
+  #                   type: string
+  #                   example: "Profile updated successfully."
+  #                 photoUrl:
+  #                   type: string
+  #                   description: New photo URL if uploaded
+  #       '400':
+  #         description: Invalid input (validation error or file type issue)
+  #       '401':
+  #         description: Unauthorized

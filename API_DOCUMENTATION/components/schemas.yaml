@@ -1,0 +1,214 @@
+components:
+  schemas:
+    # 🔹 User module schema
+    UserInfo:
+      type: object
+      properties:
+        isAdmin:
+          type: boolean
+        isModerator:
+          type: boolean
+        moderatorId:
+          type: string
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        bio:
+          type: string
+        institution:
+          type: string
+        role:
+          type: string
+          description: e.g., student, teacher, developer
+        photoUrl:
+          type: string
+          description: URL of uploaded or Google profile photo
+        authProvider:
+          type: string
+          description: Authentication method (email/password, google)
+        currentPlan:
+          type: string
+        location:
+          type: string
+        studyDomain:
+          type: string
+        interests:
+          type: array
+          items:
+            type: string
+    # 🔹 Chat module schema
+    Message:
+      type: object
+      properties:
+        role:
+          type: string
+        text:
+          type: string
+        files:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    #authorization and billing
+    SubscriptionStatus:
+      type: object
+      properties:
+        plan:
+          type: string
+          enum: [free, premium]
+        active:
+          type: boolean
+        expiresAt:
+          type: string
+          format: date-time
+    ResourceProcessingSummary:
+      type: object
+      properties:
+        textExtracted:
+          type: boolean
+        imagesExtracted:
+          type: boolean
+        tablesExtracted:
+          type: boolean
+
+    QuizQuestion:
+      type: object
+      required: [questionId, questionText, options]
+      properties:
+        questionId:
+          type: string
+        questionText:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        type:
+          type: string
+          enum: [Theoretical, ProblemSolving]
+        difficulty:
+          type: string
+          enum: [Easy, Medium, Hard]
+        marks:
+          type: integer
+        hints:
+          type: array
+          items:
+            type: string
+        explanation:
+          type: string
+
+    ContentItem:
+      type: object
+      properties:
+        contentId:
+          type: string
+        content:
+          type: string
+        imagePreview:
+          type: string
+        metadata:
+          type: object
+          properties:
+            topic:
+              type: string
+            contentType:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Invalid planId"
+
+    ContentModeratorProfile:
+      type: object
+      properties:
+        moderatorId: { type: string }
+        domains:
+          type: array
+          items: { type: string }
+        contentsModified:
+          type: integer
+        contentHistory:
+          type: array
+          items: { $ref: '#/components/schemas/ContentItem' }
+        quizzesModified:
+          type: integer
+        quizHistory:
+          type: array
+          items: { $ref: '#/components/schemas/QuizQuestion' }
+        topicsCovered:
+          type: array
+          items: { type: string }
+        totalTimeSpent:
+          type: number
+          description: Time spent on site (in hours)
+    # QuizQuestion:
+    #   type: object
+    #   properties:
+    #     question:
+    #       type: string
+    #     options:
+    #       type: array
+    #       items:
+    #         type: string
+    #     correctAnswer:
+    #       type: string
+
+    QuizResult:
+      type: object
+      properties:
+        score:
+          type: number
+        total:
+          type: number
+        feedback:
+          type: string
+        topic:
+          type: string
+        quizId:
+          type: string
+        date:
+          type: string
+          format: date-time
+        domain:
+          type: string
+          description: The domain of the quiz (e.g., physics, chemistry)
+
+    RecommendedContent:
+      type: object
+      properties:
+        content:
+          $ref: '#/components/schemas/ContentItem'
+        recommendationScore:
+          type: number
+          format: float
+          description: Score between 0 and 1 indicating the relevance of the content
+
+    Notification:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        message: { type: string }
+        timestamp: { type: string, format: date-time }
+        read: { type: boolean }
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+

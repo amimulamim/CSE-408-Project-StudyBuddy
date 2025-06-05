@@ -1,0 +1,293 @@
+[
+    {
+        "usecase": {
+            "name": "Resource Document Preprocessing",
+            "scenario": "System processes an uploaded PDF document to extract various components including text, images, tables, and generates QA pairs",
+            "actors": "Operator, System",
+            "preconditions": "Operator has a valid PDF document to upload",
+            "steps": [
+                "Operator uploads a PDF document",
+                "System validates the document format and size",
+                "System extracts components from the document",
+                "System generates initial parsing results"
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Valid PDF Processing",
+                "description": "Verify that the system can successfully process a valid PDF document and extract components",
+                "input": {
+                    "file": "lecture_notes.pdf",
+                    "fileSize": "2.5MB",
+                    "fileType": "application/pdf"
+                },
+                "expected": {
+                    "outcome": "Processing successful",
+                    "componentsExtracted": {
+                        "text": true,
+                        "images": true,
+                        "tables": true
+                    },
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Invalid File Format",
+                "description": "Verify that the system properly handles non-PDF file uploads",
+                "input": {
+                    "file": "notes.docx",
+                    "fileSize": "1.2MB",
+                    "fileType": "application/msword"
+                },
+                "expected": {
+                    "outcome": "Processing failed",
+                    "error": "Invalid file format - only PDF files are supported",
+                    "status": "Rejected"
+                }
+            },
+            {
+                "name": "Oversized File",
+                "description": "Verify that the system handles PDF files exceeding size limit",
+                "input": {
+                    "file": "large_textbook.pdf",
+                    "fileSize": "5GB",
+                    "fileType": "application/pdf"
+                },
+                "expected": {
+                    "outcome": "Processing failed",
+                    "error": "File size exceeds maximum limit",
+                    "status": "Rejected"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Content Chunking",
+            "scenario": "System breaks down processed text content into manageable chunks for further processing",
+            "actors": "System",
+            "preconditions": "Valid text content is available in text or markdown format",
+            "steps": [
+                "System receives parsed text content",
+                "System validates the input format",
+                "System chunks the content based on specified size",
+                "System returns the chunked content"
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Valid Text Chunking",
+                "description": "Verify that the system can successfully chunk valid text content",
+                "input": {
+                    "content": "chapter1.txt",
+                    "format": "txt",
+                    "maxChunkSize": 1000,
+                    "content_length": 2500
+                },
+                "expected": {
+                    "outcome": "Chunking successful",
+                    "chunks_created": 3,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Empty Content",
+                "description": "Verify system handling of empty text content",
+                "input": {
+                    "content": "empty.md",
+                    "format": "md",
+                    "maxChunkSize": 1000,
+                    "content_length": 0
+                },
+                "expected": {
+                    "outcome": "Chunking failed",
+                    "error": "Empty text content",
+                    "status": "Rejected"
+                }
+            },
+            {
+                "name": "Unsupported Format",
+                "description": "Verify system handling of unsupported file formats",
+                "input": {
+                    "content": "notes.docx",
+                    "format": "docx",
+                    "maxChunkSize": 1000
+                },
+                "expected": {
+                    "outcome": "Chunking failed",
+                    "error": "Unsupported format - only text or markdown allowed",
+                    "status": "Rejected"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "Content Vectorization",
+            "scenario": "System vectorizes chunked content and stores it in vector database",
+            "actors": "System",
+            "preconditions": "Valid chunked content is available with proper metadata",
+            "steps": [
+                "System receives chunked content with metadata",
+                "System validates chunk sizes and metadata",
+                "System vectorizes the content",
+                "System stores vectors in specified database"
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Valid Vectorization",
+                "description": "Verify successful vectorization and storage of valid content chunks",
+                "input": {
+                    "chunks": [
+                        {
+                            "id": "chunk_001",
+                            "text": "Valid content chunk",
+                            "metadata": {
+                                "source": "chapter1",
+                                "page": 1
+                            }
+                        }
+                    ],
+                    "vectorDbName": "local_vectors"
+                },
+                "expected": {
+                    "outcome": "Vectorization successful",
+                    "vectors_stored": true,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Token Limit Exceeded",
+                "description": "Verify handling of chunks exceeding embedding model token limit",
+                "input": {
+                    "chunks": [
+                        {
+                            "id": "chunk_002",
+                            "text": "Very long content exceeding 8191 tokens",
+                            "metadata": {
+                                "source": "chapter2",
+                                "page": 5
+                            }
+                        }
+                    ],
+                    "vectorDbName": "local_vectors"
+                },
+                "expected": {
+                    "outcome": "Vectorization failed",
+                    "error": "Chunk length exceeded for embedding",
+                    "status": "Rejected"
+                }
+            },
+            {
+                "name": "Invalid Metadata",
+                "description": "Verify handling of invalid metadata types",
+                "input": {
+                    "chunks": [
+                        {
+                            "id": "chunk_003",
+                            "text": "Valid content",
+                            "metadata": {
+                                "tags": ["physics", "mechanics"],
+                                "references": {
+                                    "book": "Physics 101"
+                                }
+                            }
+                        }
+                    ],
+                    "vectorDbName": "local_vectors"
+                },
+                "expected": {
+                    "outcome": "Vectorization failed",
+                    "error": "Metadata fields each must be primitive types",
+                    "status": "Rejected"
+                }
+            }
+        ]
+    },
+    {
+        "usecase": {
+            "name": "QA Generation",
+            "scenario": "System processes and stores generated question-answer pairs",
+            "actors": "System, Moderator",
+            "preconditions": "Valid QA pairs are generated from processed content",
+            "steps": [
+                "System receives generated QA pairs",
+                "System validates QA structure and content",
+                "System categorizes questions by type",
+                "System stores finalized QA pairs"
+            ]
+        },
+        "testcases": [
+            {
+                "name": "Valid Theoretical QA",
+                "description": "Verify processing of valid theoretical question-answer pairs",
+                "input": {
+                    "qa_pair": {
+                        "question": "What is the unit of acceleration?",
+                        "choices": ["m/s", "m/s²", "m", "m²/s²"],
+                        "correctOptionIndex": 1,
+                        "type": "Theoretical",
+                        "difficultyRating": "1",
+                        "explanation": "Acceleration means a = (v-u)/t, so calculating from this, we get the the answer.",
+                        "hints": ["Think about acceleration formulae"]
+                    },
+                    "moderator_comment": null
+                },
+                "expected": {
+                    "outcome": "QA processing successful",
+                    "stored": true,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Valid Problem Solving QA",
+                "description": "Verify processing of valid problem-solving question-answer pairs",
+                "input": {
+                    "qa_pair": {
+                        "question": "Calculate the force needed to accelerate a 2kg mass at 5 m/s²",
+                        "choices": ["5 N", "7 N", "10 N", "15 N"],
+                        "correctOptionIndex": 2,
+                        "type": "Problem Solving",
+                        "explanation": "Using F = ma, F = 2 * 5 = 10N",
+                        "hints": ["Use Newton's Second Law", "F = ma"]
+                    },
+                    "moderator_comment": "OK"
+                },
+                "expected": {
+                    "outcome": "QA processing successful",
+                    "stored": true,
+                    "status": "Completed"
+                }
+            },
+            {
+                "name": "Inconsistent Problem Solving QA",
+                "description": "Verify processing of inconsistent problem-solving question-answer pairs",
+                "input": {
+                    "qa_pair": {
+                        "question": "Calculate the force needed to accelerate a 2 second mass at 5 ft",
+                        "choices": ["5 m", "7 m", "10 m", "15 m"],
+                        "correctOptionIndex": 2,
+                        "type": "Problem Solving",
+                        "explanation": "Using F = ma, F = 2 * 5 = 10N",
+                        "hints": ["Use Newton's Second Law", "F = ma"]
+                    },
+                    "moderator_comment": "Inconsistent units",
+                    "moderator_edit": {
+                        "question": "Calculate the force needed to accelerate a 2kg mass at 5 m/s²",
+                        "choices": ["5 N", "7 N", "10 N", "15 N"],
+                        "correctOptionIndex": 2,
+                        "type": "Problem Solving",
+                        "explanation": "Using F = ma, F = 2 * 5 = 10N",
+                        "hints": ["Use Newton's Second Law", "F = ma"]
+                    }
+                },
+                "expected": {
+                    "outcome": "Edited QA stored successfully",
+                    "stored": true,
+                    "status": "Completed"
+                }
+            }
+        ]
+    }
+]

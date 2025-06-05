@@ -1,0 +1,25 @@
+paths:
+  /recommendations:
+    get:
+      tags: [Recommendation]
+      summary: Get Recommended Content for User
+      description: Returns a list of recommended contents for the user, based on previously generated quizzes and contents.
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: offset
+          in: query
+          required: true
+          schema: { type: integer }
+        - name: size
+          in: query
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: List of recommended contents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecommendedContent'

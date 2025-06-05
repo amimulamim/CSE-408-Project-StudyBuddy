@@ -1,0 +1,99 @@
+paths:
+  /moderator/profile:
+    get:
+      tags: [ContentModerator]
+      summary: View Content Moderator Profile
+      description: Returns profile of the logged-in content moderator.
+      security: [ { bearerAuth: [] } ]
+      responses:
+        '200':
+          description: Moderator profile data
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ContentModeratorProfile' }
+
+  /moderator/contents:
+    get:
+      tags: [ContentModerator]
+      summary: View Assigned Domain Contents
+      description: Returns paginated content related to the moderator's assigned domains.
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: offset
+          in: query
+          required: true
+          schema: { type: integer }
+        - name: size
+          in: query
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Domain content list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ContentItem' }
+
+  /moderator/contents/{contentId}:
+    put:
+      tags: [ContentModerator]
+      summary: Edit Assigned Content
+      description: Modify specific content if it falls under the moderator’s assigned domain.
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: contentId
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ContentItem' }
+      responses:
+        '200':
+          description: Content updated
+
+  /moderator/quizzes:
+    get:
+      tags: [ContentModerator]
+      summary: View Quizzes Under Domain
+      description: Get paginated list of quizzes related to the moderator’s domains.
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: offset
+          in: query
+          required: true
+          schema: { type: integer }
+        - name: size
+          in: query
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: List of quizzes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/QuizQuestion' }
+
+  /moderator/quizzes/{quizId}:
+    put:
+      tags: [ContentModerator]
+      summary: Edit Quiz Under Domain
+      description: Modify a quiz if it falls under moderator’s domain.
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: quizId
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QuizQuestion' }
+      responses:
+        '200':
+          description: Quiz updated
