@@ -31,4 +31,4 @@ setup_openapi(app)
 # Sanity root endpoint
 @app.get("/")
 def read_root():
-    return {"message": "Hello, StudyBuddy!"}
+    return {"message": "Hello v2, StudyBuddy!"}
