@@ -71,7 +71,7 @@ export default function Dashboard() {
                         variant="outline" 
                         onClick={handleLogout}
                     >
-                        F out
+                        Sign out
                     </Button>
                 </div>
 
