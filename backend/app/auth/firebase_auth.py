@@ -28,11 +28,11 @@ def verify_firebase_token(token: str) -> dict:
 
         raise HTTPException(status_code=401, detail="Invalid Firebase token format")
 
-    except exceptions.FirebaseError as e:
+    # except exceptions.FirebaseError as e:
 
 
 
-        raise HTTPException(status_code=403, detail=f"Authentication failed: {e}") # Use 403 if verification fails after format check
+    #     raise HTTPException(status_code=403, detail=f"Authentication failed: {e}") # Use 403 if verification fails after format check
 
     except Exception as e:
 
