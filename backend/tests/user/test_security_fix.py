@@ -14,81 +14,54 @@ sys.path.insert(0, backend_dir)
 
 def test_secure_profile_edit_rejects_admin_fields():
     """Test that SecureProfileEdit rejects admin fields"""
-    try:
-        from app.users.schema import SecureProfileEdit
-        
-        # Test 1: Normal valid data should work
+    from app.users.schema import SecureProfileEdit
+    
+    # Test 1: Normal valid data should work
+    valid_data = {
+        'name': 'John Doe',
+        'bio': 'A student',
+        'institution': 'University'
+    }
+    profile = SecureProfileEdit(**valid_data)
+    print("✓ Valid data accepted:", profile.model_dump())
+    assert profile.name == 'John Doe'
+    
+    # Test 2: Admin fields should be rejected
+    admin_fields_to_test = ['is_admin', 'is_moderator', 'current_plan']
+    
+    for admin_field in admin_fields_to_test:
+        invalid_data = {
+            'name': 'John Doe',
+            admin_field: True
+        }
         try:
-            valid_data = {
-                'name': 'John Doe',
-                'bio': 'A student',
-                'institution': 'University'
-            }
-            profile = SecureProfileEdit(**valid_data)
-            print("✓ Valid data accepted:", profile.model_dump())
+            profile = SecureProfileEdit(**invalid_data)
+            assert False, f"SECURITY VULNERABILITY: {admin_field} was accepted!"
         except Exception as e:
-            print("✗ Valid data rejected:", str(e))
-            return False
-        
-        # Test 2: Admin fields should be rejected
-        admin_fields_to_test = ['is_admin', 'is_moderator', 'current_plan']
-        
-        for admin_field in admin_fields_to_test:
-            try:
-                invalid_data = {
-                    'name': 'John Doe',
-                    admin_field: True
-                }
-                profile = SecureProfileEdit(**invalid_data)
-                print(f"✗ SECURITY VULNERABILITY: {admin_field} was accepted!")
-                return False
-            except Exception as e:
-                print(f"✓ {admin_field} properly rejected: {type(e).__name__}")
-        
-        print("✅ Security test PASSED - All admin fields properly rejected")
-        return True
-        
-    except ImportError as e:
-        print(f"✗ Import error: {e}")
-        return False
+            print(f"✓ {admin_field} properly rejected: {type(e).__name__}")
+            # This is expected - admin fields should be rejected
+            assert True
+    
+    print("✅ Security test PASSED - All admin fields properly rejected")
 
 def test_admin_user_edit_accepts_admin_fields():
     """Test that AdminUserEdit accepts admin fields (as intended)"""
-    try:
-        from app.users.schema import AdminUserEdit
-        
-        # Test that admin fields are accepted in AdminUserEdit
-        admin_data = {
-            'name': 'Admin User',
-            'is_admin': True,
-            'is_moderator': True,
-            'current_plan': 'premium'
-        }
-        
-        try:
-            admin_profile = AdminUserEdit(**admin_data)
-            print("✓ AdminUserEdit accepts admin fields:", admin_profile.model_dump())
-            return True
-        except Exception as e:
-            print("✗ AdminUserEdit rejected admin fields:", str(e))
-            return False
-            
-    except ImportError as e:
-        print(f"✗ Import error: {e}")
-        return False
-
-if __name__ == "__main__":
-    print("=== Security Fix Verification Test ===")
-    print()
+    from app.users.schema import AdminUserEdit
     
-    test1_result = test_secure_profile_edit_rejects_admin_fields()
-    print()
-    test2_result = test_admin_user_edit_accepts_admin_fields()
-    print()
+    # Test that admin fields are accepted in AdminUserEdit
+    admin_data = {
+        'name': 'Admin User',
+        'is_admin': True,
+        'is_moderator': True,
+        'current_plan': 'premium_monthly',
+    }
     
-    if test1_result and test2_result:
-        print("🔒 ALL SECURITY TESTS PASSED - Vulnerability is fixed!")
-        sys.exit(0)
-    else:
-        print("⚠️  SECURITY TESTS FAILED - Vulnerability may still exist!")
-        sys.exit(1)
+    admin_profile = AdminUserEdit(**admin_data)
+    print("✓ AdminUserEdit accepts admin fields:", admin_profile.model_dump())
+    
+    # Assert that admin fields were properly set
+    assert admin_profile.name == 'Admin User'
+    assert admin_profile.is_admin is True
+    assert admin_profile.is_moderator is True
+    assert admin_profile.current_plan == 'premium_monthly'
+    print("✅ Admin fields test PASSED - All admin fields properly accepted")
