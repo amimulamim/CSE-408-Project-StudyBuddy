@@ -4,6 +4,7 @@ from fastapi import HTTPException, Request,exceptions
 from app.core.config import settings
 
 
+
 # Initialize Firebase app only once
 if not firebase_admin._apps:
     cred = credentials.Certificate(settings.FIREBASE_KEY_PATH)
