@@ -4,6 +4,7 @@ Test script to verify profile endpoints are accessible
 """
 import requests
 import json
+import pytest
 
 BASE_URL = "http://localhost:8000"
 
@@ -68,9 +69,10 @@ def test_endpoints_accessible():
         response = requests.get(f"{BASE_URL}/")
         print(f"Root endpoint status: {response.status_code}")
         print(f"Root response: {response.json()}")
-    except Exception as e:
+        assert response.status_code == 200, f"Expected 200 but got {response.status_code}"
+    except requests.exceptions.ConnectionError as e:
         print(f"Error connecting to API: {e}")
-        return False
+        pytest.skip("API is not accessible. Skipping endpoint tests.")
     
     # Test if our profile endpoint exists (should get 422 due to missing auth)
     try:
@@ -95,22 +97,8 @@ def test_endpoints_accessible():
         print(f"Error testing profile PUT: {e}")
     
     # Test OpenAPI docs
-    try:
-        response = requests.get(f"{BASE_URL}/docs")
-        print(f"OpenAPI docs status: {response.status_code}")
-        if response.status_code == 200:
-            print("✓ OpenAPI docs accessible")
-    except Exception as e:
-        print(f"Error testing docs: {e}")
-    
-    return True
-
-if __name__ == "__main__":
-    print("Testing Profile Management Endpoints...")
-    print("=" * 50)
-    test_profile_endpoints()
-    print("=" * 50)
-    print("Testing general endpoint accessibility...")
-    test_endpoints_accessible()
-    print("=" * 50)
-    print("Test completed!")
+    response = requests.get(f"{BASE_URL}/docs")
+    print(f"OpenAPI docs status: {response.status_code}")
+    if response.status_code == 200:
+        print("✓ OpenAPI docs accessible")
+        assert response.status_code == 200
