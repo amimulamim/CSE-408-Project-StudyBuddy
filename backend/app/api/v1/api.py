@@ -4,6 +4,8 @@ from app.api.v1.routes import user,auth,chat,quiz,billing,admin
 
 api_router = APIRouter()
 
+
+
 # Include all API v1 routes
 api_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 api_router.include_router(user.router, prefix="/user", tags=["User"])
