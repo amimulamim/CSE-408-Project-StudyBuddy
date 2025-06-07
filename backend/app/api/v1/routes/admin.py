@@ -240,7 +240,7 @@ def invoke_llm_or_parser(
 @router.get("/stats/usage", response_model=UsageStatsResponse)
 def get_usage_statistics(
     start_time: str,
-    end_time: str,
+    end_time: str = None,
     user_info: Dict[str, Any] = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -250,7 +250,12 @@ def get_usage_statistics(
     try:
         from datetime import datetime
         start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
-        end_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
+        
+        # If end_time is not provided, use current datetime
+        if end_time is None:
+            end_dt = datetime.now()
+        else:
+            end_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
     except ValueError:
         raise HTTPException(status_code=400, detail=INVALID_DATETIME)
     
