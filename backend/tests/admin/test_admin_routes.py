@@ -509,6 +509,42 @@ class TestAdminRoutes:
         finally:
             self.teardown_overrides()
 
+    def test_get_usage_statistics_with_optional_end_time(self, admin_user, mock_db):
+        """Test getting usage statistics with optional end_time (defaults to current time)"""
+        self.setup_admin_auth(admin_user, mock_db)
+
+        try:
+            with patch('app.admin.service.get_usage_statistics') as mock_get_stats:
+                # Arrange
+                mock_stats = UsageStatsResponse(
+                    users_added=5,
+                    content_generated=15,
+                    quiz_generated=3,
+                    content_uploaded=4,
+                    chats_done=25,
+                    period_start=datetime(2025, 6, 1, tzinfo=timezone.utc),
+                    period_end=datetime.now(timezone.utc)
+                )
+                mock_get_stats.return_value = mock_stats
+
+                # Act - Call without end_time parameter
+                response = client.get("/api/v1/admin/stats/usage?start_time=2025-06-01T00:00:00Z")
+
+                # Assert
+                assert response.status_code == 200
+                data = response.json()
+                assert data["users_added"] == 5
+                assert data["chats_done"] == 25
+                
+                # Verify that the service was called with start_dt and end_dt (current time)
+                mock_get_stats.assert_called_once()
+                call_args = mock_get_stats.call_args[0]
+                assert len(call_args) == 3  # db, start_dt, end_dt
+                # The end_dt should be close to current time since it defaults to datetime.now()
+                
+        finally:
+            self.teardown_overrides()
+
     def test_get_chats_success(self, admin_user, mock_db):
         """Test getting chats successfully"""
         self.setup_admin_auth(admin_user, mock_db)
