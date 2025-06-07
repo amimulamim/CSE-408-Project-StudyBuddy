@@ -1,11 +1,12 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func, and_, or_
-from app.admin.model import AdminLog, Notification, SystemStats
+from app.admin.model import AdminLog, Notification
 from app.admin.schema import (
     AdminLogCreate, NotificationCreate, NotificationUpdate,
     UsageStatsResponse, PaginationQuery
 )
 from app.users.model import User
+from app.chat.model import Chat, Message
 from app.users.schema import AdminUserEdit
 from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime, timezone
@@ -149,8 +150,8 @@ def get_all_chats_paginated(
         for chat in chats:
             chat_dict = {
                 "id": str(chat.id),
-                "user_uid": chat.user_uid,
-                "title": chat.title,
+                "user_uid": chat.user_id,
+                "title": chat.name,
                 "created_at": chat.created_at,
                 "updated_at": chat.updated_at,
                 "message_count": len(chat.messages) if hasattr(chat, 'messages') else 0
@@ -235,35 +236,53 @@ def get_notifications_for_user(
 def get_usage_statistics(
     db: Session,
     start_time: datetime,
-    end_time: datetime
+    end_time: Optional[datetime] = None
 ) -> UsageStatsResponse:
-    """Get usage statistics for a time period"""
-    # Query system stats table if it exists
-    stats = db.query(SystemStats).filter(
-        and_(
-            SystemStats.created_at >= start_time,
-            SystemStats.created_at <= end_time
-        )
-    ).all()
+    """
+    Get usage statistics for a time period using real-time calculations.
     
-    if stats:
-        # Aggregate stats from database
-        total_users = sum(s.users_added for s in stats)
-        total_content = sum(s.content_generated for s in stats)
-        total_quiz = sum(s.quiz_generated for s in stats)
-        total_uploaded = sum(s.content_uploaded for s in stats)
-        total_chats = sum(s.chats_done for s in stats)
-    else:
-        # Fallback: Calculate from actual tables
-        total_users = db.query(User).filter(
-            and_(User.created_at >= start_time, User.created_at <= end_time)
-        ).count()
+    Args:
+        db: Database session
+        start_time: Start of the time period to analyze
+        end_time: End of the time period (defaults to current time if not provided)
+    
+    Returns:
+        UsageStatsResponse with aggregated statistics for the time period
         
-        # TODO: Add queries for content, quiz, and chat counts when models are ready
-        total_content = 0
-        total_quiz = 0
-        total_uploaded = 0
+    Note:
+        - Calculates statistics in real-time from individual tables
+        - Currently supports: users_added, chats_done
+        - Some features (content, quiz, uploads) are placeholders for future implementation
+    """
+    # Default end_time to current time if not provided
+    if end_time is None:
+        end_time = datetime.now(timezone.utc)
+        
+    # Ensure start_time is before end_time
+    if start_time >= end_time:
+        raise ValueError("start_time must be before end_time")
+    
+    # Calculate real-time statistics from actual tables
+    total_users = db.query(User).filter(
+        and_(User.created_at >= start_time, User.created_at <= end_time)
+    ).count()
+    
+    # Calculate real chat statistics
+    try:
+        total_chats = db.query(Chat).filter(
+            and_(Chat.created_at >= start_time, Chat.created_at <= end_time)
+        ).count()
+    except Exception:
         total_chats = 0
+    
+    # TODO: Implement when content model is ready
+    total_content = 0
+    
+    # TODO: Implement when quiz model is ready  
+    total_quiz = 0
+    
+    # TODO: Implement when file upload model is ready
+    total_uploaded = 0
     
     return UsageStatsResponse(
         users_added=total_users,
