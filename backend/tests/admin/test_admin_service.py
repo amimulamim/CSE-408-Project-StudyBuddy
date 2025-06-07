@@ -14,7 +14,7 @@ from app.admin.schema import (
     AdminLogCreate, AdminAction, NotificationCreate, NotificationUpdate,
     NotificationType, PaginationQuery, UsageStatsResponse
 )
-from app.admin.model import AdminLog, Notification, SystemStats
+from app.admin.model import AdminLog, Notification
 from app.users.model import User
 
 
@@ -323,59 +323,28 @@ class TestAdminService:
         assert notifications == mock_notifications
         assert total == 3
 
-    def test_get_usage_statistics_with_system_stats(self, mock_db):
-        """Test getting usage statistics with existing system stats"""
+    def test_get_usage_statistics_with_explicit_end_time(self, mock_db):
+        """Test getting usage statistics with explicit end time"""
         # Arrange
         start_time = datetime(2025, 6, 1, tzinfo=timezone.utc)
         end_time = datetime(2025, 6, 7, tzinfo=timezone.utc)
         
-        mock_stats = [
-            Mock(users_added=5, content_generated=10, quiz_generated=2, content_uploaded=3, chats_done=15),
-            Mock(users_added=3, content_generated=8, quiz_generated=1, content_uploaded=2, chats_done=12)
-        ]
-        
-        mock_query = Mock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.all.return_value = mock_stats
-
-        # Act
-        result = get_usage_statistics(mock_db, start_time, end_time)
-
-        # Assert
-        assert isinstance(result, UsageStatsResponse)
-        assert result.users_added == 8  # 5 + 3
-        assert result.content_generated == 18  # 10 + 8
-        assert result.quiz_generated == 3  # 2 + 1
-        assert result.content_uploaded == 5  # 3 + 2
-        assert result.chats_done == 27  # 15 + 12
-        assert result.period_start == start_time
-        assert result.period_end == end_time
-
-    def test_get_usage_statistics_fallback(self, mock_db):
-        """Test getting usage statistics fallback when no system stats"""
-        # Arrange
-        start_time = datetime(2025, 6, 1, tzinfo=timezone.utc)
-        end_time = datetime(2025, 6, 7, tzinfo=timezone.utc)
-        
-        # Mock empty system stats
-        mock_query = Mock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.all.return_value = []
-        
-        # Mock user count query
+        # Mock User query
         mock_user_query = Mock()
         mock_user_query.filter.return_value = mock_user_query
         mock_user_query.count.return_value = 5
         
+        # Mock Chat query
+        mock_chat_query = Mock()
+        mock_chat_query.filter.return_value = mock_chat_query
+        mock_chat_query.count.return_value = 3
+        
         # Setup query method to return different mocks for different models
         def mock_query_side_effect(model):
-            if model == SystemStats:
-                return mock_query
-            elif model == User:
+            if model == User:
                 return mock_user_query
-            return Mock()
+            else:  # Chat model
+                return mock_chat_query
         
         mock_db.query.side_effect = mock_query_side_effect
 
@@ -385,10 +354,93 @@ class TestAdminService:
         # Assert
         assert isinstance(result, UsageStatsResponse)
         assert result.users_added == 5
-        assert result.content_generated == 0
-        assert result.quiz_generated == 0
-        assert result.content_uploaded == 0
-        assert result.chats_done == 0
+        assert result.content_generated == 0  # TODO placeholder
+        assert result.quiz_generated == 0  # TODO placeholder
+        assert result.content_uploaded == 0  # TODO placeholder
+        assert result.chats_done == 3
+        assert result.period_start == start_time
+        assert result.period_end == end_time
+
+    def test_get_usage_statistics_default_end_time(self, mock_db):
+        """Test getting usage statistics with default end time (current time)"""
+        # Arrange
+        start_time = datetime(2025, 6, 1, tzinfo=timezone.utc)
+        
+        # Mock User query
+        mock_user_query = Mock()
+        mock_user_query.filter.return_value = mock_user_query
+        mock_user_query.count.return_value = 2
+        
+        # Mock Chat query
+        mock_chat_query = Mock()
+        mock_chat_query.filter.return_value = mock_chat_query
+        mock_chat_query.count.return_value = 1
+        
+        # Setup query method to return different mocks for different models
+        def mock_query_side_effect(model):
+            if model == User:
+                return mock_user_query
+            else:  # Chat model
+                return mock_chat_query
+        
+        mock_db.query.side_effect = mock_query_side_effect
+
+        # Act
+        result = get_usage_statistics(mock_db, start_time)
+
+        # Assert
+        assert isinstance(result, UsageStatsResponse)
+        assert result.users_added == 2
+        assert result.chats_done == 1
+        assert result.period_start == start_time
+        # end_time should be set to current time (we can't test exact value but it should be set)
+        assert result.period_end is not None
+        assert result.period_end > start_time
+
+    def test_get_usage_statistics_validation_error(self, mock_db):
+        """Test getting usage statistics with invalid time range"""
+        # Arrange
+        start_time = datetime(2025, 6, 7, tzinfo=timezone.utc)
+        end_time = datetime(2025, 6, 1, tzinfo=timezone.utc)  # end_time before start_time
+
+        # Act & Assert
+        with pytest.raises(ValueError, match="start_time must be before end_time"):
+            get_usage_statistics(mock_db, start_time, end_time)
+
+    def test_get_usage_statistics_chat_error_handling(self, mock_db):
+        """Test getting usage statistics when chat query fails"""
+        # Arrange
+        start_time = datetime(2025, 6, 1, tzinfo=timezone.utc)
+        end_time = datetime(2025, 6, 7, tzinfo=timezone.utc)
+        
+        # Mock User query
+        mock_user_query = Mock()
+        mock_user_query.filter.return_value = mock_user_query
+        mock_user_query.count.return_value = 5
+        
+        # Mock Chat query that raises exception
+        mock_chat_query = Mock()
+        mock_chat_query.filter.return_value = mock_chat_query
+        mock_chat_query.count.side_effect = Exception("Chat query failed")
+        
+        # Setup query method to return different mocks for different models
+        def mock_query_side_effect(model):
+            if model == User:
+                return mock_user_query
+            else:  # Chat model
+                return mock_chat_query
+        
+        mock_db.query.side_effect = mock_query_side_effect
+
+        # Act
+        result = get_usage_statistics(mock_db, start_time, end_time)
+
+        # Assert
+        assert isinstance(result, UsageStatsResponse)
+        assert result.users_added == 5
+        assert result.chats_done == 0  # Should default to 0 on error
+        assert result.period_start == start_time
+        assert result.period_end == end_time
 
     def test_get_all_chats_paginated_success(self, mock_db):
         """Test getting paginated chats successfully"""
@@ -398,8 +450,8 @@ class TestAdminService:
         # Mock chat objects
         mock_chat1 = Mock()
         mock_chat1.id = uuid.uuid4()
-        mock_chat1.user_uid = "user123"
-        mock_chat1.title = "Chat 1"
+        mock_chat1.user_id = "user123"
+        mock_chat1.name = "Chat 1"
         mock_chat1.created_at = datetime.now(timezone.utc)
         mock_chat1.updated_at = datetime.now(timezone.utc)
         mock_chat1.messages = [Mock(), Mock()]  # 2 messages
