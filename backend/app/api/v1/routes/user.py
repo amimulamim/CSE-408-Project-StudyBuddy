@@ -1,10 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.orm import Session
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from app.auth.firebase_auth import get_current_user
 from app.core.database import get_db
 from app.utils.rate_limiter import check_profile_rate_limit
+from app.utils.notification_helpers import (
+    format_notification_response,
+    get_user_notifications_with_filter,
+    mark_notification_read,
+    mark_all_notifications_read,
+    get_unread_count
+)
 from app.users.schema import (
     UserBase, UserProfile, 
     SecureProfileEdit
@@ -16,6 +23,7 @@ from app.users.service import (
 
 # Constants
 USER_NOT_FOUND = "User not found"
+NOTIFICATION_NOT_FOUND = "Notification not found"
 
 router = APIRouter()
 
@@ -120,3 +128,105 @@ def get_profile(
         raise HTTPException(status_code=404, detail=USER_NOT_FOUND)
     
     return user
+
+
+@router.get("/notifications")
+def get_my_notifications(
+    page: int = Query(1, ge=1, description="Page number"),
+    size: int = Query(10, ge=1, le=50, description="Number of notifications per page"),
+    unread_only: bool = Query(False, description="Only show unread notifications"),
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get current user's notifications with pagination.
+    
+    - Users can only access their own notifications
+    - For admin access to any user's notifications, use /admin/users/{user_id}/notifications
+    
+    Query Parameters:
+    - page: Page number (default: 1)
+    - size: Number of notifications per page (default: 10, max: 50)
+    - unread_only: If true, only returns unread notifications (default: false)
+    """
+    offset = (page - 1) * size
+    
+    # Get notifications for current user only
+    notifications, total = get_user_notifications_with_filter(
+        db, user_info["uid"], offset, size, unread_only
+    )
+    
+    # Convert notifications to response format
+    notification_list = [format_notification_response(notif) for notif in notifications]
+    
+    return {
+        "notifications": notification_list,
+        "total": total,
+        "page": page,
+        "size": size,
+        "unread_only": unread_only
+    }
+
+
+@router.put("/notifications/{notification_id}/read")
+def mark_notification_as_read(
+    notification_id: str,
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Mark a specific notification as read.
+    
+    - Users can only mark their own notifications as read
+    - For admin access, use admin endpoints
+    """
+    success = mark_notification_read(db, notification_id, user_info["uid"])
+    if not success:
+        raise HTTPException(
+            status_code=404, 
+            detail="Notification not found or you don't have permission to access it"
+        )
+    
+    return {
+        "message": "Notification marked as read",
+        "notification_id": notification_id
+    }
+
+
+@router.put("/notifications/mark-all-read")
+def mark_all_notifications_as_read(
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Mark all notifications as read for the current user.
+    
+    - Users can only mark their own notifications as read
+    - For admin access, use admin endpoints
+    """
+    updated_count = mark_all_notifications_read(db, user_info["uid"])
+    
+    return {
+        "message": f"Marked {updated_count} notifications as read",
+        "notifications_updated": updated_count
+    }
+
+
+@router.get("/notifications/unread-count")
+def get_unread_notifications_count(
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get the count of unread notifications for the current user.
+    
+    - Users can only get their own unread count
+    - For admin access, use admin endpoints
+    
+    Useful for displaying notification badges in UI.
+    """
+    unread_count = get_unread_count(db, user_info["uid"])
+    
+    return {
+        "unread_count": unread_count
+    }
