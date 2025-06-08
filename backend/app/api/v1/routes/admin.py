@@ -268,7 +268,7 @@ def send_notification(
     db: Session = Depends(get_db),
     request: Request = None
 ):
-    """Send a notification to a specific user (Admin only)"""
+    """Send a notification to a specific user (Admin only).Allowed type: info,warning,error,success"""
     require_admin_access(db, user_info)
     
     created_notification = admin_service.create_notification(
