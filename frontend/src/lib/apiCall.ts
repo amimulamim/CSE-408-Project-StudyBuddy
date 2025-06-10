@@ -24,6 +24,8 @@ async function makeRequest<T = unknown>(
   try {
     const idToken = await user.getIdToken();
     console.log('Got ID token:', idToken ? 'Token exists' : 'No token');
+    console.log(idToken);
+    console.log("user:", user);
     const isFormData = body instanceof FormData;
 
     const req: RequestInit = {
