@@ -1,6 +1,7 @@
 .vscode/
 fastapi_project/
 .coverage
+
 *.env*
 temporary-test/
 test_env*
