@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from app.core.vector_db import VectorDatabaseManager
 from app.rag.document_processor import DocumentProcessor
 from app.rag.query_processor import QueryProcessor
+from app.generator.quiz_generator import ExamGenerator
 from fastapi import APIRouter, Depends, HTTPException,  Form, UploadFile, File , Query, Path,Body
 
 
@@ -27,6 +28,11 @@ class GenerateExamRequest(BaseModel):
     query: str
     num_questions: int
     question_type: str
+
+class EvaluateAnswerRequest(BaseModel):
+    exam_id: str
+    question_id: str
+    student_answer: Any
 
 # API endpoints
 @router.post("/collections")
@@ -114,6 +120,25 @@ async def generate_exam(request: GenerateExamRequest):
     except Exception as e:
         logger.error(f"Error generating exam: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/evaluate")
+async def evaluate_answer(request: EvaluateAnswerRequest):
+    """Evaluates a student's answer using server-side stored correct answer."""
+    try:
+        query_processor = QueryProcessor()  # Access exams_storage
+        exam_generator = ExamGenerator(os.getenv("GEMINI_API_KEY"))
+        result = exam_generator.evaluate_answer(
+            exam_id=request.exam_id,
+            question_id=request.question_id,
+            student_answer=request.student_answer,
+            exams_storage=query_processor.exams_storage
+        )
+        logger.info(f"Evaluated answer for exam {request.exam_id}, question {request.question_id}")
+        return result
+    except Exception as e:
+        logger.error(f"Error evaluating answer: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     import uvicorn
