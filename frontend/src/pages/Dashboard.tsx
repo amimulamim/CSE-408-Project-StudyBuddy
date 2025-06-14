@@ -2,24 +2,45 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAuth, signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { ChatbotFAB } from '@/components/chatbot/ChatbotFAB';
 import { BillingStatus } from '@/components/billing/BillingStatus';
-import { CreditCard, User, MessageSquare, BookOpen, Settings } from "lucide-react";
+import { CreditCard, User as UserIcon, MessageSquare, BookOpen, Settings, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { useUserRole } from "@/hooks/useUserRole";
 
 export default function Dashboard() {
     const navigate = useNavigate();
-    const auth = getAuth();
-    const user = auth.currentUser;
-    
+    const { userProfile, loading } = useUserRole();
+
+    useEffect(() => {
+        if (!loading && !userProfile) {
+          toast.error('User Profile not found.');
+          navigate('/');
+        }
+    }, [loading, userProfile, navigate]);
+
     const handleLogout = async () => {
         try {
-          await signOut(auth);
-          navigate("/");
+            const auth = getAuth();
+            await signOut(auth);
+            navigate("/");
         } catch (error) {
-          // eslint-disable-next-line no-console
-          console.error("Error logging out:", error);
+            console.error("Error logging out:", error);
         }
     };
+
+    // Show loading state while checking authentication
+    // if (loading) {
+    //     return (
+    //         <div className="min-h-screen bg-background flex items-center justify-center">
+    //             <div className="flex flex-col items-center gap-4">
+    //                 <Loader2 className="h-8 w-8 animate-spin text-study-purple" />
+    //                 <p className="text-muted-foreground">Loading Your Dashboard...</p>
+    //             </div>
+    //         </div>
+    //     );
+    // }
 
     const dashboardCards = [
         {
@@ -64,14 +85,14 @@ export default function Dashboard() {
                     <div>
                         <h1 className="text-3xl font-bold">Dashboard</h1>
                         <p className="text-muted-foreground mt-1">
-                            Welcome back, {user?.displayName || 'User'}!
+                            Welcome back, {userProfile?.name || 'User'}!
                         </p>
                     </div>
                     <Button 
                         variant="outline" 
                         onClick={handleLogout}
                     >
-                        Sign out v2
+                        Sign out
                     </Button>
                 </div>
 
@@ -81,22 +102,22 @@ export default function Dashboard() {
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
-                                    <User className="h-5 w-5" />
+                                    <UserIcon className="h-5 w-5" />
                                     Profile Overview
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="flex items-center space-x-4">
-                                    {user?.photoURL && (
+                                    {userProfile?.avatar && (
                                         <img 
-                                            src={user.photoURL} 
+                                            src={userProfile.avatar} 
                                             alt="Profile" 
                                             className="h-16 w-16 rounded-full"
                                         />
                                     )}
                                     <div>
-                                        <h3 className="text-lg font-semibold">{user?.displayName || 'User'}</h3>
-                                        <p className="text-muted-foreground">{user?.email}</p>
+                                        <h3 className="text-lg font-semibold">{userProfile?.name || 'User'}</h3>
+                                        <p className="text-muted-foreground">{userProfile?.email}</p>
                                         <div className="mt-2">
                                             <BillingStatus compact={true} showTitle={false} />
                                         </div>

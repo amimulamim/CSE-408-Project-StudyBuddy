@@ -71,6 +71,18 @@
     animation: carousel 60s linear infinite;
   }
 
+  .animation-reverse {
+    animation-direction: reverse;
+  }
+  
+  .animation-delay-100 {
+    animation-delay: 100ms;
+  }
+  
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+
   @keyframes carousel {
     0% {
       transform: translateX(0);
@@ -80,3 +92,17 @@
     }
   }
 }
+
+/* @layer utilities {
+  .animation-reverse {
+    animation-direction: reverse;
+  }
+  
+  .animation-delay-100 {
+    animation-delay: 100ms;
+  }
+  
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+} */

@@ -1,31 +1,29 @@
-import { getAuth } from "firebase/auth";
 import { HttpMethod } from "@/lib/api";
 import { ApiResponse } from "@/lib/api";
+import { getCurrentUser } from "@/lib/authState";
 
-// Optional generic for expected successful data response
 async function makeRequest<T = unknown>(
   url: string,
   method: HttpMethod,
   body?: unknown
 ): Promise<T | ApiResponse> {
-  const auth = getAuth();
-  const user = auth.currentUser;
   let data: ApiResponse = { status: "error", msg: "", data: null };
   
   console.log('Making request to:', url);
-  console.log('Current user:', user);
   
-  if (!user) {
-    console.log('No user found in auth state');
-    data.msg = "User not logged in";
-    return data;
-  }
-
   try {
+    const user = await getCurrentUser();
+    console.log('Current user:', user);
+    
+    if (!user) {
+      console.log('No user found in auth state');
+      data.msg = "User not logged in";
+      return data;
+    }
+
     const idToken = await user.getIdToken();
     console.log('Got ID token:', idToken ? 'Token exists' : 'No token');
-    console.log(idToken);
-    console.log("user:", user);
+    
     const isFormData = body instanceof FormData;
 
     const req: RequestInit = {
@@ -37,11 +35,7 @@ async function makeRequest<T = unknown>(
       ...(body ? { body: isFormData ? body : JSON.stringify(body) } : {}),
     };
 
-    console.log('Request headers:', req.headers);
-    
     const response = await fetch(url, req);
-    console.log('Response status:', response.status);
-    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
     
     if (response.ok) {
       data.status = "success";
@@ -65,4 +59,4 @@ async function makeRequest<T = unknown>(
   return data;
 }
 
-export {makeRequest};
+export { makeRequest };

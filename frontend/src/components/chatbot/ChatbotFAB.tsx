@@ -1,8 +1,7 @@
-
 import React from 'react';
-import { Bot } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { motion } from 'framer-motion';
 
 export function ChatbotFAB() {
   const navigate = useNavigate();
@@ -12,16 +11,56 @@ export function ChatbotFAB() {
   };
 
   return (
-    <Button
-      onClick={handleClick}
-      className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-2xl bg-gradient-to-r from-study-purple to-study-blue hover:from-study-purple/90 hover:to-study-blue/90 border-0 z-50 transition-all duration-300 hover:scale-110 active:scale-95 group"
-      size="icon"
+    <motion.div
+      animate={{
+        y: [0, -8, 0],
+        scale: [1, 1.05, 1]
+      }}
+      transition={{
+        duration: 3,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }}
+      className="fixed bottom-8 right-8 z-50"
     >
-      <div className="relative">
-        <Bot className="h-10 w-10 text-white transition-transform duration-300 group-hover:scale-105" />
-        <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-green-400 animate-pulse shadow-lg"></div>
-        <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse"></div>
-      </div>
-    </Button>
+      <Button
+        onClick={handleClick}
+        className="h-16 w-16 rounded-full shadow-xl border-0 transition-all duration-300 hover:scale-110 active:scale-95 group p-0 flex items-center justify-center"
+        style={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          boxShadow: '0 8px 32px 0 rgba(102, 126, 234, 0.3)',
+        }}
+        size="icon"
+        aria-label="Open chatbot"
+      >
+        <motion.svg
+          width={44}
+          height={44}
+          viewBox="0 0 44 44"
+          fill="none"
+          className="text-white"
+          animate={{
+            rotate: [0, 5, -5, 0]
+          }}
+          transition={{
+            duration: 4,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        >
+          {/* Larger custom chat bubble */}
+          <path
+            d="M6 16c0-5.5 4.5-10 10-10h12c5.5 0 10 4.5 10 10v8c0 5.5-4.5 10-10 10h-3l-6 6v-6h-3c-5.5 0-10-4.5-10-10v-8z"
+            fill="white"
+            stroke="white"
+            strokeWidth="2"
+          />
+          {/* Three dots inside */}
+          <circle cx="16" cy="20" r="2" fill="#667eea"/>
+          <circle cx="22" cy="20" r="2" fill="#667eea"/>
+          <circle cx="28" cy="20" r="2" fill="#667eea"/>
+        </motion.svg>
+      </Button>
+    </motion.div>
   );
 }
