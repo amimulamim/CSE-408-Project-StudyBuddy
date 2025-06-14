@@ -1,8 +1,8 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from 'sonner';
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import AdminDashboard from "@/pages/AdminDashboard";
 
 
 // import RedirectHandler from "./pages/RedirectHandler";
@@ -13,7 +13,7 @@ import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import Chatbot from "./pages/Chatbot";
 import Billing from "./pages/Billing";
-// import { PaymentResult } from "@/components/billing/PaymentResult"; // ✅ Import this
+// import { PaymentResult } from "@/components/billing/PaymentResult"; 
 
 const queryClient = new QueryClient();
 
@@ -21,8 +21,7 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
+        <Toaster richColors/>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
@@ -30,6 +29,7 @@ const App = () => {
             <Route path="/dashboard/billing" element={<Billing />} />
             <Route path="/chatbot" element={<Chatbot />} />
             <Route path="*" element={<NotFound />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>

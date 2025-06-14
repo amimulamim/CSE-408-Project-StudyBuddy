@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Navbar } from '@/components/landing/Navbar';
 import { Hero } from '@/components/landing/Hero';
@@ -13,10 +13,12 @@ import { useNavigate } from 'react-router-dom';
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { fetchUserProfileData } from "@/lib/userProfile";
+import { AuthRedirectHandler } from '@/components/auth/AuthRedirectHandler';
 
 const Index = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signIn' | 'signUp' | 'onboarding'>('signIn');
+  const [onboardingDone, setOnboardingDone] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -66,10 +68,14 @@ const Index = () => {
     const setupAuthListener = async () => {
       const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
         if (currentUser) {
+          console.log('after current user');
           fetchUserProfileData('onboardingDone').then((onboardingDone) => {
+            console.log('after fetch user profile data');
             if (onboardingDone) {
-              navigate('/dashboard');
-            } else {
+              console.log('onboarding done');
+              setOnboardingDone(true);
+            }else{
+              console.log('onboarding not done');
               setAuthMode('onboarding');
               setAuthModalOpen(true);
             }
@@ -92,6 +98,10 @@ const Index = () => {
     setAuthMode('signUp');
     setAuthModalOpen(true);
   };
+
+  if (onboardingDone) {
+    return <AuthRedirectHandler onRedirectComplete={()=>{}} />;
+  }
   
   return (
     <div className="min-h-screen bg-study-darker">

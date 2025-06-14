@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, Send, Paperclip } from 'lucide-react';
+import { Menu, Send, Paperclip, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useChat } from './ChatContext';
@@ -7,7 +7,6 @@ import { ChatMessage } from './ChatMessage';
 import { FileUpload } from './FileUpload';
 import { ThinkingAnimation } from './ThinkingAnimation';
 import type { FileAttachment } from './chat';
-import { set } from 'date-fns';
 
 interface ChatInterfaceProps {
   sidebarOpen: boolean;
@@ -15,14 +14,26 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfaceProps) {
-  const { currentChat, isLoading, sendMessage, createNewChat, 
-    loadMoreMessages, isChatLoading, setIsChatLoading } = useChat();
+  const { currentChat, isLoading, sendMessage, 
+    createNewChat, loadMoreMessages, isNewChatLoading, setIsNewChatLoading } = useChat();
   const [message, setMessage] = useState('');
-  // const [canScrollToBottom, setCanScrollToBottom] = useState(true);
   const [attachedFiles, setAttachedFiles] = useState<FileAttachment[]>([]);
+  const [isLoadingOldMessages, setIsLoadingOldMessages] = useState(false);
+  const [noMoreOldMessages, setNoMoreOldMessages] = useState(false);
+  
+  // Refs for DOM elements
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Refs to track message state changes
+  const previousMessageCountRef = useRef<number>(0);
+  const shouldScrollToBottomRef = useRef<boolean>(true);
+  
+  // Refs to track scroll direction
+  const lastScrollTopRef = useRef<number>(0);
+  const isScrollingUpRef = useRef<boolean>(false);
+  const prevScrollHeightRef = useRef<number>(0);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -30,41 +41,97 @@ export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfacePro
 
   const handleScroll = () => {
     const container = chatContainerRef.current;
-    if (!container || isChatLoading) return;
-    if (container.scrollTop < 5) {
-      setIsChatLoading(true);
-      const prevHeight = container.scrollHeight;
-      const length = currentChat?.messages.length || 0;
+    if (!container || isLoadingOldMessages || noMoreOldMessages) return;
+    
+    const currentScrollTop = container.scrollTop;
+    const previousScrollTop = lastScrollTopRef.current;
+    
+    // Determine scroll direction
+    if (currentScrollTop < previousScrollTop) {
+      isScrollingUpRef.current = true; // Scrolling up
+    } else if (currentScrollTop > previousScrollTop) {
+      isScrollingUpRef.current = false; // Scrolling down
+    }
+    // If currentScrollTop === previousScrollTop, keep the previous direction
+    
+    // Update the last scroll position
+    lastScrollTopRef.current = currentScrollTop;
+    
+    // Only load more messages if:
+    // 1. User is at the very top (scrollTop < 5)
+    // 2. User is scrolling upwards
+    // 3. Not already loading
+    if (currentScrollTop < 3 && isScrollingUpRef.current) {
+      shouldScrollToBottomRef.current = false;
+      
+      prevScrollHeightRef.current = container.scrollHeight;
+      setIsLoadingOldMessages(true);
+      
       loadMoreMessages(currentChat?.id || '', 5);
-      if( currentChat?.messages.length === length ) {
-        console.log('No more messages to load');
-        setIsChatLoading(false);
-        // setCanScrollToBottom(true);
-        return;
-      }
-      requestAnimationFrame(() => {
-        // const newHeight = container.scrollHeight;
-        container.scrollTop = 500;
-        // console.log(container.scrollTop, newHeight, prevHeight);
-        setIsChatLoading(false);
-      });
     }
   };
 
+  // Smart scroll logic - only scroll for new messages
   useEffect(() => {
-    // const container = chatContainerRef.current;
-    // if (container) {
-    //   container.scrollTop = container.scrollHeight;
-    // }
-    if (messagesEndRef.current) {
-      scrollToBottom();
-      // setCanScrollToBottom(false);
-      // console.log('Setting canScrollToBottom to false');
+    if (isNewChatLoading) setIsNewChatLoading(false);
+    const currentMessageCount = currentChat?.messages.length || 0;
+    const previousMessageCount = previousMessageCountRef.current;
+    
+    // If we're loading old messages, don't scroll
+    if (currentMessageCount == previousMessageCount && currentMessageCount > 0) {
+      setIsLoadingOldMessages(false);
+      setNoMoreOldMessages(true);
+      return;
     }
+    
+    // If messages were added to the end (new messages), scroll to bottom
+    if (currentMessageCount > previousMessageCount) {
+      if( shouldScrollToBottomRef.current ) {
+        scrollToBottom();
+      }else {
+        const container = chatContainerRef.current;
+        requestAnimationFrame(() => {
+          const newHeight = container.scrollHeight;
+          const heightDifference = newHeight - prevScrollHeightRef.current;
+          container.scrollTop = heightDifference - 50;
+          prevScrollHeightRef.current = newHeight;
+
+          setIsLoadingOldMessages(false);
+          
+          // Re-enable auto-scroll to bottom for future new messages
+          setTimeout(() => {
+            shouldScrollToBottomRef.current = true;
+          }, 200);
+        });
+      }
+    }
+    
+    // Update the previous count
+    previousMessageCountRef.current = currentMessageCount;
   }, [currentChat?.messages]);
+
+  // Reset refs when chat changes
+  useEffect(() => {
+    shouldScrollToBottomRef.current = true;
+    lastScrollTopRef.current = 0; // Reset scroll tracking
+    isScrollingUpRef.current = false; // Reset scroll direction
+    setNoMoreOldMessages(false); // Reset no more old messages flag
+    scrollToBottom(); // Scroll to bottom on new chat
+  }, [currentChat?.id]);
+
+  // Initialize scroll position tracking when component mounts
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (container) {
+      lastScrollTopRef.current = container.scrollTop;
+    }
+  }, []);
 
   const handleSend = async () => {
     if (!message.trim() && attachedFiles.length === 0) return;
+
+    // Ensure auto-scroll is enabled for new messages
+    shouldScrollToBottomRef.current = true;
 
     // Create new chat if none exists
     if (!currentChat) {
@@ -79,7 +146,7 @@ export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfacePro
       await sendMessage(message, attachedFiles);
       setMessage('');
       setAttachedFiles([]);
-      scrollToBottom();
+      // scrollToBottom will be called automatically by useEffect
     }
   };
 
@@ -169,10 +236,19 @@ export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfacePro
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* {isChatLoading && (
-          <div className="text-center text-sm text-gray-500 mb-2">Loading...</div>
-        )} */}
+      <div 
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide"
+        onScroll={handleScroll}
+      >
+        {/* Loading indicator for old messages */}
+        {isLoadingOldMessages && (
+          <div className="text-center text-sm text-gray-500 mb-2 flex items-center justify-center gap-2">
+            <div className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></div>
+            Loading previous messages...
+          </div>
+        )}
+        
         {!currentChat || currentChat.messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
@@ -232,6 +308,26 @@ export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfacePro
           </div>
         </div>
       </div>
+
+      {/* New Chat Loading Overlay */}
+      {isNewChatLoading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center">
+          {/* Blur backdrop */}
+          <div className="absolute inset-0 bg-study-dark/50 backdrop-blur-sm" />
+          
+          {/* Loading content */}
+          <div className="relative z-10 flex flex-col items-center justify-center p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-2xl">
+            {/* Lucide spinner */}
+            <Loader2 className="w-12 h-12 text-study-purple animate-spin mb-4" />
+            
+            {/* Loading text */}
+            <div className="text-center">
+              <h3 className="text-xl font-semibold text-white mb-2">Loading Chat</h3>
+              <p className="text-sm text-white/70">Setting up your conversation...</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
