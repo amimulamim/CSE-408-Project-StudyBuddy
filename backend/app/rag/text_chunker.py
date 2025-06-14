@@ -3,7 +3,7 @@ from typing import List
 class TextChunker:
     """Handles text splitting with configurable chunk size and overlap."""
     
-    def __init__(self, chunk_size: int = 500, overlap: int = 50):
+    def __init__(self, chunk_size: int = 1000, overlap: int = 200):
         self.chunk_size = chunk_size
         self.overlap = overlap
     
