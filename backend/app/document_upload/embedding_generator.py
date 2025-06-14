@@ -1,6 +1,7 @@
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv
+from app.core.config import settings
 
 load_dotenv()
 
@@ -10,7 +11,7 @@ if not os.getenv("GEMINI_API_KEY"):
 
 class EmbeddingGenerator:
     def __init__(self, model_name="models/embedding-001", task_type="RETRIEVAL_DOCUMENT"):
-        self.api_key = os.getenv("GEMINI_API_KEY")
+        self.api_key = settings.GEMINI_API_KEY
         if not self.api_key:
             raise ValueError("Missing GEMINI_API_KEY in environment.")
 

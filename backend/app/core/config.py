@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     FIREBASE_STORAGE_BUCKET: str
     BACKEND_URL: str = "http://localhost:8000"
     ALLOWED_ORIGINS: str = "*"
+    GEMINI_MODEL: str 
     GEMINI_API_KEY: str
     QDRANT_HOST: str
     QDRANT_API_KEY: str

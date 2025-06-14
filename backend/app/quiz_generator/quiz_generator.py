@@ -1,26 +1,27 @@
-import os
-import uuid
 import json
+import uuid
 import logging
 from typing import List, Dict, Any
 from sqlalchemy.orm import Session
-from app.generator.models import Quiz, QuizQuestion
-from app.core.vector_db import VectorDatabaseManager
+from app.core.config import settings
 import google.generativeai as genai
+from app.quiz_generator.models import *
 
 logger = logging.getLogger(__name__)
 
 class ExamGenerator:
-    def __init__(self, api_key: str):
-        self.api_key = api_key
+    """Generates and evaluates quiz questions."""
+    def __init__(self):
         try:
+            genai.configure(api_key=settings.GEMINI_API_KEY)
             self.model = genai.GenerativeModel('gemini-1.5-flash')
-            logger.debug("Initialized GenerativeModel successfully")
+            logger.debug("Initialized generative model successfully")
         except Exception as e:
-            logger.error(f"Error initializing GenerativeModel: {str(e)}")
+            logger.error(f"Error initializing generative model: {str(e)}")
             raise
-    
+
     def generate_questions(self, context: str, num_questions: int, question_type: str) -> List[Dict[str, Any]]:
+        """Generates questions based on context using Gemini API."""
         try:
             questions = []
             seen_questions = set()
@@ -156,10 +157,11 @@ class ExamGenerator:
         except Exception as e:
             logger.error(f"Error generating questions: {str(e)}")
             raise Exception(f"Error generating questions: {str(e)}")
-    
+
     def evaluate_answer(self, exam_id: str, question_id: str, student_answer: Any, db: Session) -> Dict[str, Any]:
+        """Evaluates a student's answer against the correct answer."""
         try:
-            from app.models import QuizQuestion
+            # from app.models import QuizQuestion
             question = db.query(QuizQuestion).filter(
                 QuizQuestion.quiz_id == exam_id,
                 QuizQuestion.id == question_id
@@ -184,17 +186,17 @@ class ExamGenerator:
                 "score": 0.0
             }
             
-            if question_type == "multiplechoice":  # Multiple-choice with 4 options
+            if question_type == "multiplechoice":
                 result["is_correct"] = str(student_answer).strip() == str(correct_answer).strip()
                 result["score"] = float(question_data["marks"]) if result["is_correct"] else 0.0
                 logger.debug(f"Evaluated multiple-choice: {result}")
             
-            elif question_type == "truefalse":  # True/False
+            elif question_type == "truefalse":
                 result["is_correct"] = bool(student_answer) == (correct_answer.lower() == "true")
                 result["score"] = float(question_data["marks"]) if result["is_correct"] else 0.0
                 logger.debug(f"Evaluated true/false: {result}")
             
-            elif question_type == "shortanswer":  # Short-answer
+            elif question_type == "shortanswer":
                 prompt = (
                     f"Evaluate whether the student's answer is semantically equivalent to the correct answer. "
                     f"Return a JSON response with fields: 'is_correct' (boolean) and 'score' (float between 0 and {question_data['marks']}, representing similarity).\n\n"

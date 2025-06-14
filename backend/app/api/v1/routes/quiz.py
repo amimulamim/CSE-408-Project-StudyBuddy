@@ -5,10 +5,18 @@ from fastapi import FastAPI, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from app.core.vector_db import VectorDatabaseManager
-from app.rag.document_processor import DocumentProcessor
+from app.document_upload.document_processor import DocumentProcessor
 from app.rag.query_processor import QueryProcessor
-from app.generator.quiz_generator import ExamGenerator
+from app.quiz_generator.quiz_generator import ExamGenerator
 from fastapi import APIRouter, Depends, HTTPException,  Form, UploadFile, File , Query, Path,Body
+from fastapi import APIRouter, Depends, HTTPException, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from app.core.database import get_db
+from app.core.config import settings
+from sqlalchemy.orm import Session
+from app.auth.firebase_auth import *
+from app.auth.service import *
+from app.quiz_generator.models import *
 
 
 # Configure logging
@@ -19,6 +27,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 router = APIRouter()
+query_processor = QueryProcessor()
 
 # Pydantic models for request validation
 class CreateCollectionRequest(BaseModel):
@@ -34,16 +43,37 @@ class EvaluateAnswerRequest(BaseModel):
     question_id: str
     student_answer: Any
 
+    
+
+class ExamRequest(BaseModel):
+    query: str
+    num_questions: int
+    question_type: str
+
+class EvaluateRequest(BaseModel):
+    quiz_id: str
+    question_id: str
+    student_answer: Any
+    topic: str
+    domain: str
+
+
+
+logger = logging.getLogger(__name__)
+
+
+
+# Initialize Firebase Admin SDK
+
 # API endpoints
 @router.post("/collections")
 async def create_collection(request: CreateCollectionRequest):
     """Creates a new Qdrant collection."""
     try:
         vector_db = VectorDatabaseManager(
-            qdrant_url=os.getenv("QDRANT_HOST"),
-            qdrant_api_key=os.getenv("QDRANT_API_KEY"),
-            collection_name=request.collection_name
-        )
+            qdrant_api_key=settings.QDRANT_API_KEY,
+            qdrant_url=settings.QDRANT_HOST,
+            collection_name=settings.QDRANT_COLLECTION_NAME)
         result = vector_db.create_collection()
         return result
     except Exception as e:
@@ -55,8 +85,8 @@ async def delete_collection(collection_name: str):
     """Deletes a Qdrant collection."""
     try:
         vector_db = VectorDatabaseManager(
-            qdrant_url=os.getenv("QDRANT_HOST"),
-            qdrant_api_key=os.getenv("QDRANT_API_KEY"),
+            qdrant_url=settings.QDRANT_HOST,
+            qdrant_api_key=settings.QDRANT_API_KEY,
             collection_name=collection_name
         )
         result = vector_db.delete_collection()
@@ -70,8 +100,8 @@ async def list_collections():
     """Lists all Qdrant collections."""
     try:
         vector_db = VectorDatabaseManager(
-            qdrant_url=os.getenv("QDRANT_HOST"),
-            qdrant_api_key=os.getenv("QDRANT_API_KEY"),
+            qdrant_url=settings.QDRANT_API_KEY,
+            qdrant_api_key=settings.QDRANT_API_KEY,
             collection_name="dummy"  # Dummy name, not used
         )
         collections = vector_db.list_collections()
@@ -106,40 +136,67 @@ async def process_document(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/exams")
-async def generate_exam(request: GenerateExamRequest):
-    """Generates an exam based on a user query."""
+async def generate_exam(
+    request: ExamRequest,
+    db: Session = Depends(get_db),
+    user_info: dict = Depends(get_current_user)
+):
     try:
-        query_processor = QueryProcessor()
-        exam = query_processor.generate_exam(
+        user_id = user_info["uid"]
+        result = await query_processor.generate_exam(
             query=request.query,
             num_questions=request.num_questions,
-            question_type=request.question_type
+            question_type=request.question_type,
+            user_id=user_id,
+            db=db
         )
-        logger.info(f"Generated exam for query: {request.query}")
-        return exam
+        return result
     except Exception as e:
         logger.error(f"Error generating exam: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 @router.post("/evaluate")
-async def evaluate_answer(request: EvaluateAnswerRequest):
-    """Evaluates a student's answer using server-side stored correct answer."""
+async def evaluate_answer(
+    request: EvaluateRequest,
+    db: Session = Depends(get_db),
+    user_info: dict = Depends(get_current_user)
+):
     try:
-        query_processor = QueryProcessor()  # Access exams_storage
-        exam_generator = ExamGenerator(os.getenv("GEMINI_API_KEY"))
-        result = exam_generator.evaluate_answer(
-            exam_id=request.exam_id,
+        user_id = user_info["uid"]
+        result = query_processor.exam_generator.evaluate_answer(
+            exam_id=request.quiz_id,
             question_id=request.question_id,
             student_answer=request.student_answer,
-            exams_storage=query_processor.exams_storage
+            db=db
         )
-        logger.info(f"Evaluated answer for exam {request.exam_id}, question {request.question_id}")
         return result
     except Exception as e:
         logger.error(f"Error evaluating answer: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.delete("/exams/{quiz_id}")
+async def delete_exam(
+    quiz_id: str,
+    db: Session = Depends(get_db),
+    user_info: dict = Depends(get_current_user)
+):
+    try:
+        user_id = user_info["uid"]
+        # Validate user owns quiz
+        # from app.models import Quiz
+        quiz = db.query(Quiz).filter(Quiz.quiz_id == quiz_id).first()
+        if not quiz:
+            raise HTTPException(status_code=404, detail="Quiz not found")
+        if quiz.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Not authorized to delete this quiz")
+        await query_processor.delete_exam(quiz_id, db)
+        return {"message": f"Quiz {quiz_id} deleted successfully"}
+    except Exception as e:
+        logger.error(f"Error deleting exam: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(router, host="0.0.0.0", port=8000)
+
