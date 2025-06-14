@@ -17,8 +17,10 @@ import { PendingEmailVerification } from './PendingEmailVerification';
 import { updateUserField } from '@/lib/userProfile';
 import { useNavigate } from 'react-router-dom';
 import { ApiResponse } from '@/lib/api';
-import { signIn } from './api';
+import { signIn, updateUserProfile } from './api';
 import { signOut } from "firebase/auth";
+import { AuthRedirectHandler } from './AuthRedirectHandler';
+import { toast } from 'sonner';
 
 interface OnboardingStep {
   title: string;
@@ -69,9 +71,8 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
   const [customDomain, setCustomDomain] = useState("");
   const [interests, setInterests] = useState<string[]>([]);
   const [isComplete, setIsComplete] = useState(false);
-  const navigate = useNavigate();
-  const [validationModalOpen, setValidationModalOpen] = useState(false);
-  const { toast } = useToast();
+  const [goToRedirectHandler, setGoToRedirectHandler] = useState(false);
+  const [validationModalOpen, setValidationModalOpen] = useState(true);
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -84,10 +85,8 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
             if (response.status === 'success') {
               onValidationModalClose();
             } else {
-              toast({
-                title: "Sign Up Error",
-                description: response.msg || "An error occurred during sign up.",
-              });
+              toast.error('Sign up error');
+              onClose();
             }
           });
         }
@@ -95,7 +94,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
           setValidationModalOpen(true);
         }
       }
-    }, 2000); // poll every 2 seconds
+    }, 1000); // poll every 1 seconds
   
     return () => clearInterval(interval);
   }, [validationModalOpen]);
@@ -107,7 +106,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
         onClose();
       })
       .catch((error) => {
-        console.error("Error signing out:", error);
+        toast.error(`New user sign out error: ${error.message}`);
       });
     }
   };
@@ -143,25 +142,30 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
     setIsComplete(true);
     
     // Save user preferences
+    // making the interests field a string where the array items are separated by comma
     const userPreferences = {
-      role,
-      domain: effectiveDomain,
-      interests
+      role: "developer",
+      interests: interests.join(", ")
     };
-    
-    console.log("User onboarding complete:", userPreferences);
 
     updateUserField("onboardingDone", true);
     
-    // In a real app, you would send this data to your backend
-    setTimeout(() => {
-      toast({
-        title: "Profile setup complete!",
-        description: "Your preferences have been saved.",
-      });
-      onClose();
-      navigate('/dashboard'); 
-    }, 2000);
+    updateUserProfile(userPreferences).then((response: ApiResponse) => {
+      if (response.status === 'success') {
+        toast.success("Onboarding completed successfully!");
+        setGoToRedirectHandler(true);
+      } else {
+        toast.error("Failed to save preferences. Please try again.");
+        setIsComplete(false);
+        setCurrentStep(0);
+      }
+    }
+    ).catch((error) => {
+      toast.error(`Error saving preferences: ${error.message}`);
+      setIsComplete(false);
+      setCurrentStep(0);
+    });
+    
   };
 
   const isNextDisabled = () => {
@@ -171,19 +175,15 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
     return false;
   };
 
-  // if (!userValidated) {
-  //   return (
-  //       <Dialog open={validationModalOpen}>
-  //           <DialogContent className="sm:max-w-[600px] max-h-[95vh] overflow-y-auto bg-card border-white/10 p-6">
-  //             <PendingEmailVerification />
-  //           </DialogContent>
-  //       </Dialog>
-  //   );
-  // }
+  if( goToRedirectHandler ) {
+    return (
+      <AuthRedirectHandler onRedirectComplete={onClose}/>
+    );
+  }
 
   return (
     <>
-      <Dialog open={validationModalOpen} onOpenChange={onValidationModalClose}>
+      <Dialog open={validationModalOpen && isOpen} onOpenChange={onValidationModalClose}>
         <DialogContent className="sm:max-w-[600px] max-h-[95vh] overflow-y-auto bg-card border-white/10 p-6">
           <PendingEmailVerification />
         </DialogContent>

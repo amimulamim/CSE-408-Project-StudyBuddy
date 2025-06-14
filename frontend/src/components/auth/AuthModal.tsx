@@ -28,7 +28,6 @@ export function AuthModal({ isOpen, onClose, mode, onChangeMode }: AuthModalProp
     } else {
       setShowOnboarding(false);
     }
-    console.log('in useEffect of auth modal', mode, showOnboarding);
   }, [mode]);
   
   const handleSignUpSuccess = () => {
@@ -65,23 +64,23 @@ export function AuthModal({ isOpen, onClose, mode, onChangeMode }: AuthModalProp
           
           {mode === 'signIn' ? (
             <SignInForm 
-              // onSignUp={() => onChangeMode('signUp')} 
-              // onClose={onClose}
+              onSignUp={() => onChangeMode('signUp')} 
+              onClose={onClose}
             />
           ) : (
             <SignUpForm 
-              // onSignIn={() => onChangeMode('signIn')} 
-              // onClose={handleSignUpSuccess}
+              onSignIn={() => onChangeMode('signIn')} 
+              onClose={handleSignUpSuccess}
             />
           )
           }
         </DialogContent>
       </Dialog>
       
-      {/* <OnboardingModal 
+      <OnboardingModal 
         isOpen={showOnboarding} 
         onClose={handleOnboardingClose}
-      /> */}
+      />
     </>
   );
 }

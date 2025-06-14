@@ -136,16 +136,16 @@ export default function AdminDashboard() {
     navigate('/dashboard');
   };
 
-  // if (loading || loadingData) {
-  //   return (
-  //     <div className="min-h-screen bg-background flex items-center justify-center">
-  //       <div className="text-center">
-  //         <Activity className="h-8 w-8 animate-spin mx-auto mb-4" />
-  //         <p>Loading admin dashboard...</p>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  if (loading || loadingData) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Activity className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading admin dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   const dashboardCards = [
     {

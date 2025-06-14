@@ -13,6 +13,7 @@ import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import Chatbot from "./pages/Chatbot";
 import Billing from "./pages/Billing";
+import { AuthRedirectHandler } from './components/auth/AuthRedirectHandler';
 // import { PaymentResult } from "@/components/billing/PaymentResult"; 
 
 const queryClient = new QueryClient();

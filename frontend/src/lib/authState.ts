@@ -1,4 +1,3 @@
-// lib/authState.ts
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 
 let authPromise: Promise<User | null> | null = null;
