@@ -5,46 +5,39 @@ from sqlalchemy.orm import Session
 from app.quiz_generator.models import Quiz, QuizQuestion
 from app.core.vector_db import VectorDatabaseManager
 from app.quiz_generator.quiz_generator import ExamGenerator
+from app.document_upload.embedding_generator import EmbeddingGenerator
 from app.core.config import settings
-import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
 class QueryProcessor:
     """Orchestrates query processing, exam generation, and storage."""
     def __init__(self):
-        self.vector_db = VectorDatabaseManager(
-            qdrant_url=settings.QDRANT_HOST,
-            qdrant_api_key=settings.QDRANT_API_KEY,
-            collection_name=settings.QDRANT_COLLECTION_NAME)
         self.exam_generator = ExamGenerator()
-        self.embedding_api_key = settings.GEMINI_API_KEY
-        self.embedding_model = settings.QUERY_EMBEDDING_MODEL
+        self.embedding_generator = EmbeddingGenerator(model_name=settings.QUERY_EMBEDDING_MODEL, task_type="SEMANTIC_SIMILARITY")
 
     async def generate_query_embedding(self, query: str) -> List[float]:
         """Generates query embedding using Gemini API."""
         try:
-            genai.configure(api_key=self.embedding_api_key)
-            result = genai.embed_content(
-                model=self.embedding_model,
-                content=query,
-                task_type="SEMANTIC_SIMILARITY"
-            )
-            embedding = result.get('embedding')
-            if not embedding or not isinstance(embedding, list):
-                raise ValueError("Invalid embedding response from Gemini API")
+            embedding = self.embedding_generator.get_embedding(query)
             return embedding
         except Exception as e:
             logger.error(f"Error generating query embedding: {str(e)}")
             raise Exception(f"Error generating query embedding: {str(e)}")
 
-    async def generate_exam(self, query: str, num_questions: int, question_type: str, user_id: str, db: Session) -> Dict[str, Any]:
+    async def generate_exam(self, query: str, num_questions: int, question_type: str, user_id: str, collection_name: str, db: Session) -> Dict[str, Any]:
         """Generates a quiz based on user query and stores it in PostgreSQL."""
         try:
             query_embedding = await self.generate_query_embedding(query)
-            search_results = self.vector_db.search_vectors(query_embedding)
+            full_collection_name = f"{user_id}_{collection_name}"
+            vector_db = VectorDatabaseManager(
+                qdrant_url=settings.QDRANT_HOST,
+                qdrant_api_key=settings.QDRANT_API_KEY,
+                collection_name=full_collection_name
+            )
+            search_results = vector_db.search_vectors(query_embedding)
             if not search_results:
-                raise ValueError("No relevant documents found for the query")
+                raise ValueError(f"No relevant documents found in collection {collection_name}")
             context = "\n".join([result["text"] for result in search_results])
             questions = self.exam_generator.generate_questions(context, num_questions, question_type)
             

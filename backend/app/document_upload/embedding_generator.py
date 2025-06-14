@@ -1,32 +1,26 @@
-import os
 import google.generativeai as genai
-from dotenv import load_dotenv
 from app.core.config import settings
-
-load_dotenv()
-
-# Configure Gemini API
-if not os.getenv("GEMINI_API_KEY"):
-    raise ValueError("GEMINI_API_KEY not set in .env file")
 
 class EmbeddingGenerator:
     def __init__(self, model_name="models/embedding-001", task_type="RETRIEVAL_DOCUMENT"):
         self.api_key = settings.GEMINI_API_KEY
         if not self.api_key:
             raise ValueError("Missing GEMINI_API_KEY in environment.")
-
-        # genai.configure(api_key=self.api_key)
         
-        self.model = genai.get_embedding_model(model_name=model_name)
+        genai.configure(api_key=self.api_key)
+        self.model_name = model_name
         self.task_type = task_type
 
     def get_embedding(self, text: str) -> list[float]:
         try:
-            response = self.model.embed_content(
+            response = genai.embed_content(
+                model=self.model_name,
                 content=text,
-                task_type=self.task_type,
-                title="Document Chunk"
+                task_type=self.task_type
             )
-            return response["embedding"]
+            embedding = response.get("embedding")
+            if not embedding or not isinstance(embedding, list):
+                raise ValueError("Invalid embedding response from Gemini API")
+            return embedding
         except Exception as e:
             raise RuntimeError(f"Gemini embedding failed: {e}")
