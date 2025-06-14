@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAuth } from 'firebase/auth';
+import { getAuth, User } from 'firebase/auth';
 import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
 import { getCurrentUser } from '@/lib/authState';
@@ -18,14 +18,12 @@ export const useUserRole = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const auth = getAuth();
-  let isAdmin = false;
 
   useEffect(() => {
     const fetchUserProfile = async () => {
-      const user = await getCurrentUser();
+      const currentUser = await getCurrentUser();
       
-      if (!user) {
+      if (!currentUser) {
         setLoading(false);
         return;
       }
@@ -40,9 +38,6 @@ export const useUserRole = () => {
 
         if (response && typeof response === 'object' && 'status' in response) {
           if (response.status === 'success' && response.data) {
-            isAdmin = response.data.is_admin || false;
-            console.log('printing is admin data');
-            console.log(isAdmin);
             setUserProfile(response.data as UserProfile);
             setError(null);
           } else {
@@ -65,5 +60,5 @@ export const useUserRole = () => {
     fetchUserProfile();
   }, []);
 
-  return { userProfile, loading, error, isAdmin };
+  return { userProfile, loading, error };
 };

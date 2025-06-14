@@ -100,7 +100,7 @@ const Index = () => {
   };
 
   if (onboardingDone) {
-    return <AuthRedirectHandler onRedirectComplete={()=>{}} />;
+    return <AuthRedirectHandler />;
   }
   
   return (

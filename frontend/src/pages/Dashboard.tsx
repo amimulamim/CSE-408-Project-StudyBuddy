@@ -31,16 +31,16 @@ export default function Dashboard() {
     };
 
     // Show loading state while checking authentication
-    // if (loading) {
-    //     return (
-    //         <div className="min-h-screen bg-background flex items-center justify-center">
-    //             <div className="flex flex-col items-center gap-4">
-    //                 <Loader2 className="h-8 w-8 animate-spin text-study-purple" />
-    //                 <p className="text-muted-foreground">Loading Your Dashboard...</p>
-    //             </div>
-    //         </div>
-    //     );
-    // }
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-study-purple" />
+                    <p className="text-muted-foreground">Loading Your Dashboard...</p>
+                </div>
+            </div>
+        );
+    }
 
     const dashboardCards = [
         {
@@ -116,7 +116,7 @@ export default function Dashboard() {
                                         />
                                     )}
                                     <div>
-                                        <h3 className="text-lg font-semibold">{userProfile?.name || 'User'}</h3>
+                                        <h3 className="text-lg font-semibold">{userProfile?.role || 'User'}</h3>
                                         <p className="text-muted-foreground">{userProfile?.email}</p>
                                         <div className="mt-2">
                                             <BillingStatus compact={true} showTitle={false} />

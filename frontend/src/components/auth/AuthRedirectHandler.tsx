@@ -13,7 +13,7 @@ interface AuthRedirectHandlerProps {
 export const AuthRedirectHandler = ({ onRedirectComplete }: AuthRedirectHandlerProps) => {
   const navigate = useNavigate();
   const auth = getAuth();
-  const { userProfile, loading, error, isAdmin } = useUserRole();
+  const { userProfile, loading, error } = useUserRole();
   const [currentMessage, setCurrentMessage] = useState('');
 
   // Set random message on component mount
@@ -45,9 +45,9 @@ export const AuthRedirectHandler = ({ onRedirectComplete }: AuthRedirectHandlerP
         navigate('/dashboard');
       }
       
-    //   if (onRedirectComplete) {
-    //     onRedirectComplete();
-    //   }
+      if (onRedirectComplete) {
+        onRedirectComplete();
+      }
     }
   }, [userProfile, loading, error, navigate, auth.currentUser, onRedirectComplete]);
 
