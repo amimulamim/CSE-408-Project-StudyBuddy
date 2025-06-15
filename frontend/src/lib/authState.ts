@@ -35,3 +35,7 @@ export async function getCurrentUser(): Promise<User | null> {
 
   return authPromise;
 }
+
+export function clearAuthCache() {
+  authPromise = null;
+}

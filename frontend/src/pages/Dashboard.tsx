@@ -17,6 +17,7 @@ import {
   getStatusLabel,
   type SubscriptionStatus 
 } from "@/lib/billing";
+import { clearAuthCache } from "@/lib/authState";
 
 export default function Dashboard() {
     const navigate = useNavigate();
@@ -51,6 +52,7 @@ export default function Dashboard() {
         try {
             const auth = getAuth();
             await signOut(auth);
+            clearAuthCache();
             navigate("/");
         } catch (error) {
             console.error("Error logging out:", error);

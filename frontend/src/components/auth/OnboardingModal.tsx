@@ -18,9 +18,10 @@ import { updateUserField } from '@/lib/userProfile';
 import { useNavigate } from 'react-router-dom';
 import { ApiResponse } from '@/lib/api';
 import { signIn, updateUserProfile } from './api';
-import { signOut } from "firebase/auth";
+import { signOut, User } from "firebase/auth";
 import { AuthRedirectHandler } from './AuthRedirectHandler';
 import { toast } from 'sonner';
+import { clearAuthCache } from '@/lib/authState';
 
 interface OnboardingStep {
   title: string;
@@ -68,6 +69,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [role, setRole] = useState<"student" | "content_moderator" | null>(null);
   const [domain, setDomain] = useState("");
+  const [user, setUser] = useState<User | null>(auth.currentUser);
   const [customDomain, setCustomDomain] = useState("");
   const [interests, setInterests] = useState<string[]>([]);
   const [isComplete, setIsComplete] = useState(false);
@@ -80,6 +82,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
         await auth.currentUser.reload();
         if (auth.currentUser.emailVerified) {
           clearInterval(interval);
+          setUser(auth.currentUser);
           signIn()
           .then((response:ApiResponse) => {
             if (response.status === 'success') {
@@ -104,6 +107,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
     if(!auth?.currentUser?.emailVerified){
       signOut(auth).then(() => {
         onClose();
+        clearAuthCache();
       })
       .catch((error) => {
         toast.error(`New user sign out error: ${error.message}`);
@@ -144,8 +148,10 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
     // Save user preferences
     // making the interests field a string where the array items are separated by comma
     const userPreferences = {
-      role: "developer",
-      interests: interests.join(", ")
+      interests: interests.join(", "),
+      study_domain: effectiveDomain,
+      name: user?.displayName || "default name from onboarding",
+      avatar: user?.photoURL || "https://www.gravatar.com/avatar/"
     };
 
     updateUserField("onboardingDone", true);

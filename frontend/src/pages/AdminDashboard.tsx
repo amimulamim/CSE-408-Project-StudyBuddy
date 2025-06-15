@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +16,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { toast } from 'sonner';
+import { clearAuthCache } from '@/lib/authState';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -31,6 +31,7 @@ export default function AdminDashboard() {
     try {
       await signOut(auth);
       toast.success('Signed out successfully');
+      clearAuthCache();
       navigate('/');
     } catch (error) {
       console.error('Sign out error:', error);
