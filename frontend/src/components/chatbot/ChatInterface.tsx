@@ -168,7 +168,7 @@ export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfacePro
   const renderFilePreview = (file: FileAttachment) => {
     if (file.type.startsWith('image/')) {
       return (
-        <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-white/10">
+        <div className="relative w-20 h-20 rounded-lg overflow-hidden">
           <img
             src={file.url}
             alt={file.name}
