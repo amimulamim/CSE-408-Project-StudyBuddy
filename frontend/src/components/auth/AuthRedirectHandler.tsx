@@ -53,7 +53,7 @@ export const AuthRedirectHandler = ({ onRedirectComplete }: AuthRedirectHandlerP
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen dashboard-bg-animated">
         <div className="text-center max-w-lg mx-auto px-4">
           {/* Animated Logo */}
           <div className="relative mb-8">
