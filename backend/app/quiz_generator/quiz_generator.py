@@ -1,220 +1,258 @@
-import json
 import uuid
 import logging
-from typing import List, Dict, Any
-from sqlalchemy.orm import Session
-from app.core.config import settings
-import google.generativeai as genai
+from typing import List, Dict, Any, Tuple
 from app.quiz_generator.models import *
+from app.document_upload.embedding_generator import EmbeddingGenerator
+import google.generativeai as genai
+from app.core.config import settings
+import json
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
 class ExamGenerator:
-    """Generates and evaluates quiz questions."""
+    """Generates exam questions based on provided context."""
     def __init__(self):
         try:
             genai.configure(api_key=settings.GEMINI_API_KEY)
-            self.model = genai.GenerativeModel('gemini-1.5-flash')
-            logger.debug("Initialized generative model successfully")
+            self.model = genai.GenerativeModel('gemini-1.5-pro')
+            self.embedding_generator = EmbeddingGenerator(model_name="models/embedding-001", task_type="RETRIEVAL_QUERY")
         except Exception as e:
-            logger.error(f"Error initializing generative model: {str(e)}")
+            logger.error(f"Error initializing ExamGenerator: {str(e)}")
             raise
 
     def generate_questions(self, context: str, num_questions: int, question_type: str) -> List[Dict[str, Any]]:
-        """Generates questions based on context using Gemini API."""
+        """Generates a list of unique questions based on context."""
         try:
-            questions = []
-            seen_questions = set()
-            
-            for i in range(num_questions):
-                attempts = 0
-                max_attempts = 3
-                
-                while attempts < max_attempts:
-                    if question_type.lower() == "multiple_choice":
-                        prompt = (
-                            f"Based on the following context, generate a unique multiple-choice question (question {i+1}) with exactly 4 options. "
-                            f"Ensure the question is distinct from previously generated questions. "
-                            f"Check for each question whether it was previously generated. "
-                            f"Do not generate questions that are similar to previously generated questions. "
-                            f"Return the response in JSON format with fields: 'question', 'options' (list of 4 strings), 'correct_answer' (string matching one option), "
-                            f"'type' ('MultipleChoice'), 'difficulty' ('Easy', 'Medium', or 'Hard').\n\n"
-                            f"Context: {context[:2000]}"
-                        )
-                        result = self.model.generate_content(prompt)
-                        try:
-                            question_data = json.loads(result.text.strip('```json\n').strip('```'))
-                            question_text = question_data.get("question")
-                            if not question_text:
-                                raise ValueError("Empty question text")
-                            question_key = (question_text, tuple(question_data.get("options", [])))
-                            if question_key in seen_questions:
-                                logger.warning(f"Duplicate question detected: {question_text}. Retrying...")
-                                attempts += 1
-                                continue
-                            seen_questions.add(question_key)
-                            question_data = {
-                                "type": question_data.get("type", "MultipleChoice"),
-                                "question": question_text,
-                                "question_id": str(uuid.uuid4()),
-                                "options": [
-                                    f"A. {question_data['options'][0]}",
-                                    f"B. {question_data['options'][1]}",
-                                    f"C. {question_data['options'][2]}",
-                                    f"D. {question_data['options'][3]}"
-                                ],
-                                "correct_answer": question_data.get("correct_answer"),
-                                "difficulty": question_data.get("difficulty", "Medium"),
-                                "marks": 1,
-                                "hints": [],
-                                "explanation": None
-                            }
-                        except Exception as e:
-                            logger.warning(f"Failed to parse Gemini response: {str(e)}. Retrying...")
-                            attempts += 1
-                            continue
-                    elif question_type.lower() == "true_false":
-                        prompt = (
-                            f"Based on the following context, generate a unique true/false question (question {i+1}). "
-                            f"Ensure the question is distinct from previously generated questions. "
-                            f"Check for each question whether it was previously generated. "
-                            f"Do not generate questions that are similar to previously generated questions. "
-                            f"Return the response in JSON format with fields: 'question' (string), 'correct_answer' (boolean), "
-                            f"'type' ('TrueFalse'), 'difficulty' ('Easy', 'Medium', or 'Hard').\n\n"
-                            f"Context: {context[:2000]}"
-                        )
-                        result = self.model.generate_content(prompt)
-                        try:
-                            question_data_raw = json.loads(result.text.strip('```json\n').strip('```'))
-                            question_text = question_data_raw.get("question")
-                            if not question_text:
-                                raise ValueError("Empty question text")
-                            if question_text in seen_questions:
-                                logger.warning(f"Duplicate question detected: {question_text}. Retrying...")
-                                attempts += 1
-                                continue
-                            seen_questions.add(question_text)
-                            question_data = {
-                                "type": question_data_raw.get("type", "TrueFalse"),
-                                "question": question_text,
-                                "question_id": str(uuid.uuid4()),
-                                "options": ["True", "False"],
-                                "correct_answer": str(question_data_raw.get("correct_answer", True)),
-                                "difficulty": question_data_raw.get("difficulty", "Medium"),
-                                "marks": 1,
-                                "hints": [],
-                                "explanation": None
-                            }
-                        except Exception as e:
-                            logger.warning(f"Failed to parse Gemini response: {str(e)}. Retrying...")
-                            attempts += 1
-                            continue
-                    else:  # short_answer
-                        prompt = (
-                            f"Based on the following context, generate a unique short-answer question (question {i+1}). "
-                            f"Ensure the question is distinct from previously generated questions. "
-                            f"Check for each question whether it was previously generated. "
-                            f"Do not generate questions that are similar to previously generated questions. "
-                            f"Return the response in JSON format with fields: 'question' (string), 'correct_answer' (string), "
-                            f"'type' ('ShortAnswer'), 'difficulty' ('Easy', 'Medium', or 'Hard').\n\n"
-                            f"Context: {context[:2000]}"
-                        )
-                        result = self.model.generate_content(prompt)
-                        try:
-                            question_data_raw = json.loads(result.text.strip('```json\n').strip('```'))
-                            question_text = question_data_raw.get("question")
-                            if not question_text:
-                                raise ValueError("Empty question text")
-                            if question_text in seen_questions:
-                                logger.warning(f"Duplicate question detected: {question_text}. Retrying...")
-                                attempts += 1
-                                continue
-                            seen_questions.add(question_text)
-                            question_data = {
-                                "type": question_data_raw.get("type", "ShortAnswer"),
-                                "question": question_text,
-                                "question_id": str(uuid.uuid4()),
-                                "options": [],
-                                "correct_answer": question_data_raw.get("correct_answer", ""),
-                                "difficulty": question_data_raw.get("difficulty", "Medium"),
-                                "marks": 1,
-                                "hints": [],
-                                "explanation": None
-                            }
-                        except Exception as e:
-                            logger.warning(f"Failed to parse Gemini response: {str(e)}. Retrying...")
-                            attempts += 1
-                            continue
-                    
-                    questions.append(question_data)
-                    break
-                
-                if attempts >= max_attempts:
-                    logger.error(f"Failed to generate unique question {i+1} after {max_attempts} attempts.")
-                    raise Exception(f"Unable to generate unique question {i+1} after {max_attempts} attempts.")
-            
-            return questions
+            # Map underscore inputs to camel case for compatibility
+            question_type_map = {
+                "multiple_choice": "MultipleChoice",
+                "short_answer": "ShortAnswer",
+                "true_false": "TrueFalse",
+                "multiplechoice": "MultipleChoice",
+                "shortanswer": "ShortAnswer",
+                "truefalse": "TrueFalse"
+            }
+            normalized_type = question_type_map.get(question_type.lower())
+            if not normalized_type:
+                raise ValueError(f"Unsupported question type: {question_type}")
+
+            prompt = self._build_prompt(context, num_questions, normalized_type)
+            response = self.model.generate_content(prompt)
+            if not response or not hasattr(response, 'text') or not response.text:
+                logger.error(f"Invalid Gemini API response: {response}")
+                raise ValueError("No valid response from Gemini API")
+
+            logger.debug(f"Gemini API response: {response.text[:500]}")
+            questions = self._parse_questions(response.text, normalized_type)
+            unique_questions = self._deduplicate_questions(questions, num_questions, normalized_type)
+            return unique_questions
         except Exception as e:
             logger.error(f"Error generating questions: {str(e)}")
             raise Exception(f"Error generating questions: {str(e)}")
 
-    def evaluate_answer(self, exam_id: str, question_id: str, student_answer: Any, db: Session) -> Dict[str, Any]:
-        """Evaluates a student's answer against the correct answer."""
+    def _build_prompt(self, context: str, num_questions: int, question_type: str) -> str:
+        """Builds a prompt for Gemini API to generate questions."""
+        question_type_description = {
+            "MultipleChoice": "multiple-choice questions with 4 options, specifying the correct option index (0-3)",
+            "ShortAnswer": "short-answer questions",
+            "TrueFalse": "true/false questions"
+        }
+        return f"""
+        You are an expert educator tasked with creating quiz questions. Based on the following context, generate {num_questions} unique {question_type_description[question_type]}:
+        {context}
+        
+        For each question, provide:
+        - question: The question text
+        - type: "{question_type}"
+        - options: For MultipleChoice, a list of 4 distinct options; null for others
+        - difficulty: "Easy", "Medium", or "Hard"
+        - marks: Integer between 1 and 5
+        - hints: List of 1-2 hints
+        - explanation: Brief explanation of the correct answer
+        - correct_answer: For MultipleChoice, the option index (e.g., "0"); for others, the answer text
+        
+        Ensure questions and options (for MultipleChoice) are semantically distinct to avoid paraphrasing or similar meanings. Return the output as a valid JSON array, wrapped in triple backticks:
+        ```json
+        [
+            {{
+                "question": "Question text",
+                "type": "{question_type}",
+                "options": ["Option A", "Option B", "Option C", "Option D"],
+                "difficulty": "Easy|Medium|Hard",
+                "marks": integer,
+                "hints": ["Hint 1", "Hint 2"],
+                "explanation": "Explanation text",
+                "correct_answer": "0"
+            }}
+        ]
+        ```
+        """
+
+    def _parse_questions(self, response_text: str, question_type: str) -> List[Dict[str, Any]]:
+        """Parses Gemini API response into a list of questions."""
         try:
-            # from app.models import QuizQuestion
+            json_start = response_text.find('```json')
+            json_end = response_text.rfind('```')
+            if json_start != -1 and json_end != -1:
+                response_text = response_text[json_start + 7:json_end].strip()
+            else:
+                logger.warning("No JSON markdown wrapper found in response")
+
+            if not response_text:
+                logger.error("Empty response text after processing")
+                raise ValueError("Empty response text")
+
+            questions = json.loads(response_text)
+            if not isinstance(questions, list):
+                logger.error(f"Response is not a JSON array: {response_text[:500]}")
+                raise ValueError("Response is not a JSON array")
+
+            parsed_questions = []
+            for q in questions:
+                question_id = str(uuid.uuid4())
+                parsed = {
+                    "question_id": question_id,
+                    "question": q.get("question", ""),
+                    "type": q.get("type", question_type),
+                    "difficulty": q.get("difficulty", "Easy"),
+                    "marks": q.get("marks", 1),
+                    "hints": q.get("hints", []),
+                    "explanation": q.get("explanation", ""),
+                    "correct_answer": q.get("correct_answer", "")
+                }
+                if question_type == "MultipleChoice":
+                    parsed["options"] = q.get("options", [])
+                    if len(parsed["options"]) != 4 or not parsed["correct_answer"].isdigit() or not (0 <= int(parsed["correct_answer"]) < 4):
+                        logger.warning(f"Skipping invalid MCQ: {parsed}")
+                        continue
+                else:
+                    parsed["options"] = []
+                if not parsed["question"]:
+                    logger.warning(f"Skipping question with empty text: {parsed}")
+                    continue
+                parsed_questions.append(parsed)
+            if not parsed_questions:
+                logger.error("No valid questions parsed from response")
+                raise ValueError("No valid questions parsed")
+            return parsed_questions
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON decode error: {str(e)}, response: {response_text[:500]}")
+            raise Exception(f"Error parsing questions: {str(e)}")
+        except Exception as e:
+            logger.error(f"Error parsing questions: {str(e)}")
+            raise Exception(f"Error parsing questions: {str(e)}")
+
+    def _deduplicate_questions(self, questions: List[Dict[str, Any]], num_questions: int, question_type: str) -> List[Dict[str, Any]]:
+        """Ensures questions are semantically unique by comparing question and option embeddings."""
+        try:
+            seen_question_embeddings = []
+            seen_option_embeddings = []
+            unique_questions = []
+            for q in questions:
+                question_text = q["question"]
+                question_embedding = self.embedding_generator.get_embedding(question_text)
+                is_unique = True
+
+                for seen_q_emb in seen_question_embeddings:
+                    if self._cosine_similarity(question_embedding, seen_q_emb) > 0.9:
+                        is_unique = False
+                        break
+
+                if is_unique and question_type == "MultipleChoice":
+                    option_embeddings = [self.embedding_generator.get_embedding(opt) for opt in q["options"]]
+                    for opt_emb in option_embeddings:
+                        for seen_opt_emb in seen_option_embeddings:
+                            if self._cosine_similarity(opt_emb, seen_opt_emb) > 0.95:
+                                is_unique = False
+                                break
+                        if not is_unique:
+                            break
+
+                if is_unique:
+                    seen_question_embeddings.append(question_embedding)
+                    if question_type == "MultipleChoice":
+                        seen_option_embeddings.extend([self.embedding_generator.get_embedding(opt) for opt in q["options"]])
+                    unique_questions.append(q)
+                if len(unique_questions) >= num_questions:
+                    break
+
+            if len(unique_questions) < num_questions:
+                logger.warning(f"Generated only {len(unique_questions)} unique questions out of {num_questions} requested")
+            return unique_questions
+        except Exception as e:
+            logger.error(f"Error deduplicating questions: {str(e)}")
+            raise Exception(f"Error deduplicating questions: {str(e)}")
+
+    def _cosine_similarity(self, vec1: List[float], vec2: List[float]) -> float:
+        """Calculates cosine similarity between two vectors."""
+        import math
+        dot_product = sum(a * b for a, b in zip(vec1, vec2))
+        norm1 = math.sqrt(sum(a * a for a in vec1))
+        norm2 = math.sqrt(sum(b * b for b in vec2))
+        return dot_product / (norm1 * norm2) if norm1 and norm2 else 0.0
+
+    def evaluate_answer(self, exam_id: str, question_id: str, student_answer: str, user_id: str, db: Session) -> Dict[str, Any]:
+        """Evaluates a student's answer and stores in question_results table."""
+        try:
             question = db.query(QuizQuestion).filter(
-                QuizQuestion.quiz_id == exam_id,
-                QuizQuestion.id == question_id
+                QuizQuestion.id == question_id,
+                QuizQuestion.quiz_id == exam_id
             ).first()
             if not question:
-                raise ValueError(f"Quiz {exam_id} or question {question_id} not found")
-            
-            question_data = {
-                "question": question.question_text,
-                "type": question.type.value,
-                "options": question.options or [],
-                "correct_answer": question.correct_answer,
-                "marks": question.marks
-            }
-            question_type = question_data["type"].lower()
-            correct_answer = question_data["correct_answer"]
-            result = {
-                "question": question_data["question"],
-                "question_id": question_id,
-                "student_answer": student_answer,
-                "is_correct": False,
-                "score": 0.0
-            }
-            
-            if question_type == "multiplechoice":
-                result["is_correct"] = str(student_answer).strip() == str(correct_answer).strip()
-                result["score"] = float(question_data["marks"]) if result["is_correct"] else 0.0
-                logger.debug(f"Evaluated multiple-choice: {result}")
-            
-            elif question_type == "truefalse":
-                result["is_correct"] = bool(student_answer) == (correct_answer.lower() == "true")
-                result["score"] = float(question_data["marks"]) if result["is_correct"] else 0.0
-                logger.debug(f"Evaluated true/false: {result}")
-            
-            elif question_type == "shortanswer":
-                prompt = (
-                    f"Evaluate whether the student's answer is semantically equivalent to the correct answer. "
-                    f"Return a JSON response with fields: 'is_correct' (boolean) and 'score' (float between 0 and {question_data['marks']}, representing similarity).\n\n"
-                    f"Correct answer: {correct_answer}\n"
-                    f"Student answer: {student_answer}"
-                )
+                raise ValueError(f"Question {question_id} not found in quiz {exam_id}")
+
+            is_correct = False
+            score = 0.0
+            if question.type == QuestionType.MultipleChoice:
+                correct_idx = question.correct_answer
+                student_answer_str = str(student_answer).strip()
+                if student_answer_str == correct_idx or (question.options and student_answer_str == question.options[int(correct_idx)]):
+                    is_correct = True
+                    score = float(question.marks)
+            elif question.type == QuestionType.ShortAnswer:
+                prompt = f"""
+                Evaluate if the student's answer is correct based on the correct answer.
+                Question: {question.question_text}
+                Correct Answer: {question.correct_answer}
+                Student Answer: {student_answer}
+                Return JSON: {{"is_correct": boolean, "score": float}}
+                """
+                response = self.model.generate_content(prompt)
+                if not response or not hasattr(response, 'text') or not response.text:
+                    logger.error(f"Invalid Gemini API response for evaluation: {response}")
+                    raise ValueError("No valid response from Gemini API")
                 try:
-                    response = self.model.generate_content(prompt)
-                    evaluation = json.loads(response.text.strip('```json\n').strip('```'))
-                    result["is_correct"] = evaluation.get("is_correct", False)
-                    result["score"] = float(evaluation.get("score", 0.0))
-                    logger.debug(f"Evaluated short-answer: {result}")
-                except Exception as e:
-                    logger.warning(f"Failed to evaluate short-answer with Gemini: {str(e)}. Using string comparison.")
-                    result["is_correct"] = str(student_answer).strip().lower() == str(correct_answer).strip().lower()
-                    result["score"] = float(question_data["marks"]) if result["is_correct"] else 0.0
-            
-            return result
+                    result = json.loads(response.text)
+                except json.JSONDecodeError as e:
+                    logger.error(f"JSON decode error in evaluation: {str(e)}, response: {response.text[:500]}")
+                    raise ValueError(f"Invalid JSON response: {str(e)}")
+                is_correct = result.get("is_correct", False)
+                score = result.get("score", 0.0) if is_correct else 0.0
+            elif question.type == QuestionType.TrueFalse:
+                is_correct = str(student_answer).lower() == question.correct_answer.lower()
+                score = float(question.marks) if is_correct else 0.0
+
+            # Store in question_results table
+            question_result = QuestionResult(
+                question_id=question_id,
+                user_id=user_id,
+                quiz_id=exam_id,
+                score=score,
+                is_correct=is_correct,
+                student_answer=student_answer,
+                created_at=datetime.now(timezone.utc)
+            )
+            db.merge(question_result)  # Upsert to handle retries
+            db.commit()
+
+            return {
+                "question_id": question_id,
+                "is_correct": is_correct,
+                "score": score,
+                "explanation": question.explanation or ""
+            }
         except Exception as e:
+            db.rollback()
             logger.error(f"Error evaluating answer: {str(e)}")
             raise Exception(f"Error evaluating answer: {str(e)}")

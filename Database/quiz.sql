@@ -31,7 +31,22 @@ CREATE TABLE quiz_results (
     feedback TEXT,
     topic TEXT,
     domain TEXT,
-    date TIMESTAMPTZ DEFAULT now()
+    created_at TIMESTAMPTZ DEFAULT now()
 );
+
+CREATE TABLE question_results (
+    question_id UUID NOT NULL,
+    user_id TEXT NOT NULL,
+    quiz_id UUID NOT NULL,
+    score FLOAT NOT NULL,
+    is_correct BOOLEAN NOT NULL,
+    student_answer TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (question_id, user_id, quiz_id),
+    FOREIGN KEY (question_id) REFERENCES quiz_questions(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(uid) ON DELETE CASCADE,
+    FOREIGN KEY (quiz_id) REFERENCES quizzes(quiz_id) ON DELETE CASCADE
+);
+
 
 
