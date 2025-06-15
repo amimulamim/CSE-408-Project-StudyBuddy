@@ -1,25 +1,26 @@
-import PyPDF2
+import io
+import logging
+from PyPDF2 import PdfReader
+
+logger = logging.getLogger(__name__)
 
 class DocumentConverter:
-    """Handles document ingestion and text extraction from PDF and text files."""
-    
+    """Handles extraction of text from uploaded documents."""
     def __init__(self):
         pass
-    
-    def extract_text(self, file_path: str) -> str:
-        """Extracts text from PDF or .txt files."""
+
+    def extract_text(self, content: bytes, file_type: str) -> str:
+        """Extracts text from a document based on its file type."""
         try:
-            if file_path.endswith('.pdf'):
-                with open(file_path, 'rb') as file:
-                    reader = PyPDF2.PdfReader(file)
-                    text = ""
-                    for page in reader.pages:
-                        text += page.extract_text() or ""
-                    return text.strip()
-            elif file_path.endswith('.txt'):
-                with open(file_path, 'r', encoding='utf-8') as file:
-                    return file.read().strip()
+            if file_type == "application/pdf":
+                pdf_file = io.BytesIO(content)
+                pdf_reader = PdfReader(pdf_file)
+                text = "".join(page.extract_text() or "" for page in pdf_reader.pages)
+                return text
+            elif file_type == "text/plain":
+                return content.decode("utf-8")
             else:
-                raise ValueError("Unsupported file format. Use .pdf or .txt")
+                raise ValueError(f"Unsupported file type: {file_type}")
         except Exception as e:
-            raise Exception(f"Error extracting text from {file_path}: {str(e)}")
+            logger.error(f"Error extracting text from document: {str(e)}")
+            raise Exception(f"Error extracting text: {str(e)}")
