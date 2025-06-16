@@ -137,7 +137,7 @@ jobs:
           echo "VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}" >> .env
           echo "VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}" >> .env
           echo "VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}" >> .env
-          echo "VITE_BACKEND_URL=https://studybuddy-backend.wonderfuldesert-870c7845.westus2.azurecontainerapps.io" >> .env
+          echo "VITE_BACKEND_URL=${{secrets.VITE_BACKEND_URL}} >> .env
 
       - name: Run Unit Tests & Generate Coverage Report
         run: npm run coverage
