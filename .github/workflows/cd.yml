@@ -26,15 +26,15 @@ jobs:
       - name: Deploy backend
         uses: azure/container-apps-deploy-action@v1
         with:
-          acrName: studybuddyimagecontainer
+          acrName: studybuddyimagecontainerv2
           containerAppName: studybuddy-backend
           resourceGroup: CSE-408
-          imageToDeploy: studybuddyimagecontainer.azurecr.io/backend:${{ github.sha }}
+          imageToDeploy: studybuddyimagecontainerv2.azurecr.io/backend:${{ github.sha }}
 
       - name: Deploy frontend
         uses: azure/container-apps-deploy-action@v1
         with:
-          acrName: studybuddyimagecontainer
+          acrName: studybuddyimagecontainerv2
           containerAppName: studybuddy
           resourceGroup: CSE-408
-          imageToDeploy: studybuddyimagecontainer.azurecr.io/frontend:${{ github.sha }}
+          imageToDeploy: studybuddyimagecontainerv2.azurecr.io/frontend:${{ github.sha }}
