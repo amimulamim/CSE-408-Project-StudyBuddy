@@ -1,0 +1,42 @@
+[
+    {
+      "name": "Harvard",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/c/cc/Harvard_University_coat_of_arms.svg"
+    },
+    {
+      "name": "Stanford", 
+      "logo": "https://logos-world.net/wp-content/uploads/2022/11/Stanford-Cardinal-Logo.png"
+    },
+    {
+      "name": "MIT",
+      "logo": "https://www.logo.wine/a/logo/Massachusetts_Institute_of_Technology/Massachusetts_Institute_of_Technology-Logo.wine.svg"
+    },
+    {
+      "name": "Berkeley",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/8/82/University_of_California%2C_Berkeley_logo.svg"
+    },
+    {
+      "name": "Oxford",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/f/ff/Oxford-University-Circlet.svg"
+    },
+    {
+      "name": "Cambridge",
+      "logo": "https://static.cdnlogo.com/logos/u/32/university-of-cambridge.svg"
+    },
+    {
+      "name": "Yale",
+      "logo": "https://www.logo.wine/a/logo/Yale_University/Yale_University-Logo.wine.svg"
+    },
+    {
+      "name": "Princeton",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/d/d0/Princeton_seal.svg"
+    },
+    {
+      "name": "Columbia",
+      "logo": "https://cdn.freebiesupply.com/logos/large/2x/ubc-logo-png-transparent.png"
+    },
+    {
+      "name": "Caltech",
+      "logo": "https://images.seeklogo.com/logo-png/31/1/california-institute-of-technology-logo-png_seeklogo-310284.png"
+    }
+]

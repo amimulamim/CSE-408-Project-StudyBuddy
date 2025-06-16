@@ -63,7 +63,7 @@ export function Navbar({ onSignIn, onSignUp }: NavbarProps) {
                 Sign In
               </Button>
               <Button 
-                className="button-gradient transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-study-purple/50 hover:from-[#9b87f5] hover:to-[#7E69AB]" 
+                className="button-gradient transition-all duration-300" 
                 onClick={onSignUp}
               >
                 Get Started

@@ -1,0 +1,20 @@
+[
+    {
+      "name": "Alex Johnson",
+      "role": "Medical Student",
+      "content": "StuddyBuddy helped me prepare for my exams more efficiently. The custom quizzes and explanations made complex medical concepts easier to understand.",
+      "imageUrl": null
+    },
+    {
+      "name": "Sarah Williams",
+      "role": "Computer Science Major",
+      "content": "The AI chatbot is like having a tutor available 24/7. Whenever I get stuck on a programming concept, I get clear explanations immediately.",
+      "imageUrl": null
+    },
+    {
+      "name": "Michael Chen",
+      "role": "High School Student",
+      "content": "I love how StuddyBuddy can take my class notes and generate practice questions from them. It is made studying for tests so much more effective.",
+      "imageUrl": null
+    }
+]

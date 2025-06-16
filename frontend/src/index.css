@@ -64,7 +64,7 @@
   }
   
   .button-gradient {
-    @apply bg-gradient-to-r from-study-purple to-study-blue hover:from-study-purple/90 hover:to-study-blue/90 transition-all;
+    @apply bg-gradient-to-r from-study-purple to-study-blue hover:from-[#9b87f5] hover:to-[#7E69AB] transition-all;
   }
 
   .animate-carousel {
