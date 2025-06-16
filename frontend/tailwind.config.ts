@@ -105,6 +105,14 @@ export default {
           '50%': {
             'background-position': '100% 50%'
           }
+        },
+        'marquee': {
+          from: { transform: 'translateX(0)' },
+          to: { transform: 'translateX(-200%)' },
+        },
+        'marquee2': {
+          from: { transform: 'translateX(100%)' },
+          to: { transform: 'translateX(0%)' },
         }
       },
       animation: {
@@ -112,7 +120,9 @@ export default {
         'accordion-up': 'accordion-up 0.2s ease-out',
         'float': 'float 6s ease-in-out infinite',
         'pulse-glow': 'pulse-glow 3s ease-in-out infinite',
-        'gradient-x': 'gradient-x 15s ease infinite'
+        'gradient-x': 'gradient-x 15s ease infinite',
+        'marquee': 'marquee 25s linear infinite',
+        'marquee2': 'marquee2 25s linear infinite',
       }
     }
   },
