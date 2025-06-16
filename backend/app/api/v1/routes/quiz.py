@@ -36,7 +36,7 @@ class CompleteQuizRequest(BaseModel):
     domain: str
     feedback: str = None
 
-@router.post("/exams")
+@router.post("/quiz")
 async def generate_exam(
     request: ExamRequest,
     db: Session = Depends(get_db),
@@ -82,7 +82,7 @@ async def evaluate_answer(
         logger.error(f"Error evaluating answer: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/exams/{exam_id}")
+@router.delete("/quizzes/{quiz_id}")
 async def delete_exam(
     exam_id: str,
     db: Session = Depends(get_db),
@@ -101,8 +101,8 @@ async def delete_exam(
         logger.error(f"Error deleting exam: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@router.post("/exams/{exam_id}/complete")
+# evaluate before submitting
+@router.post("/quizzes/{quiz_id}/submit")
 async def complete_quiz(
     exam_id: str,
     request: CompleteQuizRequest,
@@ -156,4 +156,85 @@ async def complete_quiz(
     except Exception as e:
         db.rollback()
         logger.error(f"Error completing quiz {exam_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get("/quizzes/{quiz_id}", response_model=Dict[str, Any])
+async def get_quiz(
+    quiz_id: str,
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Fetches a previously generated quiz by quiz_id for the user."""
+    try:
+        quiz = db.query(QuizQuestion).filter(
+            QuizQuestion.quiz_id == quiz_id,
+            QuizQuestion.quiz.has(user_id=user_info["uid"])
+        ).all()
+        if not quiz:
+            raise HTTPException(status_code=404, detail="Quiz not found or not accessible")
+        
+        questions = [
+            {
+                "question_id": q.id,
+                "question": q.question_text,
+                "type": q.type,
+                "options": q.options,
+                "difficulty": q.difficulty,
+                "marks": q.marks,
+                "hints": q.hints
+            }
+            for q in quiz
+        ]
+        
+        return {
+            "quiz_id": quiz_id,
+            "questions": questions
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching quiz {quiz_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/quizzes/{quiz_id}/result", response_model=Dict[str, Any])
+async def get_quiz_result(
+    quiz_id: str,
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Fetches the result of a quiz by quiz_id for the user."""
+    try:
+        quiz_result = db.query(QuizResult).filter(
+            QuizResult.quiz_id == quiz_id,
+            QuizResult.user_id == user_info["uid"]
+        ).first()
+        if not quiz_result:
+            raise HTTPException(status_code=404, detail="Quiz result not found or not accessible")
+        
+        question_results = db.query(QuestionResult).filter(
+            QuestionResult.quiz_id == quiz_id,
+            QuestionResult.user_id == user_info["uid"]
+        ).all()
+        
+        return {
+            "quiz_id": quiz_id,
+            "score": quiz_result.score,
+            "total": quiz_result.total,
+            "topic": quiz_result.topic,
+            "domain": quiz_result.domain,
+            "feedback": quiz_result.feedback,
+            "question_results": [
+                {
+                    "question_id": qr.question_id,
+                    "score": qr.score,
+                    "is_correct": qr.is_correct,
+                    "student_answer": qr.student_answer
+                }
+                for qr in question_results
+            ]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching quiz result {quiz_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
