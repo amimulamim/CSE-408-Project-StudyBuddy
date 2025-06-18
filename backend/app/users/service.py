@@ -213,3 +213,36 @@ async def validate_and_upload_avatar(avatar) -> str:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to upload avatar: {str(e)}"
         )
+
+
+def update_user_avatar(db: Session, uid: str, avatar_url: str) -> Optional[User]:
+    """
+    Update user's avatar URL in the database.
+    
+    Args:
+        db: Database session
+        uid: User's unique identifier
+        avatar_url: New avatar URL
+        
+    Returns:
+        Updated user object or None if user not found
+    """
+    user = get_user_by_uid(db, uid)
+    if not user:
+        return None
+    
+    old_avatar = user.avatar
+    user.avatar = avatar_url
+    
+    try:
+        db.commit()
+        db.refresh(user)
+        
+        # Log the avatar change
+        changes = {"avatar": {"old": old_avatar, "new": avatar_url}}
+        log_profile_change(uid, changes, "avatar_update")
+        
+        return user
+    except Exception as e:
+        db.rollback()
+        raise e

@@ -76,6 +76,73 @@ paths:
         '200':
           description: Profile updated successfully
 
+  /profile/avatar:
+    put:
+      tags:
+        - Profile
+      summary: Upload Profile Photo
+      description: Upload a new profile photo/avatar. Accepts image files (JPEG, PNG, GIF, WebP) up to 5MB.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: Image file for the user's avatar
+              required:
+                - avatar
+      responses:
+        '200':
+          description: Profile photo updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  avatar_url:
+                    type: string
+                    description: Public URL of the uploaded avatar
+                    example: "https://storage.googleapis.com/bucket/avatars/1234567890_abc123.jpg"
+                  message:
+                    type: string
+                    example: "Profile photo updated successfully"
+        '400':
+          description: Invalid file type or size
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Invalid file type. Allowed types: image/jpeg, image/jpg, image/png, image/gif, image/webp"
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Rate limit exceeded. Please try again later."
+        '500':
+          description: Server error during upload or database update
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Failed to upload avatar or update database"
+
   /progress:
     get:
       tags:
