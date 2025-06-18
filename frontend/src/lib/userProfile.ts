@@ -5,6 +5,7 @@ import { User } from "firebase/auth"; // type
 const saveUserProfile = async (user: User) => {
   try {
     await setDoc(doc(db, "users", user.uid), {
+      email: user.email,
       onboardingDone: false,
     }, { merge: true });
   } catch (error) {

@@ -4,7 +4,10 @@ Test script for profile endpoints
 """
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# Add the backend directory to the Python path so we can import app modules
+backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, backend_dir)
 
 from app.users.service import parse_interests_operations
 

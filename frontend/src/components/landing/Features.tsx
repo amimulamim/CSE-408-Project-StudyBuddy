@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { MessageSquare, Search, Book, Plus } from 'lucide-react';
+import workingMethod from '@/assets/how.png';
 
 export function Features() {
   const features = [
@@ -74,6 +75,21 @@ export function Features() {
                     number: '03',
                     title: 'Generate quizzes & get explanations',
                     description: 'Create custom quizzes or ask questions about the content to deepen your understanding.'
+                  },
+                  {
+                    number: '04',
+                    title: 'Track your progress',
+                    description: 'Monitor your learning journey with detailed analytics and insights.'
+                  },
+                  {
+                    number: '05',
+                    title: 'Study smarter, not harder',
+                    description: 'Use AI to optimize your study sessions and achieve better results.'
+                  },
+                  {
+                    number: '06',
+                    title: 'Join our community',
+                    description: 'Connect with other learners, share resources, and get support from the StuddyBuddy community.'
                   }
                 ].map((step, index) => (
                   <div key={index} className="flex">
@@ -89,7 +105,7 @@ export function Features() {
             <div className="relative z-0">
               <div className="absolute inset-0 bg-study-purple/20 rounded-full filter blur-3xl opacity-30"></div>
               <img 
-                src="https://img.freepik.com/free-vector/gradient-infographic-steps_52683-76827.jpg?w=1380&t=st=1684941792~exp=1684942392~hmac=560aad30a9477eeeccacbeae406cd272494c95b1ae0e0e7a8e6ea55c6f1c60bd" 
+                src={workingMethod} 
                 alt="How it works" 
                 className="relative rounded-lg shadow-lg"
               />

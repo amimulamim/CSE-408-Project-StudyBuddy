@@ -1,0 +1,40 @@
+name: CD Pipeline
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'}}
+    runs-on: ubuntu-latest
+    name: Deploy to Azure
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy backend
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          acrName: studybuddyimagecontainerv2
+          containerAppName: studybuddy-backend
+          resourceGroup: CSE-408
+          imageToDeploy: studybuddyimagecontainerv2.azurecr.io/backend:${{ github.sha }}
+
+      - name: Deploy frontend
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          acrName: studybuddyimagecontainerv2
+          containerAppName: studybuddy
+          resourceGroup: CSE-408
+          imageToDeploy: studybuddyimagecontainerv2.azurecr.io/frontend:${{ github.sha }}

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
@@ -9,60 +8,172 @@ interface HeroProps {
 }
 
 export function Hero({ onSignUp }: HeroProps) {
-  // Since we're not using framer-motion package, let's use CSS animations instead
-  
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2,
+        duration: 0.3
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { 
+      opacity: 0, 
+      y: 30 
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.6,
+        ease: "easeOut"
+      }
+    }
+  };
+
+  const imageVariants = {
+    hidden: { 
+      opacity: 0, 
+      y: 50,
+      scale: 0.95
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        duration: 0.8,
+        ease: "easeOut",
+        delay: 0.8
+      }
+    }
+  };
+
+  const badgeVariants = {
+    hidden: { 
+      opacity: 0, 
+      scale: 0.8 
+    },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: {
+        duration: 0.5,
+        ease: "easeOut"
+      }
+    }
+  };
+
   return (
     <section className="pt-32 pb-20 md:pt-40 md:pb-28">
       <div className="container px-4 mx-auto">
-        <div className="flex flex-col items-center text-center">
-          <div className="inline-block mb-4 px-3 py-1.5 rounded-full bg-study-purple/20 border border-study-purple/30">
+        <motion.div 
+          className="flex flex-col items-center text-center"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.div 
+            className="inline-block mb-4 px-3 py-1.5 rounded-full bg-study-purple/20 border border-study-purple/30"
+            variants={badgeVariants}
+          >
             <p className="text-sm font-medium">
               <span className="gradient-text">AI-Powered</span> Study Assistant
             </p>
-          </div>
+          </motion.div>
           
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 max-w-4xl leading-tight md:leading-tight lg:leading-tight">
+          <motion.h1 
+            className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 max-w-4xl leading-tight md:leading-tight lg:leading-tight"
+            variants={itemVariants}
+          >
             Study Smarter with Your Personal
-            <span className="gradient-text block"> AI Study Buddy</span>
-          </h1>
+            <motion.span 
+              className="gradient-text block"
+              variants={itemVariants}
+            >
+              AI Study Buddy
+            </motion.span>
+          </motion.h1>
           
-          <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mb-8">
+          <motion.p 
+            className="text-muted-foreground text-lg md:text-xl max-w-2xl mb-8"
+            variants={itemVariants}
+          >
             Generate custom quizzes, get instant answers to your questions, 
             and understand complex study materials with our AI-powered study companion.
-          </p>
+          </motion.p>
           
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button 
-              className="button-gradient text-lg py-6 px-8" 
-              size="lg"
-              onClick={onSignUp}
+          <motion.div 
+            className="flex flex-col sm:flex-row gap-4"
+            variants={itemVariants}
+          >
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              Get Started Free <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+              <Button 
+                className="button-gradient text-lg py-6 px-8" 
+                size="lg"
+                onClick={onSignUp}
+              >
+                Get Started Free <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </motion.div>
             
-            <Button 
-              variant="outline" 
-              size="lg"
-              className="text-lg py-6 px-8 border-white/20 hover:bg-white/5"
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              Learn How It Works
-            </Button>
-          </div>
+              <Button 
+                variant="outline" 
+                size="lg"
+                className="text-lg py-6 px-8 border-white/20 hover:bg-white/5"
+              >
+                Learn How It Works
+              </Button>
+            </motion.div>
+          </motion.div>
           
-          <div className="mt-16 md:mt-20 relative">
-            <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 w-full h-40 bg-study-purple/30 filter blur-3xl opacity-30 rounded-full"></div>
+          <motion.div 
+            className="mt-16 md:mt-20 relative"
+            variants={imageVariants}
+          >
+            <motion.div 
+              className="absolute -top-10 left-1/2 transform -translate-x-1/2 w-full h-40 bg-study-purple/30 filter blur-3xl opacity-30 rounded-full"
+              animate={{
+                scale: [1, 1.1, 1],
+                opacity: [0.3, 0.5, 0.3]
+              }}
+              transition={{
+                duration: 4,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            />
             
-            <div className="relative bg-gradient-to-b from-white/10 to-white/5 border border-white/20 rounded-lg backdrop-blur-sm overflow-hidden">
-              <img 
+            <motion.div 
+              className="relative bg-gradient-to-b from-white/10 to-white/5 border border-white/20 rounded-lg backdrop-blur-sm overflow-hidden"
+              whileHover={{ 
+                scale: 1.02,
+                transition: { duration: 0.3 }
+              }}
+            >
+              <motion.img 
                 src="https://img.freepik.com/free-vector/gradient-ui-ux-background_23-2149024129.jpg?w=1380&t=st=1684941221~exp=1684941821~hmac=605a211a08d457f0a45630d1f99792fe76c80a0a70228f3e2f51f193814b9ba5" 
-                alt="StuddyBuddy Dashboard Preview" 
+                alt="StudyBuddy Dashboard Preview" 
                 className="w-full rounded-lg shadow-2xl opacity-90"
+                initial={{ scale: 1.1 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 1.2, ease: "easeOut" }}
               />
               
               <div className="absolute inset-0 bg-gradient-to-t from-study-dark to-transparent"></div>
-            </div>
-          </div>
-        </div>
+            </motion.div>
+          </motion.div>
+        </motion.div>
       </div>
     </section>
   );
