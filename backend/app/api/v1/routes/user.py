@@ -75,46 +75,6 @@ def edit_profile_secure(
 
 
 
-@router.put("/profile/secure", response_model=UserProfile)
-def edit_profile_with_audit(
-    profile_data: SecureProfileEdit,
-    user_info: Dict[str, Any] = Depends(get_current_user),
-    db: Session = Depends(get_db),
-    request: Request = None
-):
-    """
-    Enhanced secure profile edit endpoint with audit logging.
-    
-    Rate limited: 10 requests per minute per user.
-    
-    This endpoint:
-    - Only allows safe user fields (excludes admin fields)
-    - Logs all profile changes for audit purposes
-    - Includes request metadata in audit logs
-    
-    Editable fields: name, bio, avatar, institution, role, location, study_domain, interests
-    Protected fields: is_admin, is_moderator, current_plan, email, uid, auth_provider
-    """
-    # Check rate limit
-    is_allowed, _ = check_profile_rate_limit(user_info["uid"])
-    if not is_allowed:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Rate limit exceeded. Please try again later.",
-            headers={"X-RateLimit-Remaining": "0"}
-        )
-    
-    # Extract request metadata for audit logging
-    ip_address = request.client.host if request and request.client else "unknown"
-    user_agent = request.headers.get("user-agent") if request else "unknown"
-    
-    updated_user = update_user_profile_secure(
-        db, user_info["uid"], profile_data, ip_address, user_agent
-    )
-    if not updated_user:
-        raise HTTPException(status_code=404, detail=USER_NOT_FOUND)
-    
-    return updated_user
 
 
 @router.get("/profile", response_model=UserProfile)
