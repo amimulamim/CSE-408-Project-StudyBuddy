@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { toast } from 'sonner';
-import logo from '@/assets/1024.png';
+import logo from '@/assets/owl_down.png';
 import DID_YOU_KNOW_MESSAGES from './messages.json';
 
 interface AuthRedirectHandlerProps {
@@ -23,16 +23,16 @@ export const AuthRedirectHandler = ({ onRedirectComplete }: AuthRedirectHandlerP
   }, []);
 
   useEffect(() => {
+    if (!auth.currentUser) {
+      navigate('/auth');
+      return;
+    }
+
     if (loading) return;
 
     if (error) {
       toast.error('Failed to load user profile');
-      navigate('/');
-      return;
-    }
-
-    if (!auth.currentUser) {
-      navigate('/');
+      navigate('/auth');
       return;
     }
 
