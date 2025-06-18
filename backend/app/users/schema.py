@@ -126,6 +126,7 @@ class UserProfile(BaseModel):
     bio: Optional[str] = None
     institution: str
     role: str
+    is_admin: bool
     avatar: str
     current_plan: str
     location: str

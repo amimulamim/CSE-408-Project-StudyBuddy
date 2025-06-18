@@ -75,7 +75,9 @@ def test_user(mock_db):
         name="Test User",
         auth_provider="email",
         institution="Test University",
-        role="student"
+        role="student",
+        is_admin=False,
+        is_moderator=False
     )
     mock_db.add(user)
     mock_db.commit()

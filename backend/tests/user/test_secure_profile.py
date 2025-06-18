@@ -250,7 +250,9 @@ class TestAPIEndpoints:
             avatar="",
             current_plan="premium_monthly",
             location="Test City",
-            study_domain="Computer Science"
+            study_domain="Computer Science",
+            is_admin=False,
+            is_moderator=False
         )
         mock_user_obj.interests = ["coding", "learning"]
         mock_update.return_value = mock_user_obj

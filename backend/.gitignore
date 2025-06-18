@@ -11,3 +11,4 @@ keys/
 scripts/
 .env
 .env.test
+test_db

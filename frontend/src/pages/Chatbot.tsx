@@ -9,7 +9,7 @@ export default function Chatbot() {
 
   return (
     <ChatProvider>
-      <div className="h-screen flex bg-study-darker overflow-hidden">
+      <div className="h-screen flex dashboard-bg-animated overflow-hidden">
         <ChatSidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
         <ChatInterface sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
       </div>

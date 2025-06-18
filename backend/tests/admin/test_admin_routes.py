@@ -177,7 +177,9 @@ class TestAdminRoutes:
                     avatar="",
                     current_plan="free",
                     location="Updated City",
-                    study_domain="Updated Domain"
+                    study_domain="Updated Domain",
+                    is_admin=False,
+                    is_moderator=False
                 )
                 # Set interests using the property setter
                 mock_user.interests = ["coding", "learning"]

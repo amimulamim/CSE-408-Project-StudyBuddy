@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Plus, MessageSquare, Pencil, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +11,7 @@ interface ChatSidebarProps {
 }
 
 export function ChatSidebar({ isOpen, onToggle }: ChatSidebarProps) {
-  const { chatList, currentChatId, createNewChat, selectChat, deleteChat, renameChat } = useChat();
+  const { chatList, currentChat, createNewChat, setCurrentChatId, deleteChat, renameChat, isChatListLoading } = useChat();
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
 
@@ -68,20 +67,34 @@ export function ChatSidebar({ isOpen, onToggle }: ChatSidebarProps) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-2 min-w-0">
+          {isChatListLoading && (
+            <div className="flex items-center justify-center py-4">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-study-purple/30 border-t-study-purple rounded-full animate-spin"></div>
+                <span className="text-muted-foreground text-sm">Loading chats...</span>
+              </div>
+            </div>
+          )}
+
+          {!isChatListLoading && chatList.length === 0 && (
+            <div className="text-muted-foreground text-sm text-center py-4">
+              No chats available. Start a new chat!
+            </div>
+          )}
           {chatList.map((chat,index) => (
             <div
-              key={chat.id}
+              key={index}
               className={cn(
                 "group relative p-3 rounded-lg mb-2 cursor-pointer transition-colors min-w-0",
-                currentChatId === chat.id || chat.id === 'start'
+                currentChat.id === chat.id || chat.id === 'start'
                   ? "bg-study-purple/20 border border-study-purple/30" 
                   : "hover:bg-white/5"
               )}
-              onClick={() => selectChat(chat.id)}
+              onClick={() => setCurrentChatId(chat.id)}
             >
               <div className="flex items-center gap-2 min-w-0">
                 <MessageSquare className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                {editingChatId === chat.id ? (
+                {editingChatId && editingChatId === chat.id ? (
                   <Input
                     value={editingTitle}
                     onChange={(e) => setEditingTitle(e.target.value)}
@@ -90,11 +103,11 @@ export function ChatSidebar({ isOpen, onToggle }: ChatSidebarProps) {
                       if (e.key === 'Escape') handleCancelEdit();
                     }}
                     onBlur={handleSaveEdit}
-                    className="flex-1 h-6 text-sm bg-transparent border-study-purple min-w-0"
+                    className="flex-1 h-6 text-sm bg-transparent min-w-0"
                     autoFocus
                   />
                 ) : (
-                  <span className="flex-1 text-sm text-white truncate min-w-0">
+                  <span className="flex-1 text-sm text-white truncate min-w-0 max-w-48">
                     {chat.title}
                   </span>
                 )}

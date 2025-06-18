@@ -38,27 +38,29 @@ export default function BillingPage() {
   }, [searchParams, toast, navigate]);
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Button 
-          variant="ghost" 
-          size="sm"
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
-        </Button>
-      </div>
+    <div className="dashboard-bg-animated">
+      <div className="container mx-auto py-6 space-y-6">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+        </div>
 
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Billing & Subscription</h1>
-        <p className="text-muted-foreground">
-          Manage your subscription and billing information
-        </p>
-      </div>
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">Billing & Subscription</h1>
+          <p className="text-muted-foreground">
+            Manage your subscription and billing information
+          </p>
+        </div>
 
-      <BillingSubscription ref={billingRef} />
+        <BillingSubscription ref={billingRef} />
+      </div>
     </div>
   );
 }

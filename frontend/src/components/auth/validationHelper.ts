@@ -77,7 +77,7 @@ const getFirebaseError = (error: any): firebaseError => {
             break;
         default:
             field = "general";
-            message = error.message || "An unknown error occurred";
+            message = (error.message || "An unknown error occurred").replace(/^Firebase:\s*/i, "");
     }
 
     return { field, message };
