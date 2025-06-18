@@ -19,12 +19,13 @@ from app.users.schema import (
 from app.users.service import (
     get_or_create_user, get_user_by_uid,
     update_user_profile_secure, validate_and_upload_avatar,
-    update_user_avatar
+    update_user_avatar, delete_user_avatar
 )
 
 # Constants
 USER_NOT_FOUND = "User not found"
 NOTIFICATION_NOT_FOUND = "Notification not found"
+RATE_LIMIT_EXCEEDED = "Rate limit exceeded. Please try again later."
 
 router = APIRouter()
 
@@ -64,7 +65,7 @@ def edit_profile_secure(
     if not is_allowed:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Rate limit exceeded. Please try again later.",
+            detail=RATE_LIMIT_EXCEEDED,
             headers={"X-RateLimit-Remaining": "0"}
         )
     
@@ -103,7 +104,7 @@ async def upload_profile_photo(
     if not is_allowed:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Rate limit exceeded. Please try again later.",
+            detail=RATE_LIMIT_EXCEEDED,
             headers={"X-RateLimit-Remaining": "0"}
         )
     
@@ -138,6 +139,50 @@ async def upload_profile_photo(
     return {
         "avatar_url": avatar_url,
         "message": "Profile photo updated successfully"
+    }
+
+
+@router.delete("/profile/avatar", response_model=Dict[str, str])
+def delete_profile_photo(
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    request: Request = None
+):
+    """
+    Delete user profile photo.
+    
+    Rate limited: 10 requests per minute per user.
+    
+    This endpoint will:
+    - Remove the avatar URL from the user's database record (set to null)
+    - Delete the image file from Firebase Storage if it exists
+    - Log the deletion for audit purposes
+    
+    Returns confirmation of deletion.
+    
+    Example response:
+    {
+        "message": "Profile photo deleted successfully",
+        "avatar_url": ""
+    }
+    """
+    # Check rate limit
+    is_allowed, _ = check_profile_rate_limit(user_info["uid"])
+    if not is_allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=RATE_LIMIT_EXCEEDED,
+            headers={"X-RateLimit-Remaining": "0"}
+        )
+    
+    # Delete the avatar
+    updated_user = delete_user_avatar(db, user_info["uid"])
+    if not updated_user:
+        raise HTTPException(status_code=404, detail=USER_NOT_FOUND)
+    
+    return {
+        "message": "Profile photo deleted successfully",
+        "avatar_url": ""
     }
 
 

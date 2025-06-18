@@ -142,6 +142,48 @@ paths:
                   detail:
                     type: string
                     example: "Failed to upload avatar or update database"
+    delete:
+      tags:
+        - Profile
+      summary: Delete Profile Photo
+      description: Delete the user's profile photo/avatar. This will remove the avatar URL from the database and delete the image file from Firebase Storage if it exists.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile photo deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Profile photo deleted successfully"
+                  avatar_url:
+                    type: string
+                    example: ""
+                    description: "Empty string indicating no avatar"
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "User not found"
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Rate limit exceeded. Please try again later."
 
   /progress:
     get:
