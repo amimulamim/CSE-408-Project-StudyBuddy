@@ -46,6 +46,8 @@ class TestUserRoutes:
                 mock_user.location = "Test City"
                 mock_user.study_domain = "Computer Science"
                 mock_user.interests = ["programming", "ai"]
+                mock_user.is_admin = False
+                mock_user.is_moderator = False
                 mock_get_user.return_value = mock_user
 
                 # Execute

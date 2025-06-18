@@ -5,3 +5,4 @@ fastapi_project/
 *.env*
 temporary-test/
 test_env*
+*venv*
