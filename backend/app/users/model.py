@@ -1,8 +1,6 @@
-from sqlalchemy import Column, String, Boolean, TIMESTAMP, func
-from sqlalchemy.dialects.postgresql import ARRAY  
-
-
+from sqlalchemy import Column, String, Boolean, TIMESTAMP, Text, ARRAY, func
 from app.core.database import Base
+import json
 
 class User(Base):
     __tablename__ = "users"
@@ -21,6 +19,30 @@ class User(Base):
     current_plan = Column(String, nullable=False, default="free")
     location = Column(String, nullable=False, default="")
     study_domain = Column(String, nullable=False, default="")
-    interests = Column(ARRAY(String), default=[])  # or use CSV string if not using ARRAY
+    # removing the previous approach
+    # _interests = Column("interests", Text, default='[]')  # JSON string for database compatibility
+    interests = Column(ARRAY(String), nullable=True, default=lambda: [])
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # don't need the following properties anymore
+    # @property
+    # def interests(self):
+    #     """Convert JSON string to list for Python usage"""
+    #     if not self._interests:
+    #         return []
+    #     try:
+    #         return json.loads(self._interests)
+    #     except (json.JSONDecodeError, TypeError):
+    #         return []
+
+    # @interests.setter
+    # def interests(self, value):
+    #     """Convert list to JSON string for database storage"""
+    #     if isinstance(value, list):
+    #         self._interests = json.dumps(value)
+    #     elif isinstance(value, str):
+    #         # If setting directly with JSON string (for database operations)
+    #         self._interests = value
+    #     else:
+    #         self._interests = '[]'

@@ -227,32 +227,48 @@ class TestAPIEndpoints:
         """Setup test client"""
         self.client = TestClient(app)
     
+    @patch('app.auth.firebase_auth.verify_firebase_token')
     @patch('app.api.v1.routes.user.get_current_user')
     @patch('app.api.v1.routes.user.update_user_profile_secure')
-    def test_secure_profile_endpoint_with_rate_limiting(self, mock_update, mock_user):
+    def test_secure_profile_endpoint_with_rate_limiting(self, mock_update, mock_user, mock_verify):
         """Test secure profile endpoint respects rate limiting"""
+        # Mock Firebase token verification
+        mock_verify.return_value = {"uid": "test_user", "email": "test@example.com"}
+        
         # Mock user authentication
         mock_user.return_value = {"uid": "test_user", "email": "test@example.com"}
         
-        # Mock successful update
-        mock_update.return_value = {
-            "success": True,
-            "audit_log": MagicMock()
-        }
+        # Mock successful update - return a proper User object
+        from app.users.model import User
+        mock_user_obj = User(
+            uid="test_user",
+            email="test@example.com",
+            name="Test User",
+            bio="Test bio",
+            institution="Test University",
+            role="student",
+            avatar="",
+            current_plan="premium_monthly",
+            location="Test City",
+            study_domain="Computer Science",
+            is_admin=False,
+            is_moderator=False
+        )
+        mock_user_obj.interests = ["coding", "learning"]
+        mock_update.return_value = mock_user_obj
         
         # Test data
         profile_data = {
             "name": "Test User",
             "bio": "Test bio"
         }
-        
-        # Make request
+         # Make request
         response = self.client.put(
             "/api/v1/user/profile/secure",
             json=profile_data,
             headers={"Authorization": "Bearer test_token"}
         )
-        
+
         # Should succeed (first request)
         assert response.status_code in [200, 401]  # 401 if auth not properly mocked
     

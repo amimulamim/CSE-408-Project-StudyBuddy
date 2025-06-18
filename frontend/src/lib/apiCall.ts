@@ -1,24 +1,29 @@
-import { getAuth } from "firebase/auth";
 import { HttpMethod } from "@/lib/api";
 import { ApiResponse } from "@/lib/api";
+import { getCurrentUser } from "@/lib/authState";
 
-// Optional generic for expected successful data response
 async function makeRequest<T = unknown>(
   url: string,
   method: HttpMethod,
   body?: unknown
 ): Promise<T | ApiResponse> {
-  const auth = getAuth();
-  const user = auth.currentUser;
   let data: ApiResponse = { status: "error", msg: "", data: null };
-  if (!user) {
-    data.msg = "User not logged in";
-    return data;
-  }
-
+  
+  console.log('Making request to:', url);
+  
   try {
+    const user = await getCurrentUser();
+    console.log('Current user:', user);
+    
+    if (!user) {
+      console.log('No user found in auth state');
+      data.msg = "User not logged in";
+      return data;
+    }
+
     const idToken = await user.getIdToken();
-    console.log(idToken);
+    console.log('Got ID token:', idToken ? 'Token exists' : 'No token');
+    
     const isFormData = body instanceof FormData;
 
     const req: RequestInit = {
@@ -31,6 +36,7 @@ async function makeRequest<T = unknown>(
     };
 
     const response = await fetch(url, req);
+    
     if (response.ok) {
       data.status = "success";
       data.msg = "Request successful";
@@ -39,10 +45,13 @@ async function makeRequest<T = unknown>(
       data.msg = "overlap";
       data.data = await response.json();
     } else {
+      const errorData = await response.json();
+      console.log('Error response:', errorData);
       data.msg = "Failed to make request";
-      data.data = await response.json();
+      data.data = errorData;
     }
   } catch (err: any) {
+    console.error('Request error:', err);
     data.msg = "Request failed";
     data.data = { errorMessage: err.message };
   }
@@ -50,4 +59,4 @@ async function makeRequest<T = unknown>(
   return data;
 }
 
-export {makeRequest};
+export { makeRequest };
