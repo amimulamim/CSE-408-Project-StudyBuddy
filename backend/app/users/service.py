@@ -167,3 +167,49 @@ def update_user_profile_secure(db: Session, uid: str, profile_data: SecureProfil
     except Exception as e:
         db.rollback()
         raise e
+
+
+async def validate_and_upload_avatar(avatar) -> str:
+    """
+    Validate avatar file and upload to Firebase Storage.
+    
+    Args:
+        avatar: UploadFile object from FastAPI
+        
+    Returns:
+        str: Public URL of uploaded avatar
+        
+    Raises:
+        HTTPException: If validation fails or upload errors
+    """
+    from fastapi import HTTPException, status
+    from app.utils.file_upload import upload_to_firebase
+    
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"]
+    if avatar.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid file type. Allowed types: {', '.join(allowed_types)}"
+        )
+    
+    # Validate file size (5MB limit)
+    max_size = 5 * 1024 * 1024  # 5MB in bytes
+    avatar.file.seek(0, 2)  # Seek to end
+    file_size = avatar.file.tell()
+    avatar.file.seek(0)  # Reset to beginning
+    
+    if file_size > max_size:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File size too large. Maximum size is 5MB."
+        )
+    
+    try:
+        # Upload to Firebase Storage
+        return upload_to_firebase(avatar, folder="avatars")
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload avatar: {str(e)}"
+        )
