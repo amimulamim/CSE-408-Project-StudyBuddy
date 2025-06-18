@@ -246,3 +246,46 @@ def update_user_avatar(db: Session, uid: str, avatar_url: str) -> Optional[User]
     except Exception as e:
         db.rollback()
         raise e
+
+
+def delete_user_avatar(db: Session, uid: str) -> Optional[User]:
+    """
+    Delete user's avatar from both database and Firebase Storage.
+    
+    Args:
+        db: Database session
+        uid: User's unique identifier
+        
+    Returns:
+        Updated user object or None if user not found
+    """
+    user = get_user_by_uid(db, uid)
+    if not user:
+        return None
+    
+    old_avatar = user.avatar
+    
+    # Set avatar to empty string in database (since it's not nullable)
+    user.avatar = ""
+    
+    try:
+        db.commit()
+        db.refresh(user)
+        
+        # Log the avatar deletion
+        changes = {"avatar": {"old": old_avatar, "new": ""}}
+        log_profile_change(uid, changes, "avatar_delete")
+        
+        # Delete from Firebase Storage if it exists and is a Firebase URL
+        if old_avatar and "storage.googleapis.com" in old_avatar:
+            try:
+                from app.utils.file_upload import delete_from_firebase
+                delete_from_firebase(old_avatar)
+            except Exception as e:
+                # Don't fail the request if Firebase cleanup fails
+                print(f"Warning: Failed to delete avatar from Firebase: {e}")
+        
+        return user
+    except Exception as e:
+        db.rollback()
+        raise e
