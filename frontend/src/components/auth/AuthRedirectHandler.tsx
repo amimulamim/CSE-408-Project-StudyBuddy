@@ -24,7 +24,7 @@ export const AuthRedirectHandler = ({ onRedirectComplete }: AuthRedirectHandlerP
 
   useEffect(() => {
     if (!auth.currentUser) {
-      navigate('/auth');
+      navigate('/');
       return;
     }
 
@@ -32,7 +32,7 @@ export const AuthRedirectHandler = ({ onRedirectComplete }: AuthRedirectHandlerP
 
     if (error) {
       toast.error('Failed to load user profile');
-      navigate('/auth');
+      navigate('/');
       return;
     }
 
