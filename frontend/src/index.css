@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -67,16 +66,157 @@
     @apply bg-gradient-to-r from-study-purple to-study-blue hover:from-[#9b87f5] hover:to-[#7E69AB] transition-all;
   }
 
-  .animate-carousel {
-    animation: carousel 60s linear infinite;
+  /* Dashboard Background Utilities */
+  .dashboard-bg-animated {
+    background: linear-gradient(135deg, #0F0A1A 0%, #1E1A2B 25%, #2D1B42 50%, #1E1A2B 75%, #0F0A1A 100%);
+    background-size: 400% 400%;
+    animation: gradientShift 8s ease infinite;
+    position: relative;
+    overflow: hidden;
   }
 
-  @keyframes carousel {
+  .dashboard-bg-animated::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(circle 600px at 20% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+      radial-gradient(circle 400px at 80% 20%, rgba(59, 130, 246, 0.12) 0%, transparent 50%),
+      radial-gradient(circle 300px at 40% 40%, rgba(236, 72, 153, 0.1) 0%, transparent 50%);
+    animation: floatingOrbs 12s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  /* Fallback static background */
+  .dashboard-bg {
+    background: linear-gradient(135deg, #0F0A1A 0%, #1E1A2B 25%, #2D1B42 50%, #1E1A2B 75%, #0F0A1A 100%);
+  }
+
+  /* Glass Card Styles - Reusable */
+  .glass-card {
+    @apply backdrop-blur-md bg-white/10 border-white/20 shadow-xl;
+  }
+  
+  .glass-card-interactive {
+    @apply backdrop-blur-md bg-white/10 border-white/20 cursor-pointer hover:shadow-lg hover:bg-white/15 transition-all duration-200 hover:scale-105;
+  }
+  
+  .glass-card-hover-strong {
+    @apply backdrop-blur-md bg-white/10 border-white/20 cursor-pointer hover:shadow-lg hover:bg-white/20 transition-all duration-200 hover:scale-105;
+  }
+
+  /* Quiz-specific Cards */
+  .quiz-question-card {
+    @apply backdrop-blur-lg bg-white/15 border-white/25 shadow-2xl rounded-xl;
+  }
+  
+  .quiz-progress-card {
+    @apply backdrop-blur-md bg-gradient-to-r from-purple-500/20 to-blue-500/20 border-purple-300/30 shadow-lg;
+  }
+  
+  .quiz-navigation-card {
+    @apply backdrop-blur-md bg-white/10 border-white/25 shadow-lg hover:bg-white/15 transition-all duration-200;
+  }
+  
+  .quiz-option-card {
+    @apply backdrop-blur-sm bg-white/8 border-white/20 hover:bg-white/15 hover:border-white/30 transition-all duration-200 cursor-pointer;
+  }
+  
+  .quiz-option-selected {
+    @apply backdrop-blur-sm bg-purple-500/25 border-purple-300/50 hover:bg-purple-500/30;
+  }
+  
+  .quiz-option-correct {
+    @apply backdrop-blur-sm bg-green-500/25 border-green-300/50;
+  }
+  
+  .quiz-option-incorrect {
+    @apply backdrop-blur-sm bg-red-500/25 border-red-300/50;
+  }
+
+  /* Text Styles for Glass Cards */
+  .glass-text-title {
+    @apply text-white font-semibold;
+  }
+  
+  .glass-text-subtitle {
+    @apply text-gray-200 font-medium;
+  }
+  
+  .glass-text-description {
+    @apply text-gray-300;
+  }
+  
+  .glass-text-muted {
+    @apply text-gray-400;
+  }
+  
+  .quiz-text-primary {
+    @apply text-white font-medium;
+  }
+  
+  .quiz-text-secondary {
+    @apply text-gray-200;
+  }
+  
+  .quiz-text-accent {
+    @apply text-purple-200;
+  }
+
+  /* Button Styles for Glass Theme */
+  .glass-button-primary {
+    @apply bg-purple-500/80 hover:bg-purple-500/90 text-white border-purple-300/50 backdrop-blur-sm;
+  }
+  
+  .glass-button-secondary {
+    @apply bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur-sm;
+  }
+  
+  .glass-button-success {
+    @apply bg-green-500/80 hover:bg-green-500/90 text-white border-green-300/50 backdrop-blur-sm;
+  }
+  
+  .glass-button-danger {
+    @apply bg-red-500/80 hover:bg-red-500/90 text-white border-red-300/50 backdrop-blur-sm;
+  }
+
+  @keyframes gradientShift {
     0% {
-      transform: translateX(0);
+      background-position: 0% 50%;
+    }
+    25% {
+      background-position: 100% 50%;
+    }
+    50% {
+      background-position: 100% 100%;
+    }
+    75% {
+      background-position: 0% 100%;
     }
     100% {
-      transform: translateX(calc(-100% - 1rem));
+      background-position: 0% 50%;
+    }
+  }
+
+  @keyframes floatingOrbs {
+    0%, 100% {
+      transform: translateX(0) translateY(0) scale(1);
+      opacity: 0.8;
+    }
+    25% {
+      transform: translateX(50px) translateY(-30px) scale(1.1);
+      opacity: 1;
+    }
+    50% {
+      transform: translateX(-20px) translateY(-50px) scale(0.9);
+      opacity: 0.9;
+    }
+    75% {
+      transform: translateX(-50px) translateY(20px) scale(1.05);
+      opacity: 0.7;
     }
   }
 }
