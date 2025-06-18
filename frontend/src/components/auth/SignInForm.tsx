@@ -8,11 +8,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { signIn } from './api';
 import { ApiResponse } from '@/lib/api';
-import { useNavigate } from 'react-router-dom';
 import { errors } from './errors';
 import { getFirebaseError, clearFieldError, validateEmail } from './validationHelper';
 import { Loader2, Eye, EyeOff } from "lucide-react"
-import { useToast } from '@/hooks/use-toast';
+import { toast } from "sonner";
+import { AuthRedirectHandler } from './AuthRedirectHandler';
 
 interface SignInFormProps {
   onSignUp: () => void;
@@ -25,9 +25,8 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<errors>({});
   const [resettingPass, setResettingPass] = useState(false);
-  const [showPassword, setShowPassword] = useState(false)
-  const navigate = useNavigate();
-  const { toast } = useToast();
+  const [showPassword, setShowPassword] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,8 +36,7 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
       .then(signIn)
       .then((response:ApiResponse) => {
         if (response.status === 'success') {
-          onClose();
-          navigate('/dashboard');
+          setSignedIn(true);
         } else {
           setIsLoading(false);
           setErrors({ ...errors, general: response.msg });
@@ -56,8 +54,7 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
       .then(signIn)
       .then((response:ApiResponse) => {
         if (response.status === 'success') {
-          onClose();
-          navigate('/dashboard');
+          setSignedIn(true);
         } else {
           setIsLoading(false);
           setErrors({ ...errors, general: response.msg });
@@ -79,10 +76,7 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
         setResettingPass(true);
         sendPasswordResetEmail(auth, email).then(()=>{
           setResettingPass(false);
-          toast({
-            title: "Password recovery",
-            description: "Password recovery email sent to your email address",
-          });
+          toast.success("Password reset email sent successfully. Please check your inbox.");
         });
       } catch (err) {
         setResettingPass(false);
@@ -91,6 +85,17 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
       }
     }
   };
+
+  if (signedIn) {
+    onClose();
+    return (
+      <AuthRedirectHandler
+        onRedirectComplete={() => {
+          setIsLoading(false);
+        }}
+      />
+    );
+  }
   
   return (
     <div className="space-y-6">
