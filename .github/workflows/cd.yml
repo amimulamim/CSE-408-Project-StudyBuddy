@@ -41,7 +41,7 @@ jobs:
           username: ${{ secrets.AZURE_VM_USER }}
           key: ${{ secrets.AZURE_VM_SSH_PRIVATE_KEY }}
           script: |
-            cd "/home/${{ secrets.AZURE_VM_USER }}/4-1/StudyBuddy"
+            cd "/home/${{ secrets.AZURE_VM_USER }}/CSE-408-Project-StudyBuddy"
             # Pull latest images from Docker Hub
             docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin <<< "${{ secrets.DOCKERHUB_TOKEN }}"
             docker compose -f docker-compose.prod.yml pull
