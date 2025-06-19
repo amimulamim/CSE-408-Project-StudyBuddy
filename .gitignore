@@ -6,3 +6,5 @@ fastapi_project/
 temporary-test/
 test_env*
 *venv*
+
+*.pem

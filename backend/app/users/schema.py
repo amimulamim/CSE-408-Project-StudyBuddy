@@ -41,7 +41,7 @@ class SecureProfileEdit(BaseModel):
     
     name: Optional[str] = Field(None, min_length=1, max_length=100, description="User's display name")
     bio: Optional[str] = Field(None, max_length=500, description="User's bio/description")
-    avatar: Optional[str] = Field(None, description="Profile picture URL")
+    avatar: Optional[str] = Field(None, description="Profile picture URL. Send empty string to remove avatar.")
     institution: Optional[str] = Field(None, max_length=200, description="Educational institution")
     role: Optional[UserRole] = Field(None, description="User's professional role")
     location: Optional[str] = Field(None, max_length=100, description="User's location")
@@ -61,6 +61,10 @@ class SecureProfileEdit(BaseModel):
     @field_validator('avatar')
     @classmethod
     def validate_avatar(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        if v == "":  # Empty string means remove avatar
+            return ""
         if v and not (v.startswith('http://') or v.startswith('https://') or v.startswith('data:')):
             raise ValueError('Avatar must be a valid URL or data URI')
         return v
