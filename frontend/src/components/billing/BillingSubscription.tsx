@@ -156,7 +156,7 @@ export const BillingSubscription = forwardRef<{ refreshSubscriptionStatus: () =>
     <div className="space-y-6">
       {/* Current Subscription Status */}
       {subscription && (
-        <Card>
+        <Card className="glass-card">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -228,15 +228,15 @@ export const BillingSubscription = forwardRef<{ refreshSubscriptionStatus: () =>
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {AVAILABLE_PLANS.map((plan) => (
-            <Card key={plan.id} className="relative">
+            <Card key={plan.id} className="relative glass-card-interactive">
               {plan.interval === "yearly" && (
-                <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+                <div className="absolute top-1 left-1/2 transform -translate-x-1/2">
                   <Badge className="bg-green-500 hover:bg-green-500">
                     Save 17%
                   </Badge>
                 </div>
               )}
-              <CardHeader>
+              <CardHeader className="mt-2">
                 <CardTitle className="flex items-center justify-between">
                   {plan.name}
                   <Crown className="h-5 w-5 text-yellow-500" />
@@ -286,7 +286,7 @@ export const BillingSubscription = forwardRef<{ refreshSubscriptionStatus: () =>
       </div>
 
       {!subscription && (
-        <Card>
+        <Card className="glass-card">
           <CardHeader>
             <CardTitle>Free Plan</CardTitle>
             <CardDescription>Current plan - Limited features</CardDescription>

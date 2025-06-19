@@ -167,3 +167,125 @@ def update_user_profile_secure(db: Session, uid: str, profile_data: SecureProfil
     except Exception as e:
         db.rollback()
         raise e
+
+
+async def validate_and_upload_avatar(avatar) -> str:
+    """
+    Validate avatar file and upload to Firebase Storage.
+    
+    Args:
+        avatar: UploadFile object from FastAPI
+        
+    Returns:
+        str: Public URL of uploaded avatar
+        
+    Raises:
+        HTTPException: If validation fails or upload errors
+    """
+    from fastapi import HTTPException, status
+    from app.utils.file_upload import upload_to_firebase
+    
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"]
+    if avatar.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid file type. Allowed types: {', '.join(allowed_types)}"
+        )
+    
+    # Validate file size (5MB limit)
+    max_size = 5 * 1024 * 1024  # 5MB in bytes
+    avatar.file.seek(0, 2)  # Seek to end
+    file_size = avatar.file.tell()
+    avatar.file.seek(0)  # Reset to beginning
+    
+    if file_size > max_size:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File size too large. Maximum size is 5MB."
+        )
+    
+    try:
+        # Upload to Firebase Storage
+        return upload_to_firebase(avatar, folder="avatars")
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload avatar: {str(e)}"
+        )
+
+
+def update_user_avatar(db: Session, uid: str, avatar_url: str) -> Optional[User]:
+    """
+    Update user's avatar URL in the database.
+    
+    Args:
+        db: Database session
+        uid: User's unique identifier
+        avatar_url: New avatar URL
+        
+    Returns:
+        Updated user object or None if user not found
+    """
+    user = get_user_by_uid(db, uid)
+    if not user:
+        return None
+    
+    old_avatar = user.avatar
+    user.avatar = avatar_url
+    
+    try:
+        db.commit()
+        db.refresh(user)
+        
+        # Log the avatar change
+        changes = {"avatar": {"old": old_avatar, "new": avatar_url}}
+        log_profile_change(uid, changes, "avatar_update")
+        
+        return user
+    except Exception as e:
+        db.rollback()
+        raise e
+
+
+def delete_user_avatar(db: Session, uid: str) -> Optional[User]:
+    """
+    Delete user's avatar from both database and Firebase Storage.
+    
+    Args:
+        db: Database session
+        uid: User's unique identifier
+        
+    Returns:
+        Updated user object or None if user not found
+    """
+    user = get_user_by_uid(db, uid)
+    if not user:
+        return None
+    
+    old_avatar = user.avatar
+    
+    # Set avatar to empty string in database (since it's not nullable)
+    user.avatar = ""
+    
+    try:
+        db.commit()
+        db.refresh(user)
+        
+        # Log the avatar deletion
+        changes = {"avatar": {"old": old_avatar, "new": ""}}
+        log_profile_change(uid, changes, "avatar_delete")
+        
+        # Delete from Firebase Storage if it exists and is a Firebase URL
+        if old_avatar and "storage.googleapis.com" in old_avatar:
+            try:
+                from app.utils.file_upload import delete_from_firebase
+                delete_from_firebase(old_avatar)
+            except Exception as e:
+                # Don't fail the request if Firebase cleanup fails
+                print(f"Warning: Failed to delete avatar from Firebase: {e}")
+        
+        return user
+    except Exception as e:
+        db.rollback()
+        raise e

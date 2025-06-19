@@ -1,6 +1,7 @@
-
 import React from 'react';
 import { Book } from 'lucide-react';
+import logo from '@/assets/icon_v1.0.png';
+import { Avatar, AvatarFallback, AvatarImage } from '@radix-ui/react-avatar';
 
 interface LogoProps {
   className?: string;
@@ -16,10 +17,15 @@ export function Logo({
   showText = true
 }: LogoProps) {
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div className={`flex items-center gap-1 ${className}`}>
       <div className="relative">
-        <Book className={`w-8 h-8 text-study-purple ${iconClassName}`} />
-        <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-study-blue animate-pulse-glow"></div>
+        <div className="w-16 h-16 relative">
+          <img 
+            src={logo} 
+            alt="StudyBuddy Logo" 
+            className="w-full h-full object-contain object-center"
+          />
+        </div>
       </div>
       {showText && (
         <div className={`font-bold text-xl ${textClassName}`}>

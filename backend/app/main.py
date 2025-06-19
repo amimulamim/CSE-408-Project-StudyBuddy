@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.api import api_router
 from app.core.database import engine, Base
 from app.config.openapi import setup_openapi
+from app.core.config import settings
 
 # Create DB tables
 Base.metadata.create_all(bind=engine)
@@ -15,12 +16,7 @@ app = FastAPI()
 # Setup CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:5173",
-    ],
-
+    allow_origins=settings.ALLOWED_ORIGINS.split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -35,4 +31,4 @@ setup_openapi(app)
 # Sanity root endpoint
 @app.get("/")
 def read_root():
-    return {"message": "Hello, StudyBuddy!"}
+    return {"message": "Hello v3, StudyBuddy!"}
