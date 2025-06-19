@@ -1,0 +1,115 @@
+name: CD to Azure VM
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  deploy:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    name: Build & Deploy StudyBuddy
+
+    steps:
+      # 1. Grab the code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Log in to Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 3. Build & push backend image
+      - name: Build & push backend image
+        uses: docker/build-push-action@v3
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/studybuddy-backend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/studybuddy-backend:${{ github.sha }}
+
+      # 4. Build & push frontend image
+      - name: Build & push frontend image
+        uses: docker/build-push-action@v3
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/studybuddy-frontend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/studybuddy-frontend:${{ github.sha }}
+
+      # 5. Configure SSH on the runner
+      - name: Configure SSH for VM
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AZURE_VM_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.AZURE_VM_HOST }}" >> ~/.ssh/known_hosts
+
+      # 6. SSH in and deploy via Docker Compose
+      - name: SSH & deploy on Azure VM
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USER }}
+          key: ${{ secrets.AZURE_VM_SSH_PRIVATE_KEY }}
+          script: |
+            cd "/home/${{ secrets.AZURE_VM_USER }}/4-1/StudyBuddy"
+            # ensure docker-compose.yml references the correct image names:
+            #   image: ${{ secrets.DOCKERHUB_USERNAME }}/studybuddy-backend:latest
+            #   image: ${{ secrets.DOCKERHUB_USERNAME }}/studybuddy-frontend:latest
+            docker compose pull
+            docker compose up -d --force-recreate --remove-orphans
+
+# name: CD Pipeline
+
+# on:
+#   workflow_run:
+#     workflows: ["CI Pipeline"]
+#     types:
+#       - completed
+#     branches:
+#       - main
+
+# jobs:
+#   deploy:
+#     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'}}
+#     runs-on: ubuntu-latest
+#     name: Deploy to Azure
+
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+
+#       - name: Log in to Azure
+#         uses: azure/login@v1
+#         with:
+#           creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+#       - name: Deploy backend
+#         uses: azure/container-apps-deploy-action@v1
+#         with:
+#           acrName: studybuddyimagecontainerv2
+#           containerAppName: studybuddy-backend
+#           resourceGroup: CSE-408
+#           imageToDeploy: studybuddyimagecontainerv2.azurecr.io/backend:${{ github.sha }}
+
+#       - name: Deploy frontend
+#         uses: azure/container-apps-deploy-action@v1
+#         with:
+#           acrName: studybuddyimagecontainerv2
+#           containerAppName: studybuddy
+#           resourceGroup: CSE-408
+#           imageToDeploy: studybuddyimagecontainerv2.azurecr.io/frontend:${{ github.sha }}

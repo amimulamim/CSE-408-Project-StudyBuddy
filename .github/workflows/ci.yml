@@ -25,24 +25,17 @@ jobs:
       run: |
         echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
         echo "FIREBASE_KEY_PATH=/app/keys/firebaseKey.json" >> .env
-            echo "FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}" >> .env
-            echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
-            echo "GEMINI_MODEL=${{ secrets.GEMINI_MODEL }}" >> .env
-            echo "QUERY_EMBEDDING_MODEL=${{ secrets.QUERY_EMBEDDING_MODEL }}" >> .env
-            echo "QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}" >> .env
-            echo "QDRANT_HOST=${{ secrets.QDRANT_HOST }}" >> .env
-            echo "QDRANT_COLLECTION_NAME=${{ secrets.QDRANT_COLLECTION_NAME }}" >> .env
-            echo "SSLCOMMERZ_STORE_ID=${{ secrets.SSLCOMMERZ_STORE_ID }}" >> .env
-            echo "SSLCOMMERZ_STORE_PASSWORD=${{ secrets.SSLCOMMERZ_STORE_PASSWORD }}" >> .env
-            echo "SSLCOMMERZ_SANDBOX=${{ secrets.SSLCOMMERZ_SANDBOX }}" >> .env
-            echo "BACKEND_URL=${{ secrets.BACKEND_URL }}" >> .env
-
-    - name: Upload env file
-      uses: actions/upload-artifact@v4
-      with:
-        name: env-file
-        path: backend/.env
-
+        echo "FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}" >> .env
+        echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+        echo "GEMINI_MODEL=${{ secrets.GEMINI_MODEL }}" >> .env
+        echo "QUERY_EMBEDDING_MODEL=${{ secrets.QUERY_EMBEDDING_MODEL }}" >> .env
+        echo "QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}" >> .env
+        echo "QDRANT_HOST=${{ secrets.QDRANT_HOST }}" >> .env
+        echo "QDRANT_COLLECTION_NAME=${{ secrets.QDRANT_COLLECTION_NAME }}" >> .env
+        echo "SSLCOMMERZ_STORE_ID=${{ secrets.SSLCOMMERZ_STORE_ID }}" >> .env
+        echo "SSLCOMMERZ_STORE_PASSWORD=${{ secrets.SSLCOMMERZ_STORE_PASSWORD }}" >> .env
+        echo "SSLCOMMERZ_SANDBOX=${{ secrets.SSLCOMMERZ_SANDBOX }}" >> .env
+        echo "BACKEND_URL=${{ secrets.BACKEND_URL }}" >> .env
       
     - name: Create keys folder
       run: mkdir -p keys
@@ -62,34 +55,6 @@ jobs:
           "client_x509_cert_url": ${{ secrets.FIREBASE_CLIENT_X509_CERT_URL }},
           "universe_domain": ${{ secrets.FIREBASE_UNIVERSE_DOMAIN }}
         }' > keys/firebaseKey.json
-    
-    - name: upload firebaseKey.json
-      uses: actions/upload-artifact@v4
-      with:
-        name: firebaseKey
-        path: backend/keys/firebaseKey.json
-    
-    - name: Add studybuddy-50d75-firebase-adminsdk-fbsvc-b8eaf38672.json to keys folder
-      run: |
-        echo '{
-          "type": "service_account",
-          "project_id": ${{ secrets.FIREBASE_PROJECT_ID }},
-          "private_key_id": "${{ secrets.FIREBASE_PRIVATE_KEY_ID }}",
-          "private_key": ${{ secrets.FIREBASE_PRIVATE_KEY }},
-          "client_email": ${{ secrets.FIREBASE_CLIENT_EMAIL }},
-          "client_id": ${{ secrets.FIREBASE_CLIENT_ID }},
-          "auth_uri": ${{ secrets.FIREBASE_AUTH_URI }},
-          "token_uri": ${{ secrets.FIREBASE_TOKEN_URI }},
-          "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-          "client_x509_cert_url": ${{ secrets.FIREBASE_CLIENT_X509_CERT_URL }},
-          "universe_domain": ${{ secrets.FIREBASE_UNIVERSE_DOMAIN }}
-        }' > keys/studybuddy-50d75-firebase-adminsdk-fbsvc-b8eaf38672.json
-    
-    - name: upload studybuddy-50d75-firebase-adminsdk-fbsvc-b8eaf38672.json
-      uses: actions/upload-artifact@v4
-      with:
-        name: studybuddy-50d75-firebase-adminsdk-fbsvc-b8eaf38672.json
-        path: backend/keys/studybuddy-50d75-firebase-adminsdk-fbsvc-b8eaf38672.json
     
     - name: Create .env.test file
       run: |
@@ -111,65 +76,40 @@ jobs:
         echo "SSLCOMMERZ_SANDBOX=${{ secrets.SSLCOMMERZ_SANDBOX }}" >> .env.test
         echo "BACKEND_URL=${{ secrets.BACKEND_URL }}" >> .env.test
 
-
-
-
-    - name: Upload .env.test file
-      uses: actions/upload-artifact@v4
-      with:
-        name: env-test-file
-        path: backend/.env.test
-
-
-    # - name: Set up Python
-    #   uses: actions/setup-python@v4
-    #   with:
-    #     python-version: '3.11'
-
-    # - name: Install dependencies
-    #   run: |
-    #     python -m pip install --upgrade pip
-    #     pip install -r requirements.txt
-
-    # - name: Run tests with coverage
-    #   run: |
-    #     cd ..
-    #     coverage run -m pytest
-    #     coverage xml
-
-    # - name: Clean up .coverage if needed
-    #   run: rm -f .coverage
-
-    # - name: Upload coverage report artifact
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: backend-coverage-report
-    #     path: backend/coverage_reports/coverage.xml
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
+    
+    - name: Fix permissions for backend volume
+      run: |
+        chmod -R 777 .
 
     - name: Build and test with Docker Compose
       run: |
-        docker compose -f docker-compose.test.yml build --build-arg ENVIRONMENT=ci
-        docker compose -f docker-compose.test.yml up --abort-on-container-exit
-
-      # env:
-      #   FIREBASE_KEY_PATH: ${{ secrets.FIREBASE_KEY_PATH }}
-      #   DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      #   E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
-      #   FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
-      #   FIREBASE_TEST_EMAIL: ${{ secrets.FIREBASE_TEST_EMAIL }}
-      #   FIREBASE_TEST_PASSWORD: ${{ secrets.FIREBASE_TEST_PASSWORD }}
-
-    # - name: Copy test coverage from container
-    #   run: |
-    #     docker cp $(docker ps -a -q --filter "name=backend-test" --format "{{.ID}}"):/app/coverage.xml backend/coverage_reports/coverage.xml
+        TAG=${{ github.sha }} docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test
 
     - name: Upload coverage report artifact
       uses: actions/upload-artifact@v4
       with:
         name: backend-coverage-report
         path: backend/coverage_reports/coverage.xml
+
+    - name: Log in to Azure
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+    - name: Log in to Container Registry
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: docker/login-action@v2
+      with:
+        registry: studybuddyimagecontainerv2.azurecr.io
+        username: ${{ secrets.REGISTRY_NAME }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
+      
+    - name: Push Backend Image
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: docker push studybuddyimagecontainerv2.azurecr.io/backend:${{ github.sha }}
 
 
   frontend_pipeline:
@@ -190,15 +130,45 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+      
+      - name: Create .env file
+        run: |
+          echo "VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}" > .env
+          echo "VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}" >> .env
+          echo "VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}" >> .env
+          echo "VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}" >> .env
+          echo "VITE_BACKEND_URL=${{secrets.VITE_BACKEND_URL}}" >> .env
 
-      - name: Run Unit Tests
-        run: npm run test
+      - name: Run Unit Tests & Generate Coverage Report
+        run: npm run coverage
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
           name: frontend-coverage-report
           path: frontend/coverage_reports/lcov.info
+      
+      - name: Log in to Azure
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+      - name: Log in to Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v2
+        with:
+          registry: studybuddyimagecontainerv2.azurecr.io
+          username: ${{ secrets.REGISTRY_NAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+      
+      - name: Build Frontend Image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: docker build -t studybuddyimagecontainerv2.azurecr.io/frontend:${{ github.sha }} .
+      
+      - name: Push Frontend Image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: docker push studybuddyimagecontainerv2.azurecr.io/frontend:${{ github.sha }}
 
   sonarcloud-scan:
     name: SonarCloud Scan

@@ -1,42 +1,25 @@
 FROM python:3.11-slim
 
+# Create non-root user (optional but recommended)
+RUN adduser --disabled-password --no-create-home appuser
+
 WORKDIR /app
 
+# Copy requirements and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy app source code
 COPY ./app ./app
-COPY ./keys ./keys
 
-COPY .env .env
+# Use non-root user
+USER appuser
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000" ,"--reload"]
+# Start FastAPI app
 
-# FROM python:3.11-slim
+#for production,no reload
+# CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"] 
 
-# # Create a non-root user
-# RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+# For development, with reload on changes
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
-# WORKDIR /app
-
-# # Copy and install dependencies as root (before switching user)
-# COPY requirements.txt .
-# RUN pip install --no-cache-dir -r requirements.txt
-
-# # Copy the rest of the application
-# COPY ./app ./app
-# COPY ./keys ./keys
-# COPY .env .env
-
-# # Change ownership of app files to the non-root user
-# RUN chown -R appuser:appgroup /app
-
-# # Set environment variable to differentiate between CI and production
-# ARG ENVIRONMENT=production
-# ENV ENVIRONMENT=${ENVIRONMENT}
-
-# RUN if [ "$ENVIRONMENT" != "ci" ]; then \
-#     USER appuser; \
-#     fi
-
-# CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
