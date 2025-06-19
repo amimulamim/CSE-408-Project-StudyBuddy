@@ -1,0 +1,19 @@
+version: "3.7"
+
+services:
+  backend:
+    image: amimulamim/studybuddy-backend:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./backend/keys:/app/keys
+    env_file:
+      - ./backend/.env
+
+  frontend:
+    image: amimulamim/studybuddy-frontend:latest
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
