@@ -31,7 +31,20 @@ jobs:
 
       - name: Add firebaseKey.json to keys folder
         run: |
-          echo "${{ secrets.FIREBASE_KEY }}" > keys/firebaseKey.json
+          echo "{
+            "type": "service_account",
+            "project_id": ${{ secrets.FIREBASE_PROJECT_ID }},
+            "private_key_id": "${{ secrets.FIREBASE_PRIVATE_KEY_ID }}",
+            "private_key": ${{ secrets.FIREBASE_PRIVATE_KEY }},
+            "client_email": ${{ secrets.FIREBASE_CLIENT_EMAIL }},
+            "client_id": ${{ secrets.FIREBASE_CLIENT_ID }},
+            "auth_uri": ${{ secrets.FIREBASE_AUTH_URI }},
+            "token_uri": ${{ secrets.FIREBASE_TOKEN_URI }},
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+            "client_x509_cert_url": ${{ secrets.FIREBASE_CLIENT_X509_CERT_URL }},
+            "universe_domain": ${{ secrets.FIREBASE_UNIVERSE_DOMAIN }}
+          }" > keys/firebaseKey.json
+
 
       - name: Create .env.test file
         run: |
