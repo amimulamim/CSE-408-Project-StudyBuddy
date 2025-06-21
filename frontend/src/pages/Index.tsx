@@ -68,14 +68,10 @@ const Index = () => {
     const setupAuthListener = async () => {
       const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
         if (currentUser) {
-          console.log('after current user');
           fetchUserProfileData('onboardingDone').then((onboardingDone) => {
-            console.log('after fetch user profile data');
             if (onboardingDone) {
-              console.log('onboarding done');
               setOnboardingDone(true);
             }else{
-              console.log('onboarding not done');
               setAuthMode('onboarding');
               setAuthModalOpen(true);
             }
