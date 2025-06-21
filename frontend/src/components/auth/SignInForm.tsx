@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { auth, googleProvider } from '@/lib/firebase'; 
+import { auth, googleProvider, db } from '@/lib/firebase'; 
 import { signInWithPopup, signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
@@ -13,6 +13,8 @@ import { getFirebaseError, clearFieldError, validateEmail } from './validationHe
 import { Loader2, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner";
 import { AuthRedirectHandler } from './AuthRedirectHandler';
+import { doc, getDoc } from "firebase/firestore";
+import { saveUserProfile } from '@/lib/userProfile';
 
 interface SignInFormProps {
   onSignUp: () => void;
@@ -51,6 +53,15 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
   
   const handleGoogleSignIn = () => {
     signInWithPopup(auth, googleProvider)
+      .then(userCredential => {
+        const user = userCredential.user;
+        const userRef = doc(db, "users", user.uid);
+        getDoc(userRef).then((userSnapshot)=>{
+          if(!userSnapshot.exists()){
+            saveUserProfile(user);
+          }
+        });
+      })
       .then(signIn)
       .then((response:ApiResponse) => {
         if (response.status === 'success') {
