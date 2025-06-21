@@ -6,7 +6,7 @@ services:
     expose:
       - "8000"
     volumes:
-      - ./keys:/app/keys
+      - ./firebaseKey.json:/app/keys/firebaseKey.json
     env_file:
       - ./.env
 
