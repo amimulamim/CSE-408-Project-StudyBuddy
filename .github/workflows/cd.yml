@@ -20,13 +20,16 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Rename nginx.conf
+        run: cp frontend/nginx.conf nginx.conf
+
       - name: Push docker-compose.prod.yml and nginx.conf
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.AZURE_VM_HOST }}
           username: ${{ secrets.AZURE_VM_USER }}
           key: ${{ secrets.AZURE_VM_SSH_PRIVATE_KEY }}
-          source: "docker-compose.prod.yml,frontend/nginx.conf"
+          source: "docker-compose.prod.yml,nginx.conf"
           target: /home/${{ secrets.AZURE_VM_USER }}
 
   push-secrets:
@@ -35,24 +38,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Create secrets folder
-        run: mkdir -p secrets
-
       - name: Create .env file
         run: |
-          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}"                      > secrets/.env
-          echo "FIREBASE_KEY_PATH=/app/keys/firebaseKey.json"                 >> secrets/.env
-          echo "FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}" >> secrets/.env
-          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}"                 >> secrets/.env
-          echo "GEMINI_MODEL=${{ secrets.GEMINI_MODEL }}"                     >> secrets/.env
-          echo "QUERY_EMBEDDING_MODEL=${{ secrets.QUERY_EMBEDDING_MODEL }}"   >> secrets/.env
-          echo "QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}"                 >> secrets/.env
-          echo "QDRANT_HOST=${{ secrets.QDRANT_HOST }}"                       >> secrets/.env
-          echo "QDRANT_COLLECTION_NAME=${{ secrets.QDRANT_COLLECTION_NAME }}" >> secrets/.env
-          echo "SSLCOMMERZ_STORE_ID=${{ secrets.SSLCOMMERZ_STORE_ID }}"       >> secrets/.env
-          echo "SSLCOMMERZ_STORE_PASSWORD=${{ secrets.SSLCOMMERZ_STORE_PASSWORD }}" >> secrets/.env
-          echo "SSLCOMMERZ_SANDBOX=${{ secrets.SSLCOMMERZ_SANDBOX }}"         >> secrets/.env
-          echo "BACKEND_URL=${{ secrets.BACKEND_URL }}"                       >> secrets/.env
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}"                      > .env
+          echo "FIREBASE_KEY_PATH=/app/keys/firebaseKey.json"                 >> .env
+          echo "FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}" >> .env
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}"                 >> .env
+          echo "GEMINI_MODEL=${{ secrets.GEMINI_MODEL }}"                     >> .env
+          echo "QUERY_EMBEDDING_MODEL=${{ secrets.QUERY_EMBEDDING_MODEL }}"   >> .env
+          echo "QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}"                 >> .env
+          echo "QDRANT_HOST=${{ secrets.QDRANT_HOST }}"                       >> .env
+          echo "QDRANT_COLLECTION_NAME=${{ secrets.QDRANT_COLLECTION_NAME }}" >> .env
+          echo "SSLCOMMERZ_STORE_ID=${{ secrets.SSLCOMMERZ_STORE_ID }}"       >> .env
+          echo "SSLCOMMERZ_STORE_PASSWORD=${{ secrets.SSLCOMMERZ_STORE_PASSWORD }}" >> .env
+          echo "SSLCOMMERZ_SANDBOX=${{ secrets.SSLCOMMERZ_SANDBOX }}"         >> .env
+          echo "BACKEND_URL=${{ secrets.BACKEND_URL }}"                       >> .env
 
       - name: Add firebaseKey.json
         run: |
@@ -68,7 +68,7 @@ jobs:
             "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
             "client_x509_cert_url": ${{ secrets.FIREBASE_CLIENT_X509_CERT_URL }},
             "universe_domain": ${{ secrets.FIREBASE_UNIVERSE_DOMAIN }}
-          }' > secrets/firebaseKey.json
+          }' > firebaseKey.json
 
       - name: Push secrets to Azure VM
         uses: appleboy/scp-action@v0.1.7
@@ -76,7 +76,7 @@ jobs:
           host: ${{ secrets.AZURE_VM_HOST }}
           username: ${{ secrets.AZURE_VM_USER }}
           key: ${{ secrets.AZURE_VM_SSH_PRIVATE_KEY }}
-          source: secrets/.env,secrets/firebaseKey.json
+          source: .env,firebaseKey.json
           target: /home/${{ secrets.AZURE_VM_USER }}
 
   deploy:
