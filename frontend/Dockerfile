@@ -18,7 +18,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 COPY .env .env
 
 # Optional: Replace default nginx config if needed
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.dev.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
