@@ -1,0 +1,25 @@
+version: "3.7"
+
+services:
+  backend:
+    image: amimulamim/studybuddy-backend:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./backend/keys:/app/keys
+    env_file:
+      - ./backend/.env
+
+  frontend:
+    image: amimulamim/studybuddy-frontend:latest
+    
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+
+    depends_on:
+      - backend

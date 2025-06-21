@@ -1,8 +1,9 @@
-name: CD Pipeline
+# .github/workflows/cd.yml
+name: CD to Azure VM
 
 on:
   workflow_run:
-    workflows: ["CI Pipeline"]
+    workflows: ["CI pipeline"]
     types:
       - completed
     branches:
@@ -10,31 +11,38 @@ on:
 
 jobs:
   deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'}}
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
-    name: Deploy to Azure
+    name: Deploy StudyBuddy via SSH
 
     steps:
-      - name: Checkout code
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Log in to Azure
-        uses: azure/login@v1
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Deploy backend
-        uses: azure/container-apps-deploy-action@v1
-        with:
-          acrName: studybuddyimagecontainer
-          containerAppName: studybuddy-backend
-          resourceGroup: CSE-408
-          imageToDeploy: studybuddyimagecontainer.azurecr.io/backend:${{ github.sha }}
+      - name: Configure SSH for VM
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AZURE_VM_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.AZURE_VM_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Deploy frontend
-        uses: azure/container-apps-deploy-action@v1
+      - name: SSH & deploy via Docker Compose
+        uses: appleboy/ssh-action@v1
         with:
-          acrName: studybuddyimagecontainer
-          containerAppName: studybuddy
-          resourceGroup: CSE-408
-          imageToDeploy: studybuddyimagecontainer.azurecr.io/frontend:${{ github.sha }}
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USER }}
+          key: ${{ secrets.AZURE_VM_SSH_PRIVATE_KEY }}
+          script: |
+            cd "/home/${{ secrets.AZURE_VM_USER }}/CSE-408-Project-StudyBuddy"
+            # Pull latest images from Docker Hub
+            docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin <<< "${{ secrets.DOCKERHUB_TOKEN }}"
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
