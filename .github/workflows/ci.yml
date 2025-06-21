@@ -24,58 +24,18 @@ jobs:
 
       - name: Create .env file
         run: |
-          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}"                      > .env
-          echo "FIREBASE_KEY_PATH=/app/keys/firebaseKey.json"                 >> .env
-          echo "FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}" >> .env
-          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}"                 >> .env
-          echo "GEMINI_MODEL=${{ secrets.GEMINI_MODEL }}"                     >> .env
-          echo "QUERY_EMBEDDING_MODEL=${{ secrets.QUERY_EMBEDDING_MODEL }}"   >> .env
-          echo "QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}"                 >> .env
-          echo "QDRANT_HOST=${{ secrets.QDRANT_HOST }}"                       >> .env
-          echo "QDRANT_COLLECTION_NAME=${{ secrets.QDRANT_COLLECTION_NAME }}" >> .env
-          echo "SSLCOMMERZ_STORE_ID=${{ secrets.SSLCOMMERZ_STORE_ID }}"       >> .env
-          echo "SSLCOMMERZ_STORE_PASSWORD=${{ secrets.SSLCOMMERZ_STORE_PASSWORD }}" >> .env
-          echo "SSLCOMMERZ_SANDBOX=${{ secrets.SSLCOMMERZ_SANDBOX }}"         >> .env
-          echo "BACKEND_URL=${{ secrets.BACKEND_URL }}"                       >> .env
+          echo "${{ secrets.BACKEND_ENV }}" > .env
 
       - name: Create keys folder
         run: mkdir -p keys
 
       - name: Add firebaseKey.json to keys folder
         run: |
-          echo '{
-            "type": "service_account",
-            "project_id": ${{ secrets.FIREBASE_PROJECT_ID }},
-            "private_key_id": "${{ secrets.FIREBASE_PRIVATE_KEY_ID }}",
-            "private_key": ${{ secrets.FIREBASE_PRIVATE_KEY }},
-            "client_email": ${{ secrets.FIREBASE_CLIENT_EMAIL }},
-            "client_id": ${{ secrets.FIREBASE_CLIENT_ID }},
-            "auth_uri": ${{ secrets.FIREBASE_AUTH_URI }},
-            "token_uri": ${{ secrets.FIREBASE_TOKEN_URI }},
-            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-            "client_x509_cert_url": ${{ secrets.FIREBASE_CLIENT_X509_CERT_URL }},
-            "universe_domain": ${{ secrets.FIREBASE_UNIVERSE_DOMAIN }}
-          }' > keys/firebaseKey.json
+          echo "${{ secrets.FIREBASE_KEY }}" > keys/firebaseKey.json
 
       - name: Create .env.test file
         run: |
-          echo "FIREBASE_KEY_PATH=/app/keys/firebaseKey.json"                 > .env.test
-          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}"                      >> .env.test
-          echo "E2E_BASE_URL=${{ secrets.E2E_BASE_URL }}"                     >> .env.test
-          echo "FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}"             >> .env.test
-          echo "FIREBASE_TEST_EMAIL=${{ secrets.FIREBASE_TEST_EMAIL }}"       >> .env.test
-          echo "FIREBASE_TEST_PASSWORD=${{ secrets.FIREBASE_TEST_PASSWORD }}" >> .env.test
-          echo "FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}" >> .env.test
-          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}"                 >> .env.test
-          echo "GEMINI_MODEL=${{ secrets.GEMINI_MODEL }}"                     >> .env.test
-          echo "QUERY_EMBEDDING_MODEL=${{ secrets.QUERY_EMBEDDING_MODEL }}"   >> .env.test
-          echo "QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}"                 >> .env.test
-          echo "QDRANT_HOST=${{ secrets.QDRANT_HOST }}"                       >> .env.test
-          echo "QDRANT_COLLECTION_NAME=${{ secrets.QDRANT_COLLECTION_NAME }}" >> .env.test
-          echo "SSLCOMMERZ_STORE_ID=${{ secrets.SSLCOMMERZ_STORE_ID }}"       >> .env.test
-          echo "SSLCOMMERZ_STORE_PASSWORD=${{ secrets.SSLCOMMERZ_STORE_PASSWORD }}" >> .env.test
-          echo "SSLCOMMERZ_SANDBOX=${{ secrets.SSLCOMMERZ_SANDBOX }}"         >> .env.test
-          echo "BACKEND_URL=${{ secrets.BACKEND_URL }}"                       >> .env.test
+          echo "${{ secrets.BACKEND_ENV_TEST }}" > .env.test
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -133,11 +93,7 @@ jobs:
 
       - name: Create .env file
         run: |
-          echo "VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}"       > .env
-          echo "VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}" >> .env
-          echo "VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}"   >> .env
-          echo "VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}"           >> .env
-          echo "VITE_BACKEND_URL=${{ secrets.VITE_BACKEND_URL }}"                  >> .env
+           echo "${{ secrets.FRONTEND_ENV }}" > .env
 
       - name: Run Unit Tests & Generate Coverage Report
         run: npm run coverage
@@ -192,4 +148,3 @@ jobs:
           projectBaseDir: .
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
