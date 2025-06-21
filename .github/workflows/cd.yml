@@ -56,7 +56,7 @@ jobs:
             "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
             "client_x509_cert_url": ${{ secrets.FIREBASE_CLIENT_X509_CERT_URL }},
             "universe_domain": ${{ secrets.FIREBASE_UNIVERSE_DOMAIN }}
-          }" > keys/firebaseKey.json
+          }" > firebaseKey.json
 
       - name: Push secrets to Azure VM
         uses: appleboy/scp-action@v0.1.7
