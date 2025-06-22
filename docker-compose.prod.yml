@@ -4,11 +4,13 @@ services:
   
   db:
     image: postgres:16-alpine
-    container_name: local_postgres
+    container_name: ${LOCAL_CONTAINER_NAME}
     volumes:
       - ./db_data:/var/lib/postgresql/data
       - ./init:/docker-entrypoint-initdb.d
     restart: unless-stopped
+    env_file:
+      - ./.env
 
   backend:
     image: amimulamim/studybuddy-backend:latest
