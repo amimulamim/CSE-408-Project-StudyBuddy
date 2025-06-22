@@ -6,7 +6,7 @@ services:
     image: postgres:16-alpine
     container_name: local_postgres
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - ./db_data:/var/lib/postgresql/data
       - ./init:/docker-entrypoint-initdb.d
     restart: unless-stopped
 
