@@ -180,12 +180,20 @@ async def get_quiz(
 ):
     """Fetches a previously generated quiz by quiz_id for the user."""
     try:
-        quiz = db.query(QuizQuestion).filter(
-            QuizQuestion.quiz_id == quiz_id,
-            QuizQuestion.quiz.has(user_id=user_info["uid"])
-        ).all()
-        if not quiz:
+        # First check if the quiz exists and belongs to the user
+        quiz_record = db.query(Quiz).filter(
+            Quiz.quiz_id == quiz_id,
+            Quiz.user_id == user_info["uid"]
+        ).first()
+        if not quiz_record:
             raise HTTPException(status_code=404, detail="Quiz not found or not accessible")
+        
+        # Then fetch the questions for this quiz
+        questions_data = db.query(QuizQuestion).filter(
+            QuizQuestion.quiz_id == quiz_id
+        ).all()
+        if not questions_data:
+            raise HTTPException(status_code=404, detail="No questions found for this quiz")
         
         questions = [
             {
@@ -197,7 +205,7 @@ async def get_quiz(
                 "marks": q.marks,
                 "hints": q.hints
             }
-            for q in quiz
+            for q in questions_data
         ]
         
         return {
