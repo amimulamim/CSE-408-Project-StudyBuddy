@@ -42,14 +42,19 @@ def edit_profile_secure(
     
     Rate limited: 10 requests per minute per user.
     
-    Editable fields: name, bio, avatar, institution, role, location, study_domain, interests
+    Editable fields: name, bio, avatar, institution, role, location, study_domain, interests, is_moderator
     
-    Protected fields (admin only): is_admin, is_moderator, current_plan, email, uid, auth_provider
+    Protected fields (admin only): is_admin, current_plan, email, uid, auth_provider
     
     For interests field:
     - "+item" adds item to array
     - "-item" removes item from array  
     - "item1,item2" adds items to array
+    
+    For is_moderator field:
+    - Users can volunteer to become content moderators
+    -Users can anytime remove themselves from moderator status
+    - Only admins can revoke moderator status or assign admin status
     
     Example request body:
     {
@@ -57,7 +62,8 @@ def edit_profile_secure(
         "bio": "Computer Science student",
         "role": "student",
         "study_domain": "Computer Science", 
-        "interests": "+machine learning,-web development,data science"
+        "interests": "+machine learning,-web development,data science",
+        "is_moderator": true
     }
     """
     # Check rate limit

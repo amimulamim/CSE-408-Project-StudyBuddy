@@ -36,6 +36,7 @@ class SecureProfileEdit(BaseModel):
     """
     Secure schema for regular user profile edits - only allows safe fields.
     Excludes administrative and system fields for security.
+    Users can volunteer to be content moderators but cannot set admin status.
     """
     model_config = {"extra": "forbid"}
     
@@ -47,6 +48,7 @@ class SecureProfileEdit(BaseModel):
     location: Optional[str] = Field(None, max_length=100, description="User's location")
     study_domain: Optional[str] = Field(None, max_length=100, description="Field of study")
     interests: Optional[str] = Field(None, description="Comma-separated interests. Use +item to add, -item to remove")
+    is_moderator: Optional[bool] = Field(None, description="User can volunteer to be a content moderator")
 
     @field_validator('bio')
     @classmethod
@@ -131,6 +133,7 @@ class UserProfile(BaseModel):
     institution: str
     role: str
     is_admin: bool
+    is_moderator: bool
     avatar: str
     current_plan: str
     location: str

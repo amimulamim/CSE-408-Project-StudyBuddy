@@ -14,10 +14,15 @@ def get_or_create_user(db: Session, user_data: UserBase, retry: int = 3):
         try:
             user = db.query(User).filter_by(uid=user_data.uid).first()
             if user is None:
-                user = User(**user_data.dict())
+                # Debug logging for user creation
+                print(f"DEBUG: Creating new user {user_data.uid} with is_moderator: {user_data.is_moderator}")
+                user = User(**user_data.model_dump())
                 db.add(user)
                 db.commit()
                 db.refresh(user)
+                print(f"DEBUG: Created user {user.uid} - is_admin: {user.is_admin}, is_moderator: {user.is_moderator}")
+            else:
+                print(f"DEBUG: Found existing user {user.uid} - is_admin: {user.is_admin}, is_moderator: {user.is_moderator}")
             return user
         except OperationalError as e:
             db.rollback()
@@ -55,7 +60,11 @@ def parse_interests_operations(interests_str: str, current_interests: List[str])
 
 def get_user_by_uid(db: Session, uid: str) -> Optional[User]:
     """Get user by UID"""
-    return db.query(User).filter_by(uid=uid).first()
+    user = db.query(User).filter_by(uid=uid).first()
+    if user:
+        # Debug logging to track is_moderator inconsistencies
+        print(f"DEBUG: User {uid} - is_admin: {user.is_admin}, is_moderator: {user.is_moderator}")
+    return user
 
 
 def admin_update_user(db: Session, uid: str, admin_data: AdminUserEdit) -> Optional[User]:
@@ -138,7 +147,7 @@ def update_user_profile_secure(db: Session, uid: str, profile_data: SecureProfil
 
     # Track changes for audit log
     changes = {}
-    update_data = profile_data.model_dump(exclude_unset=True, exclude={"interests"})
+    update_data = profile_data.model_dump(exclude_unset=True, exclude={"interests", "is_moderator"})
     
     for field, new_value in update_data.items():
         if hasattr(user, field):
@@ -146,6 +155,13 @@ def update_user_profile_secure(db: Session, uid: str, profile_data: SecureProfil
             if old_value != new_value:
                 changes[field] = {"old": old_value, "new": new_value}
             setattr(user, field, new_value)
+
+    # Handle is_moderator field
+    if profile_data.is_moderator is not None:
+        old_is_moderator = user.is_moderator
+        if old_is_moderator != profile_data.is_moderator:
+            changes["is_moderator"] = {"old": old_is_moderator, "new": profile_data.is_moderator}
+        user.is_moderator = profile_data.is_moderator
 
     # Handle interests with special operations
     if profile_data.interests is not None:

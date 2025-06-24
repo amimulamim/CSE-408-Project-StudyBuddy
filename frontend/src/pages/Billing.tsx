@@ -5,20 +5,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/components/ui/use-toast";
 import { ArrowLeft } from "lucide-react";
 import { BillingSubscription } from '@/components/billing/BillingSubscription';
+import { toast } from 'sonner';
 
 export default function BillingPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { toast } = useToast();
   const billingRef = useRef<{ refreshSubscriptionStatus: () => void }>(null);
 
   useEffect(() => {
-    // Handle payment success/failure
     const success = searchParams.get('success');
     if (success === 'true') {
-      toast({
-        title: "Payment Successful!",
-        description: "Your subscription has been activated. Welcome to Premium!",
+      toast.success("Payment Successful", {
+        description: "Your subscription is now active.",
       });
       // Clean up URL
       navigate('/dashboard/billing', { replace: true });
@@ -27,10 +25,8 @@ export default function BillingPage() {
         billingRef.current?.refreshSubscriptionStatus();
       }, 1000);
     } else if (success === 'false') {
-      toast({
-        title: "Payment Failed or Canceled",
-        description: "Your payment was not successful or was canceled. No charges were made.",
-        variant: "destructive",
+      toast.error("Payment Failed", {
+        description: "Something went wrong during payment.",
       });
       // Clean up URL
       navigate('/dashboard/billing', { replace: true });

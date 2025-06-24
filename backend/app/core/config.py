@@ -5,10 +5,16 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     FIREBASE_KEY_PATH: str
     FIREBASE_STORAGE_BUCKET: str
-    BACKEND_URL: str = "http://localhost:8000"  # Default for development
-    ALLOWED_ORIGINS: str = "*"  # default for local/dev
+    BACKEND_URL: str = "http://localhost:8000"
+    ALLOWED_ORIGINS: str = "*"
+    GEMINI_MODEL: str 
+    GEMINI_API_KEY: str
+    QDRANT_HOST: str
+    QDRANT_API_KEY: str
+    QDRANT_COLLECTION_NAME: str
+    QUERY_EMBEDDING_MODEL: str = "models/embedding-001"
 
-    # Add the test-only fields so `.env` doesn't cause validation errors
+    # Test-only fields
     FIREBASE_API_KEY: str = ""
     FIREBASE_TEST_EMAIL: str = ""
     FIREBASE_TEST_PASSWORD: str = ""

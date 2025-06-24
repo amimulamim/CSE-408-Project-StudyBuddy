@@ -9,10 +9,11 @@ from dotenv import load_dotenv
 from PIL import Image
 import io
 import logging
-from app.rag.document_converter import DocumentConverter
-from app.rag.text_chunker import TextChunker
+from app.document_upload.document_converter import DocumentConverter
+from app.document_upload.text_chunker import TextChunker
 from app.core.vector_db import VectorDatabaseManager
 import google.generativeai as genai
+from app.core.config import settings
 # Import necessary modules
 
 
@@ -29,11 +30,11 @@ class DocumentProcessor:
         self.converter = DocumentConverter()
         self.chunker = TextChunker()
         self.vector_db = VectorDatabaseManager(
-            qdrant_url=os.getenv("QDRANT_HOST"),
-            qdrant_api_key=os.getenv("QDRANT_API_KEY"),
-            collection_name=os.getenv("QDRANT_COLLECTION_NAME")
+            qdrant_url=settings.QDRANT_HOST,
+            qdrant_api_key=settings.QDRANT_API_KEY,
+            collection_name=settings.QDRANT_COLLECTION_NAME
         )
-        self.embedding_api_key = os.getenv("GEMINI_API_KEY")
+        self.embedding_api_key = settings.GEMINI_API_KEY
     
     def generate_embedding(self, text: str) -> List[float]:
         """Generates embeddings using Gemini API."""
