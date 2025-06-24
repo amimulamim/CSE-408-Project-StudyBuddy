@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,9 +8,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bell, Plus, Edit, Trash2 } from 'lucide-react';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Bell, Plus, Edit, Trash2, Search, Check, ChevronsUpDown } from 'lucide-react';
 import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface Notification {
   id: string;
@@ -30,6 +32,13 @@ interface NotificationCreate {
   type: 'info' | 'warning' | 'success' | 'error';
 }
 
+interface User {
+  uid: string;
+  email: string;
+  name: string;
+  avatar?: string;
+}
+
 export function AdminNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
@@ -43,6 +52,114 @@ export function AdminNotifications() {
     message: '',
     type: 'info'
   });
+
+  // User search states
+  const [userSearchOpen, setUserSearchOpen] = useState(false);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  // Notification search states
+  const [notificationUserSearchOpen, setNotificationUserSearchOpen] = useState(false);
+  const [notificationUserSearchTerm, setNotificationUserSearchTerm] = useState('');
+  const [notificationSearchResults, setNotificationSearchResults] = useState<User[]>([]);
+  const [selectedNotificationUser, setSelectedNotificationUser] = useState<User | null>(null);
+  const [notificationSearchLoading, setNotificationSearchLoading] = useState(false);
+
+  // Debounce function
+  const debounce = (func: Function, wait: number) => {
+    let timeout: NodeJS.Timeout;
+    return function executedFunction(...args: any[]) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  };
+
+  // Search users across all pages
+  const searchUsers = async (searchTerm: string) => {
+    if (!searchTerm.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      setSearchLoading(true);
+      const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+      
+      // Search with a larger page size to get more results
+      const response = await makeRequest(
+        `${API_BASE_URL}/api/v1/admin/users/search?query=${encodeURIComponent(searchTerm)}&size=50`,
+        'GET'
+      );
+
+      if (response && typeof response === 'object' && 'status' in response) {
+        if (response.status === 'success' && response.data) {
+          setSearchResults(response.data.users || []);
+        }
+      }
+    } catch (error) {
+      console.error('Error searching users:', error);
+      toast.error('Failed to search users');
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  // Search users for notification target
+  const searchNotificationUsers = async (searchTerm: string) => {
+    if (!searchTerm.trim()) {
+      setNotificationSearchResults([]);
+      return;
+    }
+
+    try {
+      setNotificationSearchLoading(true);
+      const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+      
+      const response = await makeRequest(
+        `${API_BASE_URL}/api/v1/admin/users/search?query=${encodeURIComponent(searchTerm)}&size=50`,
+        'GET'
+      );
+
+      if (response && typeof response === 'object' && 'status' in response) {
+        if (response.status === 'success' && response.data) {
+          setNotificationSearchResults(response.data.users || []);
+        }
+      }
+    } catch (error) {
+      console.error('Error searching users:', error);
+      toast.error('Failed to search users');
+    } finally {
+      setNotificationSearchLoading(false);
+    }
+  };
+
+  // Debounced search functions
+  const debouncedUserSearch = useCallback(debounce(searchUsers, 300), [setSearchResults]);
+  const debouncedNotificationUserSearch = useCallback(debounce(searchNotificationUsers, 300), []);
+
+  // Effect for user search
+  useEffect(() => {
+    if (userSearchTerm) {
+      debouncedUserSearch(userSearchTerm);
+    } else {
+      setSearchResults([]);
+    }
+  }, [userSearchTerm, debouncedUserSearch]);
+
+  // Effect for notification user search
+  useEffect(() => {
+    if (notificationUserSearchTerm) {
+      debouncedNotificationUserSearch(notificationUserSearchTerm);
+    } else {
+      setNotificationSearchResults([]);
+    }
+  }, [notificationUserSearchTerm, debouncedNotificationUserSearch]);
 
   const fetchUserNotifications = async (userId: string) => {
     if (!userId) return;
@@ -87,6 +204,7 @@ export function AdminNotifications() {
             message: '',
             type: 'info'
           });
+          setSelectedUser(null);
           if (selectedUserId) {
             fetchUserNotifications(selectedUserId);
           }
@@ -186,26 +304,90 @@ export function AdminNotifications() {
                 Send Notification
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Send New Notification</DialogTitle>
                 <DialogDescription>
-                  Send a notification to a specific user.
+                  Search for a user and send them a notification.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="recipient">Recipient User ID</Label>
-                  <Input
-                    id="recipient"
-                    value={newNotification.recipient_uid}
-                    onChange={(e) => setNewNotification({
-                      ...newNotification,
-                      recipient_uid: e.target.value
-                    })}
-                    placeholder="Enter user ID"
-                  />
+                  <Label>Select Recipient</Label>
+                  <Popover open={userSearchOpen} onOpenChange={setUserSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={userSearchOpen}
+                        className="w-full justify-between"
+                      >
+                        {selectedUser ? (
+                          <div className="flex items-center gap-2">
+                            <img
+                              src={selectedUser.avatar || '/default-avatar.png'}
+                              alt={selectedUser.name}
+                              className="h-5 w-5 rounded-full"
+                            />
+                            <span>{selectedUser.name} ({selectedUser.email})</span>
+                          </div>
+                        ) : (
+                          "Search user..."
+                        )}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command shouldFilter={false}>
+                        <CommandInput
+                          placeholder="Search users by name or email..."
+                          value={userSearchTerm}
+                          onValueChange={setUserSearchTerm}
+                        />
+                        <CommandList>
+                          <CommandEmpty>
+                            {searchLoading ? "Searching..." : "No users found."}
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {searchResults.map((user) => (
+                              <CommandItem
+                                key={user.uid}
+                                value={user.uid}
+                                onSelect={() => {
+                                  setSelectedUser(user);
+                                  setNewNotification({
+                                    ...newNotification,
+                                    recipient_uid: user.uid
+                                  });
+                                  setUserSearchOpen(false);
+                                }}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <img
+                                    src={user.avatar || '/default-avatar.png'}
+                                    alt={user.name}
+                                    className="h-6 w-6 rounded-full"
+                                  />
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{user.name}</span>
+                                    <span className="text-sm text-muted-foreground">{user.email}</span>
+                                  </div>
+                                </div>
+                                <Check
+                                  className={cn(
+                                    "ml-auto h-4 w-4",
+                                    selectedUser?.uid === user.uid ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
+                
                 <div className="space-y-2">
                   <Label htmlFor="title">Title</Label>
                   <Input
@@ -251,10 +433,19 @@ export function AdminNotifications() {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                <Button variant="outline" onClick={() => {
+                  setIsCreateDialogOpen(false);
+                  setSelectedUser(null);
+                  setUserSearchTerm('');
+                }}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreateNotification}>Send</Button>
+                <Button 
+                  onClick={handleCreateNotification}
+                  disabled={!selectedUser || !newNotification.title || !newNotification.message}
+                >
+                  Send
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -263,17 +454,78 @@ export function AdminNotifications() {
       <CardContent>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="user-search">Load notifications for user</Label>
+            <Label>Load notifications for user</Label>
             <div className="flex gap-2">
-              <Input
-                id="user-search"
-                value={selectedUserId}
-                onChange={(e) => setSelectedUserId(e.target.value)}
-                placeholder="Enter user ID to load notifications"
-              />
-              <Button onClick={() => fetchUserNotifications(selectedUserId)}>
-                Load
-              </Button>
+              <Popover open={notificationUserSearchOpen} onOpenChange={setNotificationUserSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={notificationUserSearchOpen}
+                    className="flex-1 justify-between"
+                  >
+                    {selectedNotificationUser ? (
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={selectedNotificationUser.avatar || '/default-avatar.png'}
+                          alt={selectedNotificationUser.name}
+                          className="h-5 w-5 rounded-full"
+                        />
+                        <span>{selectedNotificationUser.name} ({selectedNotificationUser.email})</span>
+                      </div>
+                    ) : (
+                      "Search user to view notifications..."
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command shouldFilter={false}>
+                    <CommandInput
+                      placeholder="Search users by name or email..."
+                      value={notificationUserSearchTerm}
+                      onValueChange={setNotificationUserSearchTerm}
+                    />
+                    <CommandList>
+                      <CommandEmpty>
+                        {notificationSearchLoading ? "Searching..." : "No users found."}
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {notificationSearchResults.map((user) => (
+                          <CommandItem
+                            key={user.uid}
+                            value={user.uid}
+                            onSelect={() => {
+                              setSelectedNotificationUser(user);
+                              setSelectedUserId(user.uid);
+                              setNotificationUserSearchOpen(false);
+                              fetchUserNotifications(user.uid);
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <img
+                                src={user.avatar || '/default-avatar.png'}
+                                alt={user.name}
+                                className="h-6 w-6 rounded-full"
+                              />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{user.name}</span>
+                                <span className="text-sm text-muted-foreground">{user.email}</span>
+                              </div>
+                            </div>
+                            <Check
+                              className={cn(
+                                "ml-auto h-4 w-4",
+                                selectedNotificationUser?.uid === user.uid ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
@@ -299,7 +551,10 @@ export function AdminNotifications() {
                 ) : notifications.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8">
-                      No notifications found. Enter a user ID to load notifications.
+                      {selectedNotificationUser 
+                        ? `No notifications found for ${selectedNotificationUser.name}`
+                        : "Search and select a user to view their notifications."
+                      }
                     </TableCell>
                   </TableRow>
                 ) : (
