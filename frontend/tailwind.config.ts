@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -76,6 +75,10 @@ export default {
           'light': '#F8FAFC'
         }
       },
+      backgroundImage: {
+        'dashboard-gradient': 'radial-gradient(ellipse 80% 80% at 50% -20%, rgba(139, 92, 246, 0.15), transparent), radial-gradient(ellipse 80% 80% at 80% 40%, rgba(59, 130, 246, 0.1), transparent), radial-gradient(ellipse 80% 80% at 20% 60%, rgba(236, 72, 153, 0.1), transparent), linear-gradient(135deg, hsl(260, 30%, 8%) 0%, hsl(260, 30%, 12%) 50%, hsl(260, 30%, 10%) 100%)',
+        'dashboard-animated': 'radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(139, 92, 246, 0.15), transparent 40%), linear-gradient(135deg, hsl(260, 30%, 8%) 0%, hsl(260, 30%, 12%) 50%, hsl(260, 30%, 10%) 100%)'
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
@@ -106,6 +109,37 @@ export default {
             'background-position': '100% 50%'
           }
         },
+        'gradient-shift': {
+          '0%, 100%': {
+            'background-position': '0% 50%'
+          },
+          '25%': {
+            'background-position': '100% 50%'
+          },
+          '50%': {
+            'background-position': '100% 100%'
+          },
+          '75%': {
+            'background-position': '0% 100%'
+          }
+        },
+        'aurora': {
+          '0%': {
+            'background-position': '50% 50%, 50% 50%'
+          },
+          '25%': {
+            'background-position': '0% 100%, 100% 0%'
+          },
+          '50%': {
+            'background-position': '100% 50%, 0% 50%'
+          },
+          '75%': {
+            'background-position': '50% 0%, 50% 100%'
+          },
+          '100%': {
+            'background-position': '50% 50%, 50% 50%'
+          }
+        },
         'marquee': {
           from: { transform: 'translateX(0)' },
           to: { transform: 'translateX(-200%)' },
@@ -121,6 +155,8 @@ export default {
         'float': 'float 6s ease-in-out infinite',
         'pulse-glow': 'pulse-glow 3s ease-in-out infinite',
         'gradient-x': 'gradient-x 15s ease infinite',
+        'gradient-shift': 'gradient-shift 20s ease infinite',
+        'aurora': 'aurora 30s ease infinite',
         'marquee': 'marquee 25s linear infinite',
         'marquee2': 'marquee2 25s linear infinite',
       }

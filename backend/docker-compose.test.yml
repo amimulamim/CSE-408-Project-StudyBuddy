@@ -4,7 +4,7 @@ services:
   app:
     build:
       context: .
-    image: studybuddyimagecontainer.azurecr.io/backend:${TAG:-latest}
+    image: amimulamim/studybuddy-backend:latest
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
@@ -17,7 +17,7 @@ services:
   test:
     build:
       context: .
-    image: studybuddyimagecontainer.azurecr.io/backend:${TAG:-latest}
+    image: amimulamim/studybuddy-backend:latest
     depends_on:
       - app
     env_file:

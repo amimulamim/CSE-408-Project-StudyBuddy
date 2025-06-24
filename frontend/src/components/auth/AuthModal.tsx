@@ -28,7 +28,6 @@ export function AuthModal({ isOpen, onClose, mode, onChangeMode }: AuthModalProp
     } else {
       setShowOnboarding(false);
     }
-    console.log('in useEffect of auth modal', mode, showOnboarding);
   }, [mode]);
   
   const handleSignUpSuccess = () => {

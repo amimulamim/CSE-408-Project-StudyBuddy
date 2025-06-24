@@ -1,40 +1,85 @@
-name: CD Pipeline
+name: CD to Azure VM
 
 on:
   workflow_run:
-    workflows: ["CI Pipeline"]
+    workflows: ["CI pipeline"]
     types:
       - completed
     branches:
       - main
 
 jobs:
-  deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'}}
+  push-config:
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+    name: Push config files to Azure VM
     runs-on: ubuntu-latest
-    name: Deploy to Azure
 
     steps:
-      - name: Checkout code
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Log in to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Rename nginx.conf
+        run: cp frontend/nginx.conf nginx.conf
 
-      - name: Deploy backend
-        uses: azure/container-apps-deploy-action@v1
+      - name: Push docker-compose.prod.yml and nginx.conf
+        uses: appleboy/scp-action@v0.1.7
         with:
-          acrName: studybuddyimagecontainer
-          containerAppName: studybuddy-backend
-          resourceGroup: CSE-408
-          imageToDeploy: studybuddyimagecontainer.azurecr.io/backend:${{ github.sha }}
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USER }}
+          key: ${{ secrets.AZURE_VM_SSH_PRIVATE_KEY }}
+          source: "docker-compose.prod.yml,nginx.conf"
+          target: /home/${{ secrets.AZURE_VM_USER }}
 
-      - name: Deploy frontend
-        uses: azure/container-apps-deploy-action@v1
+  push-secrets:
+    needs: push-config
+    name: Push secret files to Azure VM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create .env file
+        run: |
+          echo "${{ secrets.BACKEND_ENV }}" > .env
+
+      - name: Add firebaseKey.json
+        run: |
+          echo '{
+            "type": "service_account",
+            "project_id": ${{ secrets.FIREBASE_PROJECT_ID }},
+            "private_key_id": "${{ secrets.FIREBASE_PRIVATE_KEY_ID }}",
+            "private_key": ${{ secrets.FIREBASE_PRIVATE_KEY }},
+            "client_email": ${{ secrets.FIREBASE_CLIENT_EMAIL }},
+            "client_id": ${{ secrets.FIREBASE_CLIENT_ID }},
+            "auth_uri": ${{ secrets.FIREBASE_AUTH_URI }},
+            "token_uri": ${{ secrets.FIREBASE_TOKEN_URI }},
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+            "client_x509_cert_url": ${{ secrets.FIREBASE_CLIENT_X509_CERT_URL }},
+            "universe_domain": ${{ secrets.FIREBASE_UNIVERSE_DOMAIN }}
+          }' > firebaseKey.json
+
+      - name: Push secrets to Azure VM
+        uses: appleboy/scp-action@v0.1.7
         with:
-          acrName: studybuddyimagecontainer
-          containerAppName: studybuddy
-          resourceGroup: CSE-408
-          imageToDeploy: studybuddyimagecontainer.azurecr.io/frontend:${{ github.sha }}
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USER }}
+          key: ${{ secrets.AZURE_VM_SSH_PRIVATE_KEY }}
+          source: .env,firebaseKey.json
+          target: /home/${{ secrets.AZURE_VM_USER }}
+
+  deploy:
+    needs: push-secrets
+    name: Deploy via Docker Compose
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: SSH & deploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USER }}
+          key: ${{ secrets.AZURE_VM_SSH_PRIVATE_KEY }}
+          script: |
+            docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin <<< "${{ secrets.DOCKERHUB_TOKEN }}"
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
