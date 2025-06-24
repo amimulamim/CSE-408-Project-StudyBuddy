@@ -131,6 +131,7 @@ class UserProfile(BaseModel):
     institution: str
     role: str
     is_admin: bool
+    is_moderator: bool
     avatar: str
     current_plan: str
     location: str
