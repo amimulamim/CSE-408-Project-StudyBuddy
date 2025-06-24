@@ -20,6 +20,8 @@ class AdminAction(str, Enum):
     NOTIFICATION_EDIT = "notification_edit"
     NOTIFICATION_DELETE = "notification_delete"
     CONTENT_MODERATE = "content_moderate"
+    MODERATE_CONTENT = "moderate_content"
+    DELETE_QUIZ = "delete_quiz"
     LLM_INVOKE = "llm_invoke"
 
 class PaginationQuery(BaseModel):
