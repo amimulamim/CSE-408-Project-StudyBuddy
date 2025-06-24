@@ -170,6 +170,41 @@ def get_all_content(
         size=size
     )
 
+@router.delete("/content/{content_id}")
+def moderate_content(
+    content_id: str,
+    action: str = Query("delete", description="Moderation action: delete, flag, approve"),
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    request: Request = None
+):
+    """Moderate content - delete or flag content (Admin/Moderator only)"""
+    from app.users.service import is_user_moderator
+    
+    # Check if user has admin or moderator privileges
+    if not is_user_moderator(db, user_info["uid"]):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin or moderator access required"
+        )
+    
+    success = admin_service.moderate_content(db, content_id, action, user_info["uid"])
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Content not found or action failed"
+        )
+    
+    # Log the moderation action
+    log_admin_action(
+        db, user_info["uid"], AdminAction.MODERATE_CONTENT,
+        target_type="content",
+        details={"content_id": content_id, "action": action},
+        request=request
+    )
+    
+    return {"message": f"Content {action}d successfully", "content_id": content_id}
+
 @router.get("/quiz-results", response_model=QuizResultsResponse)
 def get_all_quiz_results(
     offset: int = 0,
@@ -189,6 +224,92 @@ def get_all_quiz_results(
         offset=offset,
         size=size
     )
+
+@router.get("/quiz/{quiz_id}")
+def get_quiz_details(
+    quiz_id: str,
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get detailed information about a specific quiz (Admin only)"""
+    require_admin_access(db, user_info)
+    
+    from app.quiz_generator.models import Quiz, QuizQuestion, QuizResult
+    
+    quiz = db.query(Quiz).filter(Quiz.quiz_id == quiz_id).first()
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    # Get quiz questions
+    questions = db.query(QuizQuestion).filter(QuizQuestion.quiz_id == quiz_id).all()
+    
+    # Get quiz results
+    results = db.query(QuizResult).filter(QuizResult.quiz_id == quiz_id).all()
+    
+    return {
+        "quiz": {
+            "quiz_id": str(quiz.quiz_id),
+            "user_id": quiz.user_id,
+            "created_at": quiz.created_at.isoformat() if quiz.created_at else None
+        },
+        "questions": [
+            {
+                "id": str(q.id),
+                "question_text": q.question_text,
+                "type": q.type.value if q.type else None,
+                "difficulty": q.difficulty.value if q.difficulty else None,
+                "marks": q.marks,
+                "options": q.options,
+                "correct_answer": q.correct_answer
+            }
+            for q in questions
+        ],
+        "results": [
+            {
+                "id": str(r.id),
+                "user_id": r.user_id,
+                "score": r.score,
+                "total": r.total,
+                "percentage": round((r.score / r.total * 100), 2) if r.total > 0 else 0,
+                "created_at": r.created_at.isoformat() if r.created_at else None
+            }
+            for r in results
+        ]
+    }
+
+@router.delete("/quiz/{quiz_id}")
+def delete_quiz_admin(
+    quiz_id: str,
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    request: Request = None
+):
+    """Delete a quiz (Admin only)"""
+    require_admin_access(db, user_info)
+    
+    from app.quiz_generator.models import Quiz
+    
+    quiz = db.query(Quiz).filter(Quiz.quiz_id == quiz_id).first()
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    # Store quiz info before deletion for logging
+    quiz_user_id = quiz.user_id
+    
+    # Delete the quiz (cascade delete should handle questions and results)
+    db.delete(quiz)
+    db.commit()
+    
+    # Log the admin action
+    log_admin_action(
+        db, user_info["uid"], AdminAction.DELETE_QUIZ,
+        target_uid=quiz_user_id,
+        target_type="quiz",
+        details={"quiz_id": quiz_id},
+        request=request
+    )
+    
+    return {"message": "Quiz deleted successfully", "quiz_id": quiz_id}
 
 @router.get("/chats", response_model=ChatHistoryResponse)
 def get_all_chats(
@@ -460,3 +581,49 @@ def get_user_notifications(
         "page": page,
         "size": size
     }
+
+@router.get("/vector-db/collections")
+def get_vector_db_collections(
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get information about vector database collections (Admin only)"""
+    require_admin_access(db, user_info)
+    
+    try:
+        from app.core.vector_db import QdrantDB
+        from app.core.config import settings
+        
+        # Initialize Qdrant client
+        vector_db = QdrantDB(
+            qdrant_url=settings.QDRANT_URL,
+            qdrant_api_key=settings.QDRANT_API_KEY,
+            collection_name=settings.QDRANT_COLLECTION_NAME
+        )
+        
+        # Get collections info
+        collections = vector_db.client.get_collections()
+        
+        collections_info = []
+        for collection in collections.collections:
+            collection_info = vector_db.client.get_collection(collection.name)
+            collections_info.append({
+                "name": collection.name,
+                "vectors_count": collection_info.vectors_count,
+                "status": collection_info.status.value if collection_info.status else "unknown",
+                "config": {
+                    "distance": collection_info.config.params.distance.value if collection_info.config and collection_info.config.params else None,
+                    "vector_size": collection_info.config.params.size if collection_info.config and collection_info.config.params else None
+                }
+            })
+        
+        return {
+            "collections": collections_info,
+            "total_collections": len(collections_info)
+        }
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve vector database collections: {str(e)}"
+        )
