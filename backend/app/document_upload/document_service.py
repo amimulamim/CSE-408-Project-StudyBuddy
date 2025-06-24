@@ -1,5 +1,7 @@
 import uuid
 import logging
+import os
+from unittest.mock import MagicMock
 from fastapi import UploadFile, HTTPException
 from firebase_admin import storage
 from sqlalchemy.orm import Session
@@ -21,7 +23,12 @@ class DocumentService:
             self.converter = DocumentConverter()
             self.chunker = TextChunker(chunk_size=1000, overlap=200)
             self.embedding_generator = EmbeddingGenerator(model_name="models/embedding-001", task_type="RETRIEVAL_DOCUMENT")
-            self.bucket = storage.bucket(settings.FIREBASE_STORAGE_BUCKET)
+            
+            # Handle testing environment
+            if os.getenv("TESTING"):
+                self.bucket = MagicMock()
+            else:
+                self.bucket = storage.bucket(settings.FIREBASE_STORAGE_BUCKET)
             logger.debug("Initialized DocumentService successfully")
         except Exception as e:
             logger.error(f"Error initializing DocumentService: {str(e)}")

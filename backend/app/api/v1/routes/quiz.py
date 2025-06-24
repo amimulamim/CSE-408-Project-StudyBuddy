@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from app.rag.query_processor import QueryProcessor
 from app.auth.firebase_auth import get_current_user
 from app.document_upload.document_service import DocumentService
@@ -15,8 +15,22 @@ from datetime import datetime, timezone
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-query_processor = QueryProcessor()
-document_service = DocumentService()
+
+# Initialize services lazily to avoid issues during testing
+_query_processor = None
+_document_service = None
+
+def get_query_processor():
+    global _query_processor
+    if _query_processor is None:
+        _query_processor = QueryProcessor()
+    return _query_processor
+
+def get_document_service():
+    global _document_service
+    if _document_service is None:
+        _document_service = DocumentService()
+    return _document_service
 
 class ExamRequest(BaseModel):
     query: str
@@ -34,7 +48,7 @@ class EvaluateRequest(BaseModel):
 class CompleteQuizRequest(BaseModel):
     topic: str
     domain: str
-    feedback: str = None
+    feedback: Optional[str] = None
 
 @router.post("/quiz")
 async def generate_exam(
@@ -44,7 +58,7 @@ async def generate_exam(
 ):
     try:
         user_id = user_info["uid"]
-        result = await query_processor.generate_exam(
+        result = await get_query_processor().generate_exam(
             query=request.query,
             num_questions=request.num_questions,
             question_type=request.question_type,
@@ -65,7 +79,7 @@ async def evaluate_answer(
 ):
     try:
         user_id = user_info["uid"]
-        result = query_processor.exam_generator.evaluate_answer(
+        result = get_query_processor().exam_generator.evaluate_answer(
             exam_id=request.quiz_id,
             question_id=request.question_id,
             student_answer=request.student_answer,
@@ -95,7 +109,7 @@ async def delete_exam(
             raise HTTPException(status_code=404, detail="Exam not found")
         if quiz.user_id != user_id:
             raise HTTPException(status_code=403, detail="Not authorized")
-        await query_processor.delete_exam(exam_id, db)
+        await get_query_processor().delete_exam(exam_id, db)
         return {"message": f"Exam {exam_id} deleted successfully"}
     except Exception as e:
         logger.error(f"Error deleting exam: {str(e)}")
