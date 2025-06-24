@@ -147,7 +147,7 @@ def update_user_profile_secure(db: Session, uid: str, profile_data: SecureProfil
 
     # Track changes for audit log
     changes = {}
-    update_data = profile_data.model_dump(exclude_unset=True, exclude={"interests"})
+    update_data = profile_data.model_dump(exclude_unset=True, exclude={"interests", "is_moderator"})
     
     for field, new_value in update_data.items():
         if hasattr(user, field):
@@ -155,6 +155,13 @@ def update_user_profile_secure(db: Session, uid: str, profile_data: SecureProfil
             if old_value != new_value:
                 changes[field] = {"old": old_value, "new": new_value}
             setattr(user, field, new_value)
+
+    # Handle is_moderator field
+    if profile_data.is_moderator is not None:
+        old_is_moderator = user.is_moderator
+        if old_is_moderator != profile_data.is_moderator:
+            changes["is_moderator"] = {"old": old_is_moderator, "new": profile_data.is_moderator}
+        user.is_moderator = profile_data.is_moderator
 
     # Handle interests with special operations
     if profile_data.interests is not None:
