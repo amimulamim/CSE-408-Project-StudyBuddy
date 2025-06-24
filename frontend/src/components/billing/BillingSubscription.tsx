@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Crown, Check, X } from "lucide-react";
 import { 
   getSubscriptionStatus, 
@@ -15,6 +14,7 @@ import {
   getStatusLabel,
   type SubscriptionStatus 
 } from "@/lib/billing";
+import { toast } from 'sonner';
 
 // Available plans (could be fetched from API in the future)
 const AVAILABLE_PLANS = [
@@ -54,7 +54,7 @@ export const BillingSubscription = forwardRef<{ refreshSubscriptionStatus: () =>
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-  const { toast } = useToast();
+
 
   useEffect(() => {
     loadSubscriptionStatus();
@@ -69,10 +69,8 @@ export const BillingSubscription = forwardRef<{ refreshSubscriptionStatus: () =>
       console.error("Failed to load subscription status:", error);
       // Don't show error toast for no subscription found
       if (error?.status !== 404) {
-        toast({
-          title: "Error",
-          description: "Failed to load subscription status",
-          variant: "destructive",
+        toast.error("Failed to load subscription status", {
+          description: error?.message || "An unexpected error occurred"
         });
       }
     } finally {
@@ -106,10 +104,8 @@ export const BillingSubscription = forwardRef<{ refreshSubscriptionStatus: () =>
       }
     } catch (error: any) {
       console.error("Failed to create checkout session:", error);
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to start subscription process",
-        variant: "destructive",
+      toast.error("Failed to create checkout session", {
+        description: error?.message || "An unexpected error occurred"
       });
     } finally {
       setProcessing(false);
@@ -125,19 +121,16 @@ export const BillingSubscription = forwardRef<{ refreshSubscriptionStatus: () =>
       setProcessing(true);
       await cancelSubscription();
       
-      toast({
-        title: "Success",
-        description: "Your subscription has been cancelled successfully",
+      toast.success("Subscription cancelled successfully", {
+        description: "Your subscription has been cancelled. You will not be charged again."
       });
       
       // Reload subscription status
       await loadSubscriptionStatus();
     } catch (error: any) {
       console.error("Failed to cancel subscription:", error);
-      toast({
-        title: "Error", 
-        description: error?.message || "Failed to cancel subscription",
-        variant: "destructive",
+      toast.error("Failed to cancel subscription", {
+        description: error?.message || "An unexpected error occurred"
       });
     } finally {
       setProcessing(false);
