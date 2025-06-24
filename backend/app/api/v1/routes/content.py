@@ -12,6 +12,7 @@ import uuid
 from firebase_admin import storage
 from pydantic import BaseModel, Field
 from typing import Literal
+import requests
 
 
 
@@ -158,39 +159,56 @@ async def get_user_raw_content(
         raise HTTPException(status_code=500, detail=f"Error fetching raw user content: {str(e)}")
 
 @router.get("/raw/{contentId}")
-async def get_raw_content(
+async def get_content_raw(
     contentId: str,
     user: Dict[str, Any] = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
-    """Views raw content by ID."""
+    """Get raw content data (JSON for flashcards, PDF URL for slides)"""
     try:
+        # Get content metadata from database
         content = db.query(ContentItem).filter(
             ContentItem.id == contentId,
             ContentItem.user_id == user["uid"]
         ).first()
-        if not content:
-            raise HTTPException(status_code=404, detail="Content not found or access denied")
-
-        # Fetch raw content from Firebase
         
-        blob = storage.bucket().blob(content.content_url.replace(f"https://storage.googleapis.com/{storage.bucket().name}/", ""))
-        raw_content = blob.download_as_text()
-
-        return {
-            "contentId": content.id,
-            "rawText": raw_content,
-            "metadata": {
-                "topic": content.topic,
-                "contentType": content.content_type,
-                "createdAt": content.created_at
+        if not content:
+            raise HTTPException(status_code=404, detail="Content not found")
+        
+        if content.content_type == "flashcards":
+            # Fetch JSON content from Firebase Storage
+            response = requests.get(content.content_url)
+            response.raise_for_status()
+            flashcards_data = response.json()
+            
+            return {
+                "status": "success",
+                "data": {
+                    "content": flashcards_data,
+                    "metadata": {
+                        "topic": content.topic,
+                        "contentType": content.content_type,
+                        "createdAt": content.created_at.isoformat()
+                    }
+                }
             }
-        }
-    except HTTPException as e:
-        raise
+        else:
+            # For slides, return the URL directly
+            return {
+                "status": "success", 
+                "data": {
+                    "content": content.content_url,
+                    "metadata": {
+                        "topic": content.topic,
+                        "contentType": content.content_type,
+                        "createdAt": content.created_at.isoformat()
+                    }
+                }
+            }
+            
     except Exception as e:
-        logger.error(f"Error fetching raw content {contentId}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error fetching raw content: {str(e)}")
+        logger.error(f"Error fetching content {contentId}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch content")
 
 @router.put("/{contentId}")
 async def update_content(

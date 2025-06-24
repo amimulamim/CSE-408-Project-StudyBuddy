@@ -12,12 +12,12 @@ export function NotificationButton() {
 
   // Play alarm sound for new notifications
   useEffect(() => {
-    if (hasNewNotification && unreadCount > 0) {
+    if ( unreadCount > 0 ) {
       const audio = new Audio('/notification-sound.mp3');
-      audio.volume = 0.3;
+      audio.volume = 1;
       audio.play().catch(console.error);
     }
-  }, [hasNewNotification, unreadCount]);
+  }, [ unreadCount ]);
 
   return (
     <>

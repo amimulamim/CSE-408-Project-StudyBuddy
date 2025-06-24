@@ -5,10 +5,11 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AdminDashboard from "@/pages/AdminDashboard";
 import QuizTaker from "@/pages/QuizTaker";
 import QuizResults from "@/pages/QuizResults";
-
+import ContentLibrary from '@/pages/ContentLibrary';
+import FlashcardsView from '@/pages/FlashcardsView';
+import SlidesView from '@/pages/SlidesView';
 
 // import RedirectHandler from "./pages/RedirectHandler";
-
 
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -30,6 +31,9 @@ const App = () => {
             <Route path="/" element={<Index />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dashboard/billing" element={<Billing />} />
+            <Route path="/dashboard/content" element={<ContentLibrary />} />
+            <Route path="/content/flashcards/:contentId" element={<FlashcardsView />} />
+            <Route path="/content/slides/:contentId" element={<SlidesView />} />
             <Route path="/chatbot" element={<Chatbot />} />
             <Route path="*" element={<NotFound />} />
             <Route path="/quiz/take/:id" element={<QuizTaker />} />
