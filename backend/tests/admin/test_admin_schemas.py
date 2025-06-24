@@ -41,12 +41,15 @@ class TestEnums:
         assert AdminAction.NOTIFICATION_EDIT == "notification_edit"
         assert AdminAction.NOTIFICATION_DELETE == "notification_delete"
         assert AdminAction.CONTENT_MODERATE == "content_moderate"
+        assert AdminAction.MODERATE_CONTENT == "moderate_content"
+        assert AdminAction.DELETE_QUIZ == "delete_quiz"
         assert AdminAction.LLM_INVOKE == "llm_invoke"
         
         # Test all expected values are present
         expected_values = {
             "user_edit", "user_delete", "user_promote", "notification_send",
-            "notification_edit", "notification_delete", "content_moderate", "llm_invoke"
+            "notification_edit", "notification_delete", "content_moderate", 
+            "moderate_content", "delete_quiz", "llm_invoke"
         }
         actual_values = {item.value for item in AdminAction}
         assert actual_values == expected_values
