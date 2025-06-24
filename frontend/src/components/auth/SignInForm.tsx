@@ -2,17 +2,19 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { auth, googleProvider } from '@/lib/firebase'; 
+import { auth, googleProvider, db } from '@/lib/firebase'; 
 import { signInWithPopup, signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { signIn } from './api';
 import { ApiResponse } from '@/lib/api';
-import { useNavigate } from 'react-router-dom';
 import { errors } from './errors';
 import { getFirebaseError, clearFieldError, validateEmail } from './validationHelper';
 import { Loader2, Eye, EyeOff } from "lucide-react"
-import { useToast } from '@/hooks/use-toast';
+import { toast } from "sonner";
+import { AuthRedirectHandler } from './AuthRedirectHandler';
+import { doc, getDoc } from "firebase/firestore";
+import { saveUserProfile } from '@/lib/userProfile';
 
 interface SignInFormProps {
   onSignUp: () => void;
@@ -25,9 +27,8 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<errors>({});
   const [resettingPass, setResettingPass] = useState(false);
-  const [showPassword, setShowPassword] = useState(false)
-  const navigate = useNavigate();
-  const { toast } = useToast();
+  const [showPassword, setShowPassword] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,8 +38,7 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
       .then(signIn)
       .then((response:ApiResponse) => {
         if (response.status === 'success') {
-          onClose();
-          navigate('/dashboard');
+          setSignedIn(true);
         } else {
           setIsLoading(false);
           setErrors({ ...errors, general: response.msg });
@@ -53,11 +53,19 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
   
   const handleGoogleSignIn = () => {
     signInWithPopup(auth, googleProvider)
+      .then(userCredential => {
+        const user = userCredential.user;
+        const userRef = doc(db, "users", user.uid);
+        getDoc(userRef).then((userSnapshot)=>{
+          if(!userSnapshot.exists()){
+            saveUserProfile(user);
+          }
+        });
+      })
       .then(signIn)
       .then((response:ApiResponse) => {
         if (response.status === 'success') {
-          onClose();
-          navigate('/dashboard');
+          setSignedIn(true);
         } else {
           setIsLoading(false);
           setErrors({ ...errors, general: response.msg });
@@ -79,10 +87,7 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
         setResettingPass(true);
         sendPasswordResetEmail(auth, email).then(()=>{
           setResettingPass(false);
-          toast({
-            title: "Password recovery",
-            description: "Password recovery email sent to your email address",
-          });
+          toast.success("Password reset email sent successfully. Please check your inbox.");
         });
       } catch (err) {
         setResettingPass(false);
@@ -91,6 +96,17 @@ export function SignInForm({ onSignUp, onClose }: SignInFormProps) {
       }
     }
   };
+
+  if (signedIn) {
+    onClose();
+    return (
+      <AuthRedirectHandler
+        onRedirectComplete={() => {
+          setIsLoading(false);
+        }}
+      />
+    );
+  }
   
   return (
     <div className="space-y-6">

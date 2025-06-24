@@ -7,9 +7,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, sendEmailVerification } from "firebase/auth";
 import { validateForm, getFirebaseError, clearFieldError } from './validationHelper';
-import { auth, googleProvider } from '@/lib/firebase';
+import { auth, googleProvider, db } from '@/lib/firebase';
 import { errors } from "./errors";
 import { saveUserProfile } from '@/lib/userProfile';
+import { doc, getDoc } from "firebase/firestore";
 
 
 interface SignUpFormProps {
@@ -57,7 +58,16 @@ export function SignUpForm({ onSignIn, onClose }: SignUpFormProps) {
     setIsLoading(true);
 
     try{
-      signInWithPopup(auth, googleProvider);
+      signInWithPopup(auth, googleProvider)
+      .then(userCredential => {
+        const user = userCredential.user;
+        const userRef = doc(db, "users", user.uid);
+        getDoc(userRef).then((userSnapshot)=>{
+          if(!userSnapshot.exists()){
+            saveUserProfile(user);
+          }
+        });
+      });
     }
     catch(error) {
       setIsLoading(false);
