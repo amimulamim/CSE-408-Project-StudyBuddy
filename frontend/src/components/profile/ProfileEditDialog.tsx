@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { X, Plus, Loader2, Upload, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import { makeRequest } from '@/lib/apiCall';
+import { ApiResponse } from '@/lib/api';
 
 interface UserProfile {
   uid: string;
@@ -151,6 +152,34 @@ export function ProfileEditDialog({ isOpen, onClose, userProfile, onSave }: Prof
     try {
       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
       
+      // Handle avatar upload first if file is selected
+      let avatarUrl = formData.avatar;
+      if (avatarFile) {
+        try {
+          const avatarFormData = new FormData();
+          avatarFormData.append('avatar', avatarFile);
+
+          const avatarResponse:ApiResponse = await makeRequest(
+            `${API_BASE_URL}/api/v1/user/profile/avatar`,
+            'PUT',
+            avatarFormData
+          );
+
+          if (avatarResponse.status === 'success') {
+            avatarUrl = avatarResponse.data?.avatar_url; 
+            // not showing success toast just for avatar upload
+            // toast.success('Avatar uploaded successfully');
+          } else {
+            throw new Error(avatarResponse.data?.message || 'Failed to upload avatar');
+          }
+        } catch (avatarError) {
+          toast.error('Failed to upload avatar');
+          setIsLoading(false);
+          return; // Don't proceed with profile update if avatar upload fails
+        }
+      }
+
+      // Now update the profile with other data
       const updateData: any = {
         name: formData.name,
         bio: formData.bio,
@@ -160,14 +189,9 @@ export function ProfileEditDialog({ isOpen, onClose, userProfile, onSave }: Prof
         study_domain: formData.study_domain
       };
 
-      // Handle avatar - send dummy URL if file is selected, otherwise use current avatar
-      if (avatarFile) {
-        // TODO: When backend supports file upload, replace this with actual file upload
-        // For now, send a dummy URL to indicate avatar change
-        updateData.avatar = `https://example.com/avatars/${avatarFile.name}-${Date.now()}`;
-        toast.info('Avatar file selected. Backend integration pending.');
-      } else if (formData.avatar !== userProfile.avatar) {
-        updateData.avatar = formData.avatar;
+      // Include avatar URL if it changed (either from file upload or URL input)
+      if (avatarUrl !== userProfile.avatar) {
+        updateData.avatar = avatarUrl;
       }
 
       // Only include interests if they changed
@@ -177,7 +201,7 @@ export function ProfileEditDialog({ isOpen, onClose, userProfile, onSave }: Prof
         updateData.interests = formatInterestsForAPI(originalInterests, newInterests);
       }
 
-      const response = await makeRequest(
+      const response:ApiResponse = await makeRequest(
         `${API_BASE_URL}/api/v1/user/profile`,
         'PUT',
         updateData
@@ -187,10 +211,10 @@ export function ProfileEditDialog({ isOpen, onClose, userProfile, onSave }: Prof
         if (response.status === 'success') {
           toast.success('Profile updated successfully');
           
-          // Update form data with preview URL for local display
+          // Update form data with the actual avatar URL from server
           const updatedFormData = { ...formData };
-          if (avatarFile && avatarPreview) {
-            updatedFormData.avatar = avatarPreview;
+          if (avatarUrl) {
+            updatedFormData.avatar = avatarUrl;
           }
           
           onSave(updatedFormData);
@@ -382,7 +406,7 @@ export function ProfileEditDialog({ isOpen, onClose, userProfile, onSave }: Prof
                 value={newInterest}
                 onChange={(e) => setNewInterest(e.target.value)}
                 placeholder="Add an interest"
-                onKeyPress={(e) => e.key === 'Enter' && addInterest()}
+                onKeyDown={(e) => e.key === 'Enter' && addInterest()}
               />
               <Button type="button" onClick={addInterest} size="sm">
                 <Plus className="h-4 w-4" />
