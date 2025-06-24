@@ -1,120 +1,262 @@
-import os
-import logging
-from typing import List, Dict, Any
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from pydantic import BaseModel
-from dotenv import load_dotenv
-from app.core.vector_db import VectorDatabaseManager
-from app.rag.document_processor import DocumentProcessor
+from typing import List, Dict, Any, Optional
 from app.rag.query_processor import QueryProcessor
-from fastapi import APIRouter, Depends, HTTPException,  Form, UploadFile, File , Query, Path,Body
+from app.auth.firebase_auth import get_current_user
+from app.document_upload.document_service import DocumentService
+from app.core.database import get_db
+from sqlalchemy.orm import Session
+from app.quiz_generator.models import Quiz, QuizQuestion, QuizResult, QuestionResult
+from app.document_upload.model import UserCollection
+import logging
+import uuid
+from datetime import datetime, timezone
 
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Load environment variables
-load_dotenv()
 
 router = APIRouter()
 
-# Pydantic models for request validation
-class CreateCollectionRequest(BaseModel):
-    collection_name: str
+# Initialize services lazily to avoid issues during testing
+_query_processor = None
+_document_service = None
 
-class GenerateExamRequest(BaseModel):
+def get_query_processor():
+    global _query_processor
+    if _query_processor is None:
+        _query_processor = QueryProcessor()
+    return _query_processor
+
+def get_document_service():
+    global _document_service
+    if _document_service is None:
+        _document_service = DocumentService()
+    return _document_service
+
+class ExamRequest(BaseModel):
     query: str
     num_questions: int
-    question_type: str
+    question_type: str  # Expected: MultipleChoice, ShortAnswer, TrueFalse (also accepts multiple_choice, short_answer, true_false)
+    collection_name: str
 
-# API endpoints
-@router.post("/collections")
-async def create_collection(request: CreateCollectionRequest):
-    """Creates a new Qdrant collection."""
-    try:
-        vector_db = VectorDatabaseManager(
-            qdrant_url=os.getenv("QDRANT_HOST"),
-            qdrant_api_key=os.getenv("QDRANT_API_KEY"),
-            collection_name=request.collection_name
-        )
-        result = vector_db.create_collection()
-        return result
-    except Exception as e:
-        logger.error(f"Error creating collection: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+class EvaluateRequest(BaseModel):
+    quiz_id: str
+    question_id: str
+    student_answer: str
+    topic: str
+    domain: str
 
-@router.delete("/collections/{collection_name}")
-async def delete_collection(collection_name: str):
-    """Deletes a Qdrant collection."""
-    try:
-        vector_db = VectorDatabaseManager(
-            qdrant_url=os.getenv("QDRANT_HOST"),
-            qdrant_api_key=os.getenv("QDRANT_API_KEY"),
-            collection_name=collection_name
-        )
-        result = vector_db.delete_collection()
-        return result
-    except Exception as e:
-        logger.error(f"Error deleting collection: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+class CompleteQuizRequest(BaseModel):
+    topic: str
+    domain: str
+    feedback: Optional[str] = None
 
-@router.get("/collections")
-async def list_collections():
-    """Lists all Qdrant collections."""
+@router.post("/quiz")
+async def generate_exam(
+    request: ExamRequest,
+    db: Session = Depends(get_db),
+    user_info: Dict[str, Any] = Depends(get_current_user)
+):
     try:
-        vector_db = VectorDatabaseManager(
-            qdrant_url=os.getenv("QDRANT_HOST"),
-            qdrant_api_key=os.getenv("QDRANT_API_KEY"),
-            collection_name="dummy"  # Dummy name, not used
-        )
-        collections = vector_db.list_collections()
-        return {"collections": collections}
-    except Exception as e:
-        logger.error(f"Error listing collections: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.post("/documents")
-async def process_document(file: UploadFile = File(...)):
-    """Processes an uploaded document and stores it in Qdrant."""
-    try:
-        if not file.filename.endswith(('.pdf', '.txt')):
-            raise HTTPException(status_code=400, detail="Unsupported file format. Use .pdf or .txt")
-        
-        # Save uploaded file temporarily
-        temp_file_path = f"/tmp/{file.filename}"
-        with open(temp_file_path, "wb") as temp_file:
-            temp_file.write(await file.read())
-        
-        # Process document
-        doc_processor = DocumentProcessor()
-        document_id = doc_processor.process_document(temp_file_path)
-        
-        # Clean up temporary file
-        os.remove(temp_file_path)
-        
-        logger.info(f"Processed document {file.filename} with ID: {document_id}")
-        return {"document_id": document_id, "message": f"Document {file.filename} processed successfully"}
-    except Exception as e:
-        logger.error(f"Error processing document {file.filename}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.post("/exams")
-async def generate_exam(request: GenerateExamRequest):
-    """Generates an exam based on a user query."""
-    try:
-        query_processor = QueryProcessor()
-        exam = query_processor.generate_exam(
+        user_id = user_info["uid"]
+        result = await get_query_processor().generate_exam(
             query=request.query,
             num_questions=request.num_questions,
-            question_type=request.question_type
+            question_type=request.question_type,
+            user_id=user_id,
+            collection_name=request.collection_name,
+            db=db
         )
-        logger.info(f"Generated exam for query: {request.query}")
-        return exam
+        return result
     except Exception as e:
         logger.error(f"Error generating exam: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(router, host="0.0.0.0", port=8000)
+@router.post("/evaluate")
+async def evaluate_answer(
+    request: EvaluateRequest,
+    db: Session = Depends(get_db),
+    user_info: Dict[str, Any] = Depends(get_current_user)
+):
+    try:
+        user_id = user_info["uid"]
+        result = get_query_processor().exam_generator.evaluate_answer(
+            exam_id=request.quiz_id,
+            question_id=request.question_id,
+            student_answer=request.student_answer,
+            user_id=user_id,
+            db=db
+        )
+        return {
+            "question_id": result["question_id"],
+            "is_correct": result["is_correct"],
+            "score": result["score"],
+            "explanation": result["explanation"]
+        }
+    except Exception as e:
+        logger.error(f"Error evaluating answer: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/quizzes/{quiz_id}")
+async def delete_exam(
+    exam_id: str,
+    db: Session = Depends(get_db),
+    user_info: Dict[str, Any] = Depends(get_current_user)
+):
+    try:
+        user_id = user_info["uid"]
+        quiz = db.query(Quiz).filter(Quiz.quiz_id == exam_id).first()
+        if not quiz:
+            raise HTTPException(status_code=404, detail="Exam not found")
+        if quiz.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Not authorized")
+        await get_query_processor().delete_exam(exam_id, db)
+        return {"message": f"Exam {exam_id} deleted successfully"}
+    except Exception as e:
+        logger.error(f"Error deleting exam: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# evaluate before submitting
+@router.post("/quizzes/{quiz_id}/submit")
+async def complete_quiz(
+    exam_id: str,
+    request: CompleteQuizRequest,
+    db: Session = Depends(get_db),
+    user_info: Dict[str, Any] = Depends(get_current_user)
+):
+    try:
+        user_id = user_info["uid"]
+        quiz = db.query(Quiz).filter(Quiz.quiz_id == exam_id).first()
+        if not quiz:
+            raise HTTPException(status_code=404, detail="Quiz not found")
+        if quiz.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+        # Calculate total score from question_results table
+        question_results = db.query(QuestionResult).filter(
+            QuestionResult.user_id == user_id,
+            QuestionResult.quiz_id == exam_id
+        ).all()
+        if not question_results:
+            raise HTTPException(status_code=400, detail="No answers submitted")
+
+        score = sum(res.score for res in question_results)
+
+        # Calculate maximum possible score
+        questions = db.query(QuizQuestion).filter(QuizQuestion.quiz_id == exam_id).all()
+        total = sum(q.marks for q in questions)
+
+        # Store in quiz_results
+        result = QuizResult(
+            id=str(uuid.uuid4()),
+            user_id=user_id,
+            quiz_id=exam_id,
+            score=score,
+            total=total,
+            feedback=request.feedback,
+            topic=request.topic,
+            domain=request.domain,
+            created_at=datetime.now(timezone.utc)
+        )
+        db.add(result)
+        db.commit()
+
+        logger.info(f"Stored quiz result: score {score}/{total} for quiz {exam_id}")
+        return {
+            "quiz_id": exam_id,
+            "score": score,
+            "total": total,
+            "message": "Quiz completed successfully"
+        }
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error completing quiz {exam_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get("/quizzes/{quiz_id}", response_model=Dict[str, Any])
+async def get_quiz(
+    quiz_id: str,
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Fetches a previously generated quiz by quiz_id for the user."""
+    try:
+        # First check if the quiz exists and belongs to the user
+        quiz_record = db.query(Quiz).filter(
+            Quiz.quiz_id == quiz_id,
+            Quiz.user_id == user_info["uid"]
+        ).first()
+        if not quiz_record:
+            raise HTTPException(status_code=404, detail="Quiz not found or not accessible")
+        
+        # Then fetch the questions for this quiz
+        questions_data = db.query(QuizQuestion).filter(
+            QuizQuestion.quiz_id == quiz_id
+        ).all()
+        if not questions_data:
+            raise HTTPException(status_code=404, detail="No questions found for this quiz")
+        
+        questions = [
+            {
+                "question_id": q.id,
+                "question": q.question_text,
+                "type": q.type,
+                "options": q.options,
+                "difficulty": q.difficulty,
+                "marks": q.marks,
+                "hints": q.hints
+            }
+            for q in questions_data
+        ]
+        
+        return {
+            "quiz_id": quiz_id,
+            "questions": questions
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching quiz {quiz_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/quizzes/{quiz_id}/result", response_model=Dict[str, Any])
+async def get_quiz_result(
+    quiz_id: str,
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Fetches the result of a quiz by quiz_id for the user."""
+    try:
+        quiz_result = db.query(QuizResult).filter(
+            QuizResult.quiz_id == quiz_id,
+            QuizResult.user_id == user_info["uid"]
+        ).first()
+        if not quiz_result:
+            raise HTTPException(status_code=404, detail="Quiz result not found or not accessible")
+        
+        question_results = db.query(QuestionResult).filter(
+            QuestionResult.quiz_id == quiz_id,
+            QuestionResult.user_id == user_info["uid"]
+        ).all()
+        
+        return {
+            "quiz_id": quiz_id,
+            "score": quiz_result.score,
+            "total": quiz_result.total,
+            "topic": quiz_result.topic,
+            "domain": quiz_result.domain,
+            "feedback": quiz_result.feedback,
+            "question_results": [
+                {
+                    "question_id": qr.question_id,
+                    "score": qr.score,
+                    "is_correct": qr.is_correct,
+                    "student_answer": qr.student_answer
+                }
+                for qr in question_results
+            ]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching quiz result {quiz_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
