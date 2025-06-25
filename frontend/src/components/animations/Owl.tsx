@@ -3,8 +3,8 @@ import React, { useEffect, useState } from "react";
 const BlinkingOwl: React.FC = () => {
   const [isBlinking, setIsBlinking] = useState(false);
 
-  const openEyes = "/owl_stillv3.png";
-  const closedEyes = "/owl_closev2.png";
+  const openEyes = "/open_v5.png";
+  const closedEyes = "/close_v5.png";
 
   useEffect(() => {
     let blinkTimeout: ReturnType<typeof setTimeout>;
@@ -31,19 +31,19 @@ const BlinkingOwl: React.FC = () => {
   }, []);
 
   return (
-    <div className="w-96 h-96 flex justify-center items-center">
+    <div className="relative w-[600px] h-[600px] flex justify-center items-center">
       {!isBlinking && (
         <img
           src={openEyes}
           alt="Owl with Open Eyes"
-          className="absolute inset-0 w-full h-full"
+          className="w-full h-full object-contain"
         />
       )}
       {isBlinking && (
         <img
           src={closedEyes}
           alt="Owl with Closed Eyes"
-          className="absolute inset-0 w-full h-full"
+          className="w-full h-full object-contain"
         />
       )}
     </div>
