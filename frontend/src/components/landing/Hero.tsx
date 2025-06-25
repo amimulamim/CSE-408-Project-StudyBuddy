@@ -2,6 +2,8 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
+import dashboard from '@/assets/dashboard.png';
+import BlinkingOwl from '../animations/Owl';
 
 interface HeroProps {
   onSignUp: () => void;
@@ -154,24 +156,7 @@ export function Hero({ onSignUp }: HeroProps) {
               }}
             />
             
-            <motion.div 
-              className="relative bg-gradient-to-b from-white/10 to-white/5 border border-white/20 rounded-lg backdrop-blur-sm overflow-hidden"
-              whileHover={{ 
-                scale: 1.02,
-                transition: { duration: 0.3 }
-              }}
-            >
-              <motion.img 
-                src="https://img.freepik.com/free-vector/gradient-ui-ux-background_23-2149024129.jpg?w=1380&t=st=1684941221~exp=1684941821~hmac=605a211a08d457f0a45630d1f99792fe76c80a0a70228f3e2f51f193814b9ba5" 
-                alt="StudyBuddy Dashboard Preview" 
-                className="w-full rounded-lg shadow-2xl opacity-90"
-                initial={{ scale: 1.1 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 1.2, ease: "easeOut" }}
-              />
-              
-              <div className="absolute inset-0 bg-gradient-to-t from-study-dark to-transparent"></div>
-            </motion.div>
+            <BlinkingOwl />
           </motion.div>
         </motion.div>
       </div>
