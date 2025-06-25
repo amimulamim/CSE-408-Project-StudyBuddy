@@ -109,7 +109,7 @@ export function AdminStatistics() {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="glass-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
