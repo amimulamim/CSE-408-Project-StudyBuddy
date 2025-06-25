@@ -144,7 +144,7 @@ export function AdminUserManagement() {
   );
 
   return (
-    <Card>
+    <Card className="glass-card">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
