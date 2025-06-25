@@ -19,7 +19,6 @@ export default function Profile() {
 
     const handleProfileUpdate = (updatedData: any) => {
         refetchUserProfile?.();
-        toast.success('Profile updated successfully!');
     };
 
     if (loading) {
