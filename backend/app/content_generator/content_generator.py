@@ -171,7 +171,9 @@ class ContentGenerator:
             - A clear title using \\frame{{\\frametitle{{Title}}}}
             - Concise content (bullet points, equations, or diagrams using \\itemize, \\amsmath, or \\tikz where appropriate)
             - Valid LaTeX syntax that compiles without errors
-            
+            - strictly follow the example structure . No need to add anything extra before or after the example structure .
+            - don't hallucinate
+
             Example structure:
             {preamble}
             \\begin{{document}}
