@@ -147,19 +147,6 @@ class ContentGenerator:
         """Generates LaTeX slides."""
         try:
             num_slides = {"short": 5, "medium": 10, "long": 15}.get(length, 10)
-            preamble = f"""\\documentclass{{beamer}}
-\\usetheme{{Copenhagen}}
-\\usepackage{{amsmath,amsfonts,amssymb}}
-\\usepackage{{graphicx}}
-\\usepackage{{tikz}}
-\\usepackage{{booktabs}}
-\\usepackage{{multicol}}
-\\setbeamertemplate{{navigation symbols}}{{}}
-\\title{{{topic}}}
-\\author{{StudyBuddy}}
-\\date{{\\today}}
-
-"""
             prompt = f"""
             You are an expert educator creating a LaTeX Beamer presentation on the topic '{topic}' with a {tone} tone and {difficulty} difficulty.
             Based on the following context, generate {num_slides} slides:
@@ -175,7 +162,6 @@ class ContentGenerator:
             - don't hallucinate
 
             Example structure:
-            {preamble}
             \\begin{{document}}
             \\frame{{\\frametitle{{Introduction}} \\begin{{itemize}} \\item Point 1 \\end{{itemize}}}}
             \\end{{document}}
@@ -207,8 +193,20 @@ class ContentGenerator:
             if not latex_content.strip() or len(latex_content.split('\n')) < 3:
                 logger.error(f"Invalid or empty LaTeX content for topic '{topic}'")
             # Add preamble
+            preamble = f"""\\documentclass{{beamer}}
+\\usetheme{{Copenhagen}}
+\\usepackage{{amsmath,amsfonts,amssymb}}
+\\usepackage{{graphicx}}
+\\usepackage{{tikz}}
+\\usepackage{{booktabs}}
+\\usepackage{{multicol}}
+\\setbeamertemplate{{navigation symbols}}{{}}
+\\title{{{topic}}}
+\\author{{StudyBuddy}}
+\\date{{\\today}}
 
-            return latex_content
+"""
+            return preamble + latex_content
         except Exception as e:
             logger.error(f"Error generating slides for topic '{topic}': {str(e)}")
             raise Exception(f"Error generating slides: {str(e)}")
