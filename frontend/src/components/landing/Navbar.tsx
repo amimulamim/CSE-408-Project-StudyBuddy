@@ -82,8 +82,8 @@ export function Navbar({ onSignIn, onSignUp }: NavbarProps) {
         
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <nav className="md:hidden mt-4 py-4 border-t border-border/40 animate-fade-in">
-            <ul className="flex flex-col gap-4">
+          <nav className="md:hidden mt-4 py-4 border-t border-border/40 animate-fade-in bg-background/95 backdrop-blur-sm shadow-md">
+            <ul className="flex flex-col gap-4 px-4">
               {navLinks.map((link) => (
                 <li key={link.name}>
                   <a 
