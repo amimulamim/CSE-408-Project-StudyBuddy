@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
-from pydantic import BaseModel
+from pydantic import BaseModel , Field
 from typing import List, Dict, Any, Optional
 from app.rag.query_processor import QueryProcessor
 from app.auth.firebase_auth import get_current_user
@@ -49,6 +49,14 @@ class CompleteQuizRequest(BaseModel):
     topic: str
     domain: str
     feedback: Optional[str] = None
+class BulkAnswer(BaseModel):
+    question_id: str = Field(..., description="The UUID of the question")
+    student_answer: str = Field(..., description="The student's answer")
+
+class BulkEvaluateRequest(BaseModel):
+    quiz_id: str
+    answers: List[BulkAnswer] 
+
 
 @router.post("/quiz")
 async def generate_exam(
@@ -259,4 +267,106 @@ async def get_quiz_result(
         raise
     except Exception as e:
         logger.error(f"Error fetching quiz result {quiz_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/quizzes/{quiz_id}/evaluate_all", response_model=Dict[str, Any])
+async def evaluate_all_answers(
+    quiz_id: str,
+    request: BulkEvaluateRequest,
+    db: Session = Depends(get_db),
+    user_info: Dict[str, Any] = Depends(get_current_user)
+):
+    """
+    Evaluates all answers for a quiz and returns results, correct answers, and overall quiz result.
+    Prevents users from submitting the same quiz twice.
+    """
+    try:
+        user_id = user_info["uid"]
+
+        # Check if user already has a result for this quiz
+        existing_result = db.query(QuizResult).filter(
+            QuizResult.quiz_id == quiz_id,
+            QuizResult.user_id == user_id
+        ).first()
+        if existing_result:
+            raise HTTPException(
+                status_code=400,
+                detail="You have already submitted this quiz. Multiple submissions are not allowed."
+            )
+
+        # Fetch all questions for the quiz
+        questions = db.query(QuizQuestion).filter(QuizQuestion.quiz_id == quiz_id).all()
+        question_map = {str(q.id): q for q in questions}
+        results = []
+        correct_answers = []
+
+        from app.quiz_generator.quiz_generator import ExamGenerator
+        exam_generator = ExamGenerator()
+
+        total_score = 0.0
+        total_marks = 0.0
+
+        for ans in request.answers:
+            qid = ans.question_id
+            student_answer = ans.student_answer
+            question = question_map.get(qid)
+            if not question:
+                continue
+            eval_result = exam_generator.evaluate_answer(
+                exam_id=quiz_id,
+                question_id=qid,
+                student_answer=student_answer,
+                user_id=user_id,
+                db=db
+            )
+            results.append({
+                "question_id": qid,
+                "is_correct": eval_result["is_correct"],
+                "score": eval_result["score"],
+                "explanation": eval_result["explanation"]
+            })
+            correct_answers.append({
+                "question_id": qid,
+                "correct_answer": question.correct_answer,
+                "options": question.options,
+                "type": question.type.value if hasattr(question.type, "value") else str(question.type)
+            })
+            total_score += eval_result["score"]
+            total_marks += question.marks
+
+        # Optionally fetch topic/domain/feedback from Quiz or QuizResult if needed
+        quiz = db.query(Quiz).filter(Quiz.quiz_id == quiz_id).first()
+        quiz_result = db.query(QuizResult).filter(
+            QuizResult.quiz_id == quiz_id,
+            QuizResult.user_id == user_id
+        ).first()
+
+        # Store the quiz result to prevent double submissions
+        quiz_result = QuizResult(
+            id=str(uuid.uuid4()),
+            user_id=user_id,
+            quiz_id=quiz_id,
+            score=total_score,
+            total=total_marks,
+            feedback="",
+            topic=(getattr(quiz, "topic", "") if quiz and getattr(quiz, "topic", None) is not None else ""),
+            domain=(getattr(quiz, "domain", "") if quiz and getattr(quiz, "domain", None) is not None else ""),
+            created_at=datetime.now(timezone.utc)
+        )
+        db.add(quiz_result)
+        db.commit()
+
+        return {
+            "quiz_id": quiz_id,
+            "score": total_score,
+            "total": total_marks,
+            "topic": getattr(quiz_result, "topic", None) if quiz_result else None,
+            "domain": getattr(quiz_result, "domain", None) if quiz_result else None,
+            "feedback": getattr(quiz_result, "feedback", None) if quiz_result else None,
+            "question_results": results,
+            "correct_answers": correct_answers
+        }
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error in bulk evaluation for quiz {quiz_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

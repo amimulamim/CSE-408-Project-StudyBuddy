@@ -571,7 +571,6 @@ def get_user_notifications(
             "recipient_uid": notif.recipient_uid,
             "is_read": notif.is_read,
             "created_at": notif.created_at.isoformat() if notif.created_at else None,
-            "read_at": notif.read_at.isoformat() if notif.read_at else None
         }
         notification_list.append(notif_dict)
     
@@ -626,4 +625,52 @@ def get_vector_db_collections(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve vector database collections: {str(e)}"
+        )
+
+@router.get("/users/search")
+def search_users(
+    query: str = Query(..., description="Search term for user name or email"),
+    size: int = Query(50, ge=1, le=100, description="Maximum number of results"),
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Search users by name or email across all pages (Admin only)"""
+    require_admin_access(db, user_info)
+    
+    try:
+        users = admin_service.search_users_by_query(db, query, size)
+        
+        # Convert users to the same format as get_all_users endpoint
+        user_list = []
+        for user in users:
+            user_dict = {
+                "uid": user.uid,
+                "email": user.email,
+                "name": user.name,
+                "bio": user.bio,
+                "institution": user.institution,
+                "role": user.role,
+                "avatar": user.avatar,
+                "auth_provider": user.auth_provider,
+                "is_admin": user.is_admin,
+                "is_moderator": user.is_moderator,
+                "current_plan": user.current_plan,
+                "location": user.location,
+                "study_domain": user.study_domain,
+                "interests": user.interests,
+                "created_at": user.created_at,
+                "updated_at": user.updated_at
+            }
+            user_list.append(user_dict)
+        
+        return {
+            "users": user_list,
+            "total": len(user_list),
+            "query": query
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Search failed: {str(e)}"
         )

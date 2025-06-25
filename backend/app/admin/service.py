@@ -98,6 +98,20 @@ def promote_user_to_admin(
     db.refresh(user)
     return user
 
+def search_users_by_query(db: Session, query: str, limit: int = 50):
+    """Search users by name or email"""
+    from app.users.model import User
+    from sqlalchemy import or_
+    
+    users = db.query(User).filter(
+        or_(
+            User.name.ilike(f"%{query}%"),
+            User.email.ilike(f"%{query}%")
+        )
+    ).limit(limit).all()
+    
+    return users
+
 # Content Management Functions
 def get_all_content_paginated(
     db: Session,
@@ -290,19 +304,32 @@ def delete_notification(db: Session, notification_id: str) -> bool:
 
 def get_notifications_for_user(
     db: Session,
-    user_uid: str,
+    user_id: str,
     pagination: PaginationQuery
 ) -> Tuple[List[Notification], int]:
-    """Get notifications for a specific user"""
-    total = db.query(Notification).filter(Notification.recipient_uid == user_uid).count()
-    notifications = db.query(Notification)\
-                     .filter(Notification.recipient_uid == user_uid)\
-                     .order_by(desc(Notification.created_at))\
-                     .offset(pagination.offset)\
-                     .limit(pagination.size)\
-                     .all()
-    
-    return notifications, total
+    """Get notifications for a specific user with pagination"""
+    try:
+        # Get total count
+        total = db.query(Notification).filter(
+            Notification.recipient_uid == user_id
+        ).count()
+        
+        # Get paginated notifications
+        notifications = db.query(Notification).filter(
+            Notification.recipient_uid == user_id
+        ).order_by(
+            desc(Notification.created_at)
+        ).offset(
+            pagination.offset
+        ).limit(
+            pagination.size
+        ).all()
+        
+        return notifications, total
+        
+    except Exception as e:
+        print(f"Error getting notifications for user {user_id}: {str(e)}")
+        return [], 0
 
 # Statistics Functions
 def get_usage_statistics(

@@ -183,6 +183,23 @@
     @apply bg-red-500/80 hover:bg-red-500/90 text-white border-red-300/50 backdrop-blur-sm;
   }
 
+  /* 3D Flashcard animations */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+
+  .transform-style-preserve-3d {
+    transform-style: preserve-3d;
+  }
+
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+
+  .rotate-y-180 {
+    transform: rotateY(180deg);
+  }
+
   @keyframes gradientShift {
     0% {
       background-position: 0% 50%;
@@ -218,5 +235,47 @@
       transform: translateX(-50px) translateY(20px) scale(1.05);
       opacity: 0.7;
     }
+  }
+
+  /* Educational Flashcard Gradients */
+  .flashcard-front-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  .flashcard-back-gradient {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  }
+
+  .flashcard-question-gradient {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  }
+
+  .flashcard-answer-gradient {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  }
+
+  .flashcard-academic-front {
+    background: linear-gradient(135deg, #2196F3 0%, #1976D2 50%, #0D47A1 100%);
+  }
+
+  .flashcard-academic-back {
+    background: linear-gradient(135deg, #4CAF50 0%, #388E3C 50%, #1B5E20 100%);
+  }
+
+  .flashcard-knowledge-front {
+    background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 50%, #4A148C 100%);
+  }
+
+  .flashcard-knowledge-back {
+    background: linear-gradient(135deg, #FF9800 0%, #F57C00 50%, #E65100 100%);
+  }
+
+  /* Text shadows for better readability on gradients */
+  .flashcard-text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  .flashcard-light-text-shadow {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   }
 }

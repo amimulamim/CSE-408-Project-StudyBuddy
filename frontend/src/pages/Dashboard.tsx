@@ -105,7 +105,7 @@ export default function Dashboard() {
             title: "Quiz Center",
             description: "Take quizzes and test your knowledge",
             icon: Brain,
-            onClick: () => {}, // Will be handled by scroll to quiz section
+            onClick: () => {},
             color: "text-purple-500"
         },
         {

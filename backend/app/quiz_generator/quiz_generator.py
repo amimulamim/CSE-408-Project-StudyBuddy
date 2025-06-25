@@ -7,6 +7,7 @@ import google.generativeai as genai
 from app.core.config import settings
 import json
 from sqlalchemy.orm import Session
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +103,11 @@ class ExamGenerator:
             if not response_text:
                 logger.error("Empty response text after processing")
                 raise ValueError("Empty response text")
+
+            # --- PATCH: Remove unescaped control characters ---
+            # This replaces unescaped control characters (except for \n, \r, \t) with a space
+            response_text = re.sub(r'(?<!\\)[\x00-\x1F]', ' ', response_text)
+            # --------------------------------------------------
 
             questions = json.loads(response_text)
             if not isinstance(questions, list):
@@ -223,12 +229,28 @@ class ExamGenerator:
                     logger.error(f"Invalid Gemini API response for evaluation: {response}")
                     raise ValueError("No valid response from Gemini API")
                 try:
-                    result = json.loads(response.text)
+                    eval_text = response.text.strip()
+                    if eval_text.startswith("```json"):
+                        eval_text = eval_text[7:]
+                    if eval_text.endswith("```"):
+                        eval_text = eval_text[:-3]
+                    eval_text = eval_text.strip()
+
+                    # Extract only the first JSON object or array
+                    import re
+                    json_match = re.search(r'(\{.*?\}|\[.*?\])', eval_text, re.DOTALL)
+                    if not json_match:
+                        logger.error(f"No JSON object found in evaluation response: {eval_text[:500]}")
+                        raise ValueError("No JSON object found in evaluation response")
+                    json_str = json_match.group(1)
+                    result = json.loads(json_str)
+
+                    
                 except json.JSONDecodeError as e:
                     logger.error(f"JSON decode error in evaluation: {str(e)}, response: {response.text[:500]}")
                     raise ValueError(f"Invalid JSON response: {str(e)}")
                 is_correct = result.get("is_correct", False)
-                score = result.get("score", 0.0) if is_correct else 0.0
+                score = float(question.marks) if is_correct else 0.0
             elif question.type == QuestionType.TrueFalse:
                 is_correct = str(student_answer).lower() == question.correct_answer.lower()
                 score = float(question.marks) if is_correct else 0.0

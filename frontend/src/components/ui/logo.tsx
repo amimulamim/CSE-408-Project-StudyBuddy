@@ -29,7 +29,7 @@ export function Logo({
       </div>
       {showText && (
         <div className={`font-bold text-xl ${textClassName}`}>
-          <span className="text-white">Studdy</span>
+          <span className="text-white">Study</span>
           <span className="gradient-text">Buddy</span>
         </div>
       )}

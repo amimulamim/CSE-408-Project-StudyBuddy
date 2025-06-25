@@ -53,7 +53,7 @@ export const useNotifications = () => {
         if (newCount > unreadCount && unreadCount !== 0) {
           setHasNewNotification(true);
           // Reset the flag after a short delay
-          setTimeout(() => setHasNewNotification(false), 3000);
+          setTimeout(() => setHasNewNotification(false), 1000);
         }
         
         setUnreadCount(newCount);
@@ -126,11 +126,11 @@ export const useNotifications = () => {
     fetchUnreadCount();
   }, []);
 
-  // Poll for new notifications every 30 seconds
+  // Poll for new notifications every 5 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       fetchUnreadCount();
-    }, 30000);
+    }, 8000);
 
     return () => clearInterval(interval);
   }, [fetchUnreadCount]);

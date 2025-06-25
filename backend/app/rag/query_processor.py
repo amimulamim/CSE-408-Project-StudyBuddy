@@ -62,7 +62,7 @@ class QueryProcessor:
                     quiz_id=quiz_id,
                     question_text=q["question"],
                     type=q["type"],
-                    options=q["options"] if q["options"] else None,
+                    options=q["options"] if q["options"] else [],
                     difficulty=q["difficulty"],
                     marks=float(q["marks"]),
                     hints=q["hints"],
