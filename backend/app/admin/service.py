@@ -98,14 +98,35 @@ def promote_user_to_admin(
     db.refresh(user)
     return user
 
-# Content Management Functions (Placeholders)
+# Content Management Functions
 def get_all_content_paginated(
     db: Session,
     pagination: PaginationQuery
 ) -> Tuple[List[Dict[str, Any]], int]:
-    """Get paginated list of all generated content (PLACEHOLDER)"""
-    # TODO: Implement when content model is ready
-    return [], 0
+    """Get paginated list of all generated content"""
+    from app.content_generator.models import ContentItem
+    
+    query = db.query(ContentItem)
+    total = query.count()
+    
+    content_items = query.order_by(ContentItem.created_at.desc())\
+                         .offset(pagination.offset)\
+                         .limit(pagination.size)\
+                         .all()
+    
+    content_list = []
+    for item in content_items:
+        content_list.append({
+            "id": str(item.id),
+            "user_id": item.user_id,
+            "content_url": item.content_url,
+            "image_preview": item.image_preview,
+            "topic": item.topic,
+            "content_type": item.content_type,
+            "created_at": item.created_at.isoformat() if item.created_at else None
+        })
+    
+    return content_list, total
 
 def moderate_content(
     db: Session,
@@ -113,18 +134,69 @@ def moderate_content(
     action: str,
     moderator_uid: str
 ) -> bool:
-    """Moderate content (PLACEHOLDER)"""
-    # TODO: Implement when content model is ready
-    return True
+    """Moderate content - delete or flag content"""
+    from app.content_generator.models import ContentItem
+    
+    content = db.query(ContentItem).filter(ContentItem.id == content_id).first()
+    if not content:
+        return False
+    
+    if action.lower() == "delete":
+        # Delete the content
+        db.delete(content)
+        db.commit()
+        
+        # Log the moderation action
+        log_data = AdminLogCreate(
+            admin_uid=moderator_uid,
+            action_type="moderate_content",
+            target_uid=content.user_id,
+            target_type="content",
+            details={
+                "content_id": content_id,
+                "action": "delete",
+                "topic": content.topic,
+                "content_type": content.content_type
+            }
+        )
+        create_admin_log(db, log_data)
+        return True
+    
+    # For other actions (flag, approve, etc.), you could implement additional logic here
+    return False
 
-# Quiz Management Functions (Placeholders)
+# Quiz Management Functions
 def get_all_quiz_results_paginated(
     db: Session,
     pagination: PaginationQuery
 ) -> Tuple[List[Dict[str, Any]], int]:
-    """Get paginated list of all quiz results (PLACEHOLDER)"""
-    # TODO: Implement when quiz model is ready
-    return [], 0
+    """Get paginated list of all quiz results"""
+    from app.quiz_generator.models import QuizResult, Quiz
+    
+    query = db.query(QuizResult).join(Quiz, QuizResult.quiz_id == Quiz.quiz_id)
+    total = query.count()
+    
+    quiz_results = query.order_by(QuizResult.created_at.desc())\
+                        .offset(pagination.offset)\
+                        .limit(pagination.size)\
+                        .all()
+    
+    results_list = []
+    for result in quiz_results:
+        results_list.append({
+            "id": str(result.id),
+            "user_id": result.user_id,
+            "quiz_id": str(result.quiz_id),
+            "score": result.score,
+            "total": result.total,
+            "percentage": round((result.score / result.total * 100), 2) if result.total > 0 else 0,
+            "feedback": result.feedback,
+            "topic": result.topic,
+            "domain": result.domain,
+            "created_at": result.created_at.isoformat() if result.created_at else None
+        })
+    
+    return results_list, total
 
 # Chat Management Functions
 def get_all_chats_paginated(
