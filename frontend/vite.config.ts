@@ -26,8 +26,18 @@ export default defineConfig(({ mode }) => ({
     setupFiles: "./src/setupTests.ts",
     coverage: {
       provider: "v8",
-      reporter: ["lcov"],
+      reporter: ["text","lcov"],
       reportsDirectory: "coverage_reports",
+      exclude: [
+        "vitest.config.*",
+        "vite.config.*",
+        "**/jest.config.*",
+        "**/*.config.*",  
+        "**/coverage/**",
+        "**/dist/**",
+        "**/build/**",
+        "**/*.conf**",
+      ],
     },
   },
   resolve: {
