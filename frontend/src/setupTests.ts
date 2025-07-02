@@ -10,12 +10,12 @@ global.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
   disconnect() {}
-};
+} as any;
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -33,35 +33,36 @@ global.IntersectionObserver = class IntersectionObserver {
   observe() {}
   unobserve() {}
   disconnect() {}
-};
+} as any;
 
 // Mock scrollIntoView
-Element.prototype.scrollIntoView = vi.fn();
+Element.prototype.scrollIntoView = vi.fn() as any;
 
 // Mock HTMLElement methods
-HTMLElement.prototype.scrollIntoView = vi.fn();
-HTMLElement.prototype.hasPointerCapture = vi.fn();
-HTMLElement.prototype.releasePointerCapture = vi.fn();
-HTMLElement.prototype.setPointerCapture = vi.fn();
+HTMLElement.prototype.scrollIntoView = vi.fn() as any;
+HTMLElement.prototype.hasPointerCapture = vi.fn() as any;
+HTMLElement.prototype.releasePointerCapture = vi.fn() as any;
+HTMLElement.prototype.setPointerCapture = vi.fn() as any;
 
 // Mock getComputedStyle
-window.getComputedStyle = vi.fn(() => ({
+(window as any).getComputedStyle = vi.fn(() => ({
   getPropertyValue: vi.fn(() => ''),
 }));
 
 // Mock requestAnimationFrame
-global.requestAnimationFrame = vi.fn((cb) => setTimeout(cb, 0));
-global.cancelAnimationFrame = vi.fn();
+(global as any).requestAnimationFrame = vi.fn((cb: FrameRequestCallback) => setTimeout(cb, 0));
+(global as any).cancelAnimationFrame = vi.fn();
 
 // Mock Image constructor for avatar tests
-global.Image = class {
+(global as any).Image = class MockImage {
+  onload: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  src: string = '';
+  alt: string = '';
+  
   constructor() {
     setTimeout(() => {
       if (this.onload) this.onload();
     }, 100);
   }
-  onload: (() => void) | null = null;
-  onerror: (() => void) | null = null;
-  src: string = '';
-  alt: string = '';
 };
