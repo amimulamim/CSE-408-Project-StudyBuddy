@@ -1,4 +1,5 @@
 import { makeRequest } from "@/lib/apiCall";
+import { SubscriptionStatus } from "@/lib/billingTypes";
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
@@ -12,17 +13,17 @@ export interface Plan {
   is_active: boolean;
 }
 
-export interface SubscriptionStatus {
-  id: string;
-  user_id: string;
-  plan_id: string;
-  status: string;
-  start_date: string;
-  end_date?: string;
-  cancel_at?: string;
-  created_at: string;
-  updated_at: string;
-}
+// export interface SubscriptionStatus {
+//   id: string;
+//   user_id: string;
+//   plan_id: string;
+//   status: string;
+//   start_date: string;
+//   end_date?: string;
+//   cancel_at?: string;
+//   created_at: string;
+//   updated_at: string;
+// }
 
 export interface CheckoutSession {
   plan_id: string;

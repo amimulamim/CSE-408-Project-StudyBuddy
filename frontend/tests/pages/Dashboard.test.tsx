@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
-import { vi } from 'vitest'
+import '@testing-library/jest-dom'
+import { vi, beforeEach, test, expect } from 'vitest'
 import Dashboard from '@/pages/Dashboard'
 
 // Mock DOM APIs for Avatar component
@@ -80,15 +81,28 @@ vi.mock('@/components/ui/avatar', () => ({
   AvatarFallback: ({ children, className }: any) => <div className={className} data-testid="avatar-fallback">{children}</div>,
 }))
 
+// Updated mock user profile to match UserProfile interface
 const mockUserProfile = {
-  name: 'John Doe',
+  uid: 'test-uid-123',
   email: 'john@example.com',
+  name: 'John Doe',
+  role: 'user',
+  is_admin: false,
+  current_plan: 'premium',
   avatar: 'https://example.com/avatar.jpg',
 }
 
+// Updated mock subscription to match SubscriptionStatus interface
 const mockSubscription = {
+  id: 'sub_123456789',
+  user_id: 'test-uid-123',
   plan_id: 'premium',
   status: 'active',
+  start_date: '2024-01-01T00:00:00Z',
+  end_date: '2025-01-01T00:00:00Z',
+  cancel_at: undefined,
+  created_at: '2024-01-01T00:00:00Z',
+  updated_at: '2024-01-01T00:00:00Z',
 }
 
 const renderDashboard = () => {
@@ -109,6 +123,8 @@ test('renders loading state when loading', async () => {
   vi.mocked(useUserRole).mockReturnValue({
     userProfile: null,
     loading: true,
+    refetching: false,
+    error: null,
     refetchUserProfile: vi.fn(),
   })
 
@@ -124,6 +140,8 @@ test('renders dashboard with user profile', async () => {
   vi.mocked(useUserRole).mockReturnValue({
     userProfile: mockUserProfile,
     loading: false,
+    refetching: false,
+    error: null,
     refetchUserProfile: vi.fn(),
   })
   
@@ -145,6 +163,8 @@ test('displays user initials when no avatar', async () => {
   vi.mocked(useUserRole).mockReturnValue({
     userProfile: { ...mockUserProfile, avatar: null },
     loading: false,
+    refetching: false,
+    error: null,
     refetchUserProfile: vi.fn(),
   })
   
@@ -164,6 +184,8 @@ test('renders quick action cards', async () => {
   vi.mocked(useUserRole).mockReturnValue({
     userProfile: mockUserProfile,
     loading: false,
+    refetching: false,
+    error: null,
     refetchUserProfile: vi.fn(),
   })
   
@@ -188,6 +210,8 @@ test('navigates to chat when AI Chat card is clicked', async () => {
   vi.mocked(useUserRole).mockReturnValue({
     userProfile: mockUserProfile,
     loading: false,
+    refetching: false,
+    error: null,
     refetchUserProfile: vi.fn(),
   })
   
@@ -211,6 +235,8 @@ test('navigates to billing when Billing card is clicked', async () => {
   vi.mocked(useUserRole).mockReturnValue({
     userProfile: mockUserProfile,
     loading: false,
+    refetching: false,
+    error: null,
     refetchUserProfile: vi.fn(),
   })
   
@@ -236,6 +262,8 @@ test('handles logout correctly', async () => {
   vi.mocked(useUserRole).mockReturnValue({
     userProfile: mockUserProfile,
     loading: false,
+    refetching: false,
+    error: null,
     refetchUserProfile: vi.fn(),
   })
   
@@ -261,6 +289,8 @@ test('displays subscription status correctly', async () => {
   vi.mocked(useUserRole).mockReturnValue({
     userProfile: mockUserProfile,
     loading: false,
+    refetching: false,
+    error: null,
     refetchUserProfile: vi.fn(),
   })
   
@@ -281,10 +311,22 @@ test('displays free plan when no subscription', async () => {
   vi.mocked(useUserRole).mockReturnValue({
     userProfile: mockUserProfile,
     loading: false,
+    refetching: false,
+    error: null,
     refetchUserProfile: vi.fn(),
   })
   
-  vi.mocked(getSubscriptionStatus).mockResolvedValue({ plan_id: 'free', status: 'active' })
+  const mockFreeSubscription = {
+    id: 'sub_free_123',
+    user_id: 'test-uid-123',
+    plan_id: 'free',
+    status: 'active',
+    start_date: '2024-01-01T00:00:00Z',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+  }
+  
+  vi.mocked(getSubscriptionStatus).mockResolvedValue(mockFreeSubscription)
 
   renderDashboard()
 
@@ -300,6 +342,8 @@ test('scrolls to quiz section when quiz card is clicked', async () => {
   vi.mocked(useUserRole).mockReturnValue({
     userProfile: mockUserProfile,
     loading: false,
+    refetching: false,
+    error: null,
     refetchUserProfile: vi.fn(),
   })
   
@@ -329,6 +373,8 @@ test('shows recent activity section', async () => {
   vi.mocked(useUserRole).mockReturnValue({
     userProfile: mockUserProfile,
     loading: false,
+    refetching: false,
+    error: null,
     refetchUserProfile: vi.fn(),
   })
   
@@ -349,6 +395,8 @@ test('renders quiz dashboard component', async () => {
   vi.mocked(useUserRole).mockReturnValue({
     userProfile: mockUserProfile,
     loading: false,
+    refetching: false,
+    error: null,
     refetchUserProfile: vi.fn(),
   })
   
@@ -368,6 +416,8 @@ test('renders chatbot FAB', async () => {
   vi.mocked(useUserRole).mockReturnValue({
     userProfile: mockUserProfile,
     loading: false,
+    refetching: false,
+    error: null,
     refetchUserProfile: vi.fn(),
   })
   
@@ -387,6 +437,8 @@ test('redirects to home when no user profile', async () => {
   vi.mocked(useUserRole).mockReturnValue({
     userProfile: null,
     loading: false,
+    refetching: false,
+    error: null,
     refetchUserProfile: vi.fn(),
   })
 
@@ -405,6 +457,8 @@ test('handles subscription loading state', async () => {
   vi.mocked(useUserRole).mockReturnValue({
     userProfile: mockUserProfile,
     loading: false,
+    refetching: false,
+    error: null,
     refetchUserProfile: vi.fn(),
   })
   
