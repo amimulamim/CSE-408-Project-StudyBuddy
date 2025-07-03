@@ -1,8 +1,7 @@
-import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Loader2, Crown, Check, X } from "lucide-react";
 import { 
   getSubscriptionStatus, 
@@ -11,10 +10,10 @@ import {
   formatPrice,
   formatInterval,
   getStatusColor,
-  getStatusLabel,
-  type SubscriptionStatus 
+  getStatusLabel, 
 } from "@/lib/billing";
 import { toast } from 'sonner';
+import { SubscriptionStatus } from "@/lib/billingTypes";
 
 // Available plans (could be fetched from API in the future)
 const AVAILABLE_PLANS = [

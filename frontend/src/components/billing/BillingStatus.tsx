@@ -1,15 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Crown, Calendar, CreditCard, Clock } from "lucide-react";
 import { 
   getSubscriptionStatus, 
-  formatPrice, 
   getStatusColor, 
-  getStatusLabel,
-  type SubscriptionStatus 
+  getStatusLabel, 
 } from "@/lib/billing";
+import { SubscriptionStatus } from "@/lib/billingTypes";
 
 interface BillingStatusProps {
   showTitle?: boolean;
