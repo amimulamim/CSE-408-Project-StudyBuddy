@@ -391,7 +391,7 @@ def get_usage_statistics(
     return admin_service.get_usage_statistics(db, start_dt, end_dt)
 
 @router.post("/notifications", response_model=NotificationResponse)
-def send_notification(
+async def send_notification(
     notification: NotificationCreate,
     user_info: Dict[str, Any] = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -400,7 +400,7 @@ def send_notification(
     """Send a notification to a specific user (Admin only).Allowed type: info,warning,error,success"""
     require_admin_access(db, user_info)
     
-    created_notification = admin_service.create_notification(
+    created_notification = await admin_service.create_notification(
         db, notification, user_info["uid"]
     )
     

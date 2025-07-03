@@ -12,6 +12,7 @@ from app.utils.notification_helpers import (
     mark_all_notifications_read,
     get_unread_count
 )
+from app.websocket.notification_service import notification_service
 from app.users.schema import (
     UserBase, UserProfile, 
     SecureProfileEdit
@@ -247,7 +248,7 @@ def get_my_notifications(
 
 
 @router.put("/notifications/{notification_id}/read")
-def mark_notification_as_read(
+async def mark_notification_as_read(
     notification_id: str,
     user_info: Dict[str, Any] = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -257,6 +258,7 @@ def mark_notification_as_read(
     
     - Users can only mark their own notifications as read
     - For admin access, use admin endpoints
+    - Sends real-time updates via WebSocket if user is connected
     """
     success = mark_notification_read(db, notification_id, user_info["uid"])
     if not success:
@@ -265,6 +267,17 @@ def mark_notification_as_read(
             detail="Notification not found or you don't have permission to access it"
         )
     
+    # Send WebSocket notification if user is connected
+    try:
+        await notification_service.notify_notification_read(
+            user_info["uid"], 
+            notification_id, 
+            db
+        )
+    except Exception as e:
+        # Don't fail the request if WebSocket fails
+        print(f"WebSocket notification failed: {e}")
+    
     return {
         "message": "Notification marked as read",
         "notification_id": notification_id
@@ -272,7 +285,7 @@ def mark_notification_as_read(
 
 
 @router.put("/notifications/mark-all-read")
-def mark_all_notifications_as_read(
+async def mark_all_notifications_as_read(
     user_info: Dict[str, Any] = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -281,8 +294,20 @@ def mark_all_notifications_as_read(
     
     - Users can only mark their own notifications as read
     - For admin access, use admin endpoints
+    - Sends real-time updates via WebSocket if user is connected
     """
     updated_count = mark_all_notifications_read(db, user_info["uid"])
+    
+    # Send WebSocket notification if user is connected
+    try:
+        await notification_service.notify_all_notifications_read(
+            user_info["uid"], 
+            updated_count, 
+            db
+        )
+    except Exception as e:
+        # Don't fail the request if WebSocket fails
+        print(f"WebSocket notification failed: {e}")
     
     return {
         "message": f"Marked {updated_count} notifications as read",

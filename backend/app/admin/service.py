@@ -8,6 +8,7 @@ from app.admin.schema import (
 from app.users.model import User
 from app.chat.model import Chat, Message
 from app.users.schema import AdminUserEdit
+from app.websocket.notification_service import notification_service
 from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime, timezone
 import uuid
@@ -250,12 +251,12 @@ def get_all_chats_paginated(
         return [], 0
 
 # Notification Management Functions
-def create_notification(
+async def create_notification(
     db: Session,
     notification_data: NotificationCreate,
     created_by: str
 ) -> Notification:
-    """Create a new notification"""
+    """Create a new notification and send WebSocket update"""
     notification = Notification(
         id=str(uuid.uuid4()),
         recipient_uid=notification_data.recipient_uid,
@@ -267,6 +268,26 @@ def create_notification(
     db.add(notification)
     db.commit()
     db.refresh(notification)
+    
+    # Send WebSocket notification if user is connected
+    try:
+        notification_dict = {
+            "id": notification.id,
+            "title": notification.title,
+            "message": notification.message,
+            "type": notification.type,
+            "is_read": notification.is_read,
+            "created_at": notification.created_at.isoformat()
+        }
+        await notification_service.notify_new_notification(
+            notification_data.recipient_uid,
+            notification_dict,
+            db
+        )
+    except Exception as e:
+        # Don't fail notification creation if WebSocket fails
+        print(f"WebSocket notification failed: {e}")
+    
     return notification
 
 def update_notification(
