@@ -214,12 +214,17 @@ class TestAdminService:
         created_by = "admin123"
         mock_notification = Mock(spec=Notification)
         mock_notification.id = str(uuid.uuid4())
+        mock_notification.title = sample_notification_data.title
+        mock_notification.message = sample_notification_data.message
+        mock_notification.type = sample_notification_data.type.value
+        mock_notification.is_read = False
+        mock_notification.created_at = datetime.now(timezone.utc)
         
         with patch('app.admin.service.Notification') as mock_notification_class, \
              patch('app.admin.service.uuid.uuid4') as mock_uuid, \
              patch('app.admin.service.notification_service.notify_new_notification') as mock_notify:
             
-            mock_uuid.return_value = "test-uuid"
+            mock_uuid.return_value = uuid.UUID("12345678-1234-5678-1234-567812345678")
             mock_notification_class.return_value = mock_notification
             mock_notify.return_value = None  # Mock the async WebSocket call
             
@@ -227,10 +232,21 @@ class TestAdminService:
             result = await create_notification(mock_db, sample_notification_data, created_by)
             
             # Assert
-            mock_notification_class.assert_called_once()
+            mock_notification_class.assert_called_once_with(
+                id=str(mock_uuid.return_value),
+                recipient_uid=sample_notification_data.recipient_uid,
+                title=sample_notification_data.title,
+                message=sample_notification_data.message,
+                type=sample_notification_data.type.value,
+                created_by=created_by
+            )
             mock_db.add.assert_called_once_with(mock_notification)
             mock_db.commit.assert_called_once()
             mock_db.refresh.assert_called_once_with(mock_notification)
+            
+            # Verify WebSocket notification was called
+            mock_notify.assert_called_once()
+            
             assert result == mock_notification
 
     def test_update_notification_success(self, mock_db):
