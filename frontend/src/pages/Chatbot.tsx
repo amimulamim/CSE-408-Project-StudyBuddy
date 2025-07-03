@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatSidebar } from '@/components/chatbot/ChatSidebar';
 import { ChatInterface } from '@/components/chatbot/ChatInterface';
