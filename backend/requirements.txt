@@ -30,6 +30,9 @@ pytest-dotenv
 # Linting / Code Quality (Optional, for SonarCloud)
 flake8
 
+# WebSocket Support
+websockets
+
 
 #vector database
 chromadb[postgresql]>=0.4.24
