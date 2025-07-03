@@ -37,6 +37,7 @@ export default defineConfig(({ mode }) => ({
         "**/dist/**",
         "**/build/**",
         "**/*.conf**",
+        "**/*.d.ts*",
       ],
     },
   },
