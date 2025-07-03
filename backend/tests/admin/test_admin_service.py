@@ -207,7 +207,8 @@ class TestAdminService:
         assert result is None
         mock_db.commit.assert_not_called()
 
-    def test_create_notification_success(self, mock_db, sample_notification_data):
+    @pytest.mark.asyncio
+    async def test_create_notification_success(self, mock_db, sample_notification_data):
         """Test successful notification creation"""
         # Arrange
         created_by = "admin123"
@@ -215,13 +216,15 @@ class TestAdminService:
         mock_notification.id = str(uuid.uuid4())
         
         with patch('app.admin.service.Notification') as mock_notification_class, \
-             patch('app.admin.service.uuid.uuid4') as mock_uuid:
+             patch('app.admin.service.uuid.uuid4') as mock_uuid, \
+             patch('app.admin.service.notification_service.notify_new_notification') as mock_notify:
             
             mock_uuid.return_value = "test-uuid"
             mock_notification_class.return_value = mock_notification
+            mock_notify.return_value = None  # Mock the async WebSocket call
             
             # Act
-            result = create_notification(mock_db, sample_notification_data, created_by)
+            result = await create_notification(mock_db, sample_notification_data, created_by)
             
             # Assert
             mock_notification_class.assert_called_once()

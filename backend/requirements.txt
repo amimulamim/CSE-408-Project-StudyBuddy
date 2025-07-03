@@ -26,6 +26,7 @@ coverage
 pytest-asyncio
 pytest-mock
 pytest-dotenv
+aiohttp  # for integration tests
 
 # Linting / Code Quality (Optional, for SonarCloud)
 flake8
