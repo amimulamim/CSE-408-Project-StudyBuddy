@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.api import api_router
+from app.websocket.routes import router as websocket_router
 from app.core.database import engine, Base
 from app.config.openapi import setup_openapi
 from app.core.config import settings
@@ -24,6 +25,9 @@ app.add_middleware(
 
 # Include API v1 routes
 app.include_router(api_router, prefix="/api/v1")
+
+# Include WebSocket routes
+app.include_router(websocket_router, prefix="/ws", tags=["websocket"])
 
 # Setup OpenAPI configuration
 setup_openapi(app)
