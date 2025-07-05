@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from pydantic import BaseModel
 from typing import List, Dict, Any
@@ -40,7 +39,7 @@ async def upload_document(
         return {"message": "Document uploaded successfully"}
     except Exception as e:
         logger.error(f"Error uploading document: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
 
 @router.get("/collections", response_model=List[CollectionResponse])
 async def list_collections(
@@ -60,7 +59,7 @@ async def list_collections(
         ]
     except Exception as e:
         logger.error(f"Error listing collections: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
 
 @router.post("/collections")
 async def create_collection(
@@ -78,7 +77,7 @@ async def create_collection(
         return {"message": f"Collection {request.collection_name} created", "full_collection_name": full_collection_name}
     except Exception as e:
         logger.error(f"Error creating collection: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
 
 @router.delete("/collections/{collection_name}")
 async def delete_collection(
@@ -92,4 +91,4 @@ async def delete_collection(
         return {"message": f"Collection {collection_name} deleted successfully"}
     except Exception as e:
         logger.error(f"Error deleting collection: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
