@@ -56,6 +56,7 @@ class ContentGenerator:
                 raise ValueError("No relevant documents found")
 
             bucket = storage.bucket(settings.FIREBASE_STORAGE_BUCKET)
+            raw_source_url = None  # Initialize raw_source_url variable
 
             # Generate content
             if content_type == "flashcards":
@@ -69,30 +70,32 @@ class ContentGenerator:
                 content_url = blob.public_url
             elif content_type == "slides":
                 pdf_bytes, latex_source = await self._generate_slides(context, topic, difficulty, length, tone, return_latex=True)
-                # Upload PDF
-                file_extension = "pdf"
-                storage_path_pdf = f"content/{user_id}/{content_id}.pdf"
-                blob_pdf = bucket.blob(storage_path_pdf)
-                blob_pdf.upload_from_string(pdf_bytes, content_type="application/pdf")
-                blob_pdf.make_public()
-                content_url = blob_pdf.public_url
-                # Upload .tex with a new unique id
-                tex_id = str(uuid.uuid4())
-                storage_path_tex = f"content/{user_id}/{tex_id}.tex"
-                blob_tex = bucket.blob(storage_path_tex)
-                blob_tex.upload_from_string(latex_source, content_type="text/x-tex")
-                blob_tex.make_public()
-                tex_url = blob_tex.public_url
-                # Store LaTeX as a separate ContentItem
-                tex_item = ContentItem(
-                    id=tex_id,
-                    user_id=user_id,
-                    content_url=tex_url,
-                    topic=topic,
-                    content_type="latex",
-                    created_at=datetime.now(timezone.utc)
-                )
-                db.add(tex_item)
+                if pdf_bytes:
+                    # Successful compilation - upload PDF
+                    file_extension = "pdf"
+                    storage_path_pdf = f"content/{user_id}/{content_id}.pdf"
+                    blob_pdf = bucket.blob(storage_path_pdf)
+                    blob_pdf.upload_from_string(pdf_bytes, content_type="application/pdf")
+                    blob_pdf.make_public()
+                    content_url = blob_pdf.public_url
+                    
+                    # Also save the LaTeX source for future moderation/editing
+                    storage_path_tex = f"content/{user_id}/{content_id}.tex"
+                    blob_tex = bucket.blob(storage_path_tex)
+                    blob_tex.upload_from_string(latex_source, content_type="text/x-tex")
+                    blob_tex.make_public()
+                    raw_source_url = blob_tex.public_url
+                else:
+                    # Compilation failed but we have LaTeX source - save for moderation
+                    logger.warning(f"Slides compilation failed for content {content_id}, saving LaTeX for moderation")
+                    storage_path_tex = f"content/{user_id}/{content_id}_pending.tex"
+                    blob_tex = bucket.blob(storage_path_tex)
+                    blob_tex.upload_from_string(latex_source, content_type="text/x-tex")
+                    blob_tex.make_public()
+                    content_url = blob_tex.public_url
+                    raw_source_url = blob_tex.public_url
+                    # Mark content as pending moderation
+                    content_type = "slides_pending"
             else:
                 raise ValueError(f"Unsupported content type: {content_type}")
 
@@ -103,6 +106,7 @@ class ContentGenerator:
                 content_url=content_url,
                 topic=topic,
                 content_type=content_type,
+                raw_source=raw_source_url if content_type in ["slides", "slides_pending"] else None,
                 created_at=datetime.now(timezone.utc)
             )
             db.add(content_item)
@@ -171,6 +175,8 @@ class ContentGenerator:
         return_latex: bool = False
     ) -> Any:
         """Generates LaTeX slides and compiles to PDF, retrying on error. Returns PDF bytes and optionally the LaTeX source."""
+        last_latex_source = None
+        
         for attempt in range(1, max_retries + 1):
             try:
                 num_slides = {"short": 5, "medium": 10, "long": 15}.get(length, 10)
@@ -217,6 +223,8 @@ class ContentGenerator:
 
 """
                 full_latex = preamble + latex_content
+                last_latex_source = full_latex  # Store the latest LaTeX source
+                
                 # Compile LaTeX to PDF
                 with tempfile.TemporaryDirectory() as tmpdir:
                     tex_path = os.path.join(tmpdir, "slides.tex")
@@ -240,11 +248,27 @@ class ContentGenerator:
                     else:
                         logger.warning(f"LaTeX compilation failed on attempt {attempt}: {proc.stderr.decode('utf-8')}")
                         if attempt == max_retries:
-                            raise Exception(f"LaTeX compilation failed after {max_retries} attempts. Last error: {proc.stderr.decode('utf-8')}")
+                            # Return None for PDF and the LaTeX source for moderation
+                            if return_latex:
+                                return None, last_latex_source
+                            return None
                         # Prompt LLM to retry by continuing loop
             except Exception as e:
                 logger.error(f"Error generating/compiling slides (attempt {attempt}): {str(e)}")
                 if attempt == max_retries:
-                    raise Exception(f"Error generating slides after {max_retries} attempts: {str(e)}")
-        raise Exception("Failed to generate valid slides after retries.")
+                    # Return None for PDF and the LaTeX source for moderation
+                    if return_latex and last_latex_source:
+                        return None, last_latex_source
+                    elif last_latex_source:
+                        return None
+                    else:
+                        raise Exception(f"Failed to generate valid slides after {max_retries} attempts. Please try again with a different topic or check your collection documents.")
+        
+        # Final fallback - if we have LaTeX source, return it for moderation
+        if last_latex_source:
+            if return_latex:
+                return None, last_latex_source
+            return None
+            
+        raise Exception(f"Failed to generate valid slides after {max_retries} retries. Please try again with a different topic or check your collection documents.")
 
