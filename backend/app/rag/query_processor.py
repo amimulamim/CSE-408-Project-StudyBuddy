@@ -2,7 +2,7 @@ from typing import List, Dict, Any
 import logging
 from app.quiz_generator.quiz_generator import ExamGenerator
 from app.document_upload.document_service import DocumentService
-from app.quiz_generator.models import Quiz, QuizQuestion
+from app.quiz_generator.models import Quiz, QuizQuestion, DifficultyLevel
 from sqlalchemy.orm import Session
 import uuid
 from datetime import datetime, timezone
@@ -22,6 +22,10 @@ class QueryProcessor:
         question_type: str,
         user_id: str,
         collection_name: str,
+        difficulty: str,  # string from client
+        duration: int,
+        topic: str,
+        domain: str,
         db: Session
     ) -> Dict[str, Any]:
         """Generates a quiz based on user query and collection."""
@@ -42,15 +46,26 @@ class QueryProcessor:
             questions = self.exam_generator.generate_questions(
                 context=context,
                 num_questions=num_questions,
-                question_type=question_type
+                question_type=question_type,
+                difficulty=difficulty
             )
 
             # Create quiz
             quiz_id = str(uuid.uuid4())
+            # Convert difficulty string to Enum
+            try:
+                difficulty_enum = DifficultyLevel[difficulty.capitalize()]
+            except Exception:
+                difficulty_enum = DifficultyLevel.Easy
             quiz = Quiz(
                 quiz_id=quiz_id,
                 user_id=user_id,
-                created_at=datetime.now(timezone.utc)
+                created_at=datetime.now(timezone.utc),
+                difficulty=difficulty_enum,
+                duration=duration,
+                collection_name=collection_name,
+                topic=topic,
+                domain=domain
             )
             db.add(quiz)
 
