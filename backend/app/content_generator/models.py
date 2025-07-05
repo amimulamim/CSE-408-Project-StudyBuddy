@@ -14,4 +14,5 @@ class ContentItem(Base):
     image_preview = Column(Text, nullable=True)
     topic = Column(Text, nullable=True)
     content_type = Column(Text, nullable=True)
+    raw_source = Column(Text, nullable=True)  # Store raw source URL for slides (LaTeX)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
