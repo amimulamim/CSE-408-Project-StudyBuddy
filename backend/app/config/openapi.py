@@ -16,6 +16,10 @@ def setup_openapi(app: FastAPI) -> None:
             routes=app.routes,
         )
 
+        # Ensure components section exists
+        if "components" not in openapi_schema:
+            openapi_schema["components"] = {}
+            
         # Add bearerAuth security scheme
         openapi_schema["components"]["securitySchemes"] = {
             "bearerAuth": {

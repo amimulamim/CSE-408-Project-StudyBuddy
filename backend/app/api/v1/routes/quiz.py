@@ -113,19 +113,21 @@ async def evaluate_answer(
 
 @router.delete("/quizzes/{quiz_id}")
 async def delete_exam(
-    exam_id: str,
+    quiz_id: str,
     db: Session = Depends(get_db),
     user_info: Dict[str, Any] = Depends(get_current_user)
 ):
     try:
         user_id = user_info["uid"]
-        quiz = db.query(Quiz).filter(Quiz.quiz_id == exam_id).first()
+        quiz = db.query(Quiz).filter(Quiz.quiz_id == quiz_id).first()
         if not quiz:
             raise HTTPException(status_code=404, detail="Exam not found")
         if quiz.user_id != user_id:
             raise HTTPException(status_code=403, detail="Not authorized")
-        await get_query_processor().delete_exam(exam_id, db)
-        return {"message": f"Exam {exam_id} deleted successfully"}
+        await get_query_processor().delete_exam(quiz_id, db)
+        return {"message": f"Exam {quiz_id} deleted successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error deleting exam: {str(e)}")
         raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
@@ -133,14 +135,14 @@ async def delete_exam(
 # evaluate before submitting
 @router.post("/quizzes/{quiz_id}/submit")
 async def complete_quiz(
-    exam_id: str,
+    quiz_id: str,
     request: CompleteQuizRequest,
     db: Session = Depends(get_db),
     user_info: Dict[str, Any] = Depends(get_current_user)
 ):
     try:
         user_id = user_info["uid"]
-        quiz = db.query(Quiz).filter(Quiz.quiz_id == exam_id).first()
+        quiz = db.query(Quiz).filter(Quiz.quiz_id == quiz_id).first()
         if not quiz:
             raise HTTPException(status_code=404, detail="Quiz not found")
         if quiz.user_id != user_id:
@@ -149,7 +151,7 @@ async def complete_quiz(
         # Calculate total score from question_results table
         question_results = db.query(QuestionResult).filter(
             QuestionResult.user_id == user_id,
-            QuestionResult.quiz_id == exam_id
+            QuestionResult.quiz_id == quiz_id
         ).all()
         if not question_results:
             raise HTTPException(status_code=400, detail="No answers submitted")
@@ -157,14 +159,14 @@ async def complete_quiz(
         score = sum(res.score for res in question_results)
 
         # Calculate maximum possible score
-        questions = db.query(QuizQuestion).filter(QuizQuestion.quiz_id == exam_id).all()
+        questions = db.query(QuizQuestion).filter(QuizQuestion.quiz_id == quiz_id).all()
         total = sum(q.marks for q in questions)
 
         # Store in quiz_results
         result = QuizResult(
             id=str(uuid.uuid4()),
             user_id=user_id,
-            quiz_id=exam_id,
+            quiz_id=quiz_id,
             score=score,
             total=total,
             feedback=request.feedback,
@@ -173,16 +175,18 @@ async def complete_quiz(
         db.add(result)
         db.commit()
 
-        logger.info(f"Stored quiz result: score {score}/{total} for quiz {exam_id}")
+        logger.info(f"Stored quiz result: score {score}/{total} for quiz {quiz_id}")
         return {
-            "quiz_id": exam_id,
+            "quiz_id": quiz_id,
             "score": score,
             "total": total,
             "message": "Quiz completed successfully"
         }
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
-        logger.error(f"Error completing quiz {exam_id}: {str(e)}")
+        logger.error(f"Error completing quiz {quiz_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
     
 @router.get("/quizzes/{quiz_id}", response_model=Dict[str, Any])
