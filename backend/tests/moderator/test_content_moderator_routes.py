@@ -919,3 +919,301 @@ class TestContentModeratorRoutes:
         
         # Assert
         assert result is None  # Function returns None when user not found
+
+    # Additional comprehensive test cases for better coverage
+    
+    def test_track_moderation_activity_error_handling(self, mock_moderator_user):
+        """Test error handling in track_moderation_activity function"""
+        from app.api.v1.routes.contentModerator import track_moderation_activity
+        
+        mock_db = Mock()
+        mock_db.commit.side_effect = Exception("Database error")
+        
+        # Should not raise exception, just log error and rollback
+        asyncio.run(track_moderation_activity(
+            moderator_id=mock_moderator_user["uid"],
+            db=mock_db,
+            content_id="content-123"
+        ))
+        
+        mock_db.rollback.assert_called()
+
+    def test_moderate_content_with_firebase_storage_error(self, mock_moderator_user, sample_pending_content):
+        """Test moderate content when Firebase storage operations fail"""
+        app.dependency_overrides[get_current_user] = lambda: mock_moderator_user
+        
+        mock_db = Mock()
+        app.dependency_overrides[get_db] = lambda: mock_db
+        
+        # Mock user as moderator
+        mock_user = Mock()
+        mock_user.uid = mock_moderator_user["uid"]
+        mock_user.is_moderator = True
+        
+        def mock_query_side_effect(model):
+            mock_query = Mock()
+            if model == User:
+                mock_query.filter.return_value.first.return_value = mock_user
+            elif model == ContentItem:
+                mock_query.filter.return_value.first.return_value = sample_pending_content
+            elif model == ModeratorProfile:
+                mock_query.filter.return_value.first.return_value = None
+            return mock_query
+        
+        mock_db.query.side_effect = mock_query_side_effect
+
+        content_id = str(sample_pending_content.id)
+        request_data = {
+            "raw_content": "\\documentclass{beamer}\\begin{document}\\end{document}"
+        }
+
+        with patch('firebase_admin.storage.bucket') as mock_bucket:
+            # Mock bucket to raise exception
+            mock_bucket.side_effect = Exception("Firebase storage error")
+
+            response = client.put(f"/api/v1/content-moderator/{content_id}/moderate", json=request_data)
+
+        assert response.status_code == 500
+        assert "internal server error" in response.json()["detail"].lower()
+
+    def test_get_content_raw_content_http_error(self, mock_moderator_user, sample_pending_content):
+        """Test raw content retrieval when HTTP request fails"""
+        app.dependency_overrides[get_current_user] = lambda: mock_moderator_user
+        
+        mock_db = Mock()
+        app.dependency_overrides[get_db] = lambda: mock_db
+        
+        # Mock user as moderator
+        mock_user = Mock()
+        mock_user.uid = mock_moderator_user["uid"]
+        mock_user.is_moderator = True
+        
+        def mock_query_side_effect(model):
+            mock_query = Mock()
+            if model == User:
+                mock_query.filter.return_value.first.return_value = mock_user
+            elif model == ContentItem:
+                mock_query.filter.return_value.first.return_value = sample_pending_content
+            return mock_query
+        
+        mock_db.query.side_effect = mock_query_side_effect
+
+        content_id = str(sample_pending_content.id)
+
+        with patch('requests.get') as mock_requests:
+            # Mock HTTP request failure
+            mock_response = Mock()
+            mock_response.raise_for_status.side_effect = Exception("HTTP 404 Not Found")
+            mock_requests.return_value = mock_response
+
+            response = client.get(f"/api/v1/content-moderator/{content_id}/raw_content")
+
+        assert response.status_code == 500
+        assert "internal server error" in response.json()["detail"].lower()
+
+    def test_create_moderator_profile_database_error(self, mock_moderator_user):
+        """Test moderator profile creation with database error"""
+        app.dependency_overrides[get_current_user] = lambda: mock_moderator_user
+        
+        mock_db = Mock()
+        app.dependency_overrides[get_db] = lambda: mock_db
+        
+        # Mock user as moderator
+        mock_user = Mock()
+        mock_user.uid = mock_moderator_user["uid"]
+        mock_user.is_moderator = True
+        
+        def mock_query_side_effect(model):
+            mock_query = Mock()
+            if model == User:
+                mock_query.filter.return_value.first.return_value = mock_user
+            elif model == ModeratorProfile:
+                mock_query.filter.return_value.first.return_value = None  # No existing profile
+            return mock_query
+        
+        mock_db.query.side_effect = mock_query_side_effect
+        mock_db.commit.side_effect = Exception("Database commit failed")
+
+        request_data = {
+            "domains": ["Computer Science"],
+            "topics": ["Python"]
+        }
+
+        response = client.post("/api/v1/content-moderator/profile", json=request_data)
+
+        assert response.status_code == 500
+        mock_db.rollback.assert_called()
+
+    def test_update_moderator_profile_database_error(self, mock_moderator_user, sample_moderator_profile):
+        """Test moderator profile update with database error"""
+        app.dependency_overrides[get_current_user] = lambda: mock_moderator_user
+        
+        mock_db = Mock()
+        app.dependency_overrides[get_db] = lambda: mock_db
+        
+        # Mock user as moderator
+        mock_user = Mock()
+        mock_user.uid = mock_moderator_user["uid"]
+        mock_user.is_moderator = True
+        
+        def mock_query_side_effect(model):
+            mock_query = Mock()
+            if model == User:
+                mock_query.filter.return_value.first.return_value = mock_user
+            elif model == ModeratorProfile:
+                mock_query.filter.return_value.first.return_value = sample_moderator_profile
+            elif model in [ModeratorDomain, ModeratorTopic]:
+                mock_query.filter.return_value.delete.return_value = None
+                return mock_query
+            return mock_query
+        
+        mock_db.query.side_effect = mock_query_side_effect
+        mock_db.commit.side_effect = Exception("Database commit failed")
+
+        request_data = {
+            "domains": ["Updated Domain"],
+            "topics": ["Updated Topic"]
+        }
+
+        response = client.put("/api/v1/content-moderator/profile", json=request_data)
+
+        assert response.status_code == 500
+        mock_db.rollback.assert_called()
+
+    def test_delete_moderator_profile_database_error(self, mock_moderator_user, sample_moderator_profile):
+        """Test moderator profile deletion with database error"""
+        app.dependency_overrides[get_current_user] = lambda: mock_moderator_user
+        
+        mock_db = Mock()
+        app.dependency_overrides[get_db] = lambda: mock_db
+        
+        # Mock user as moderator
+        mock_user = Mock()
+        mock_user.uid = mock_moderator_user["uid"]
+        mock_user.is_moderator = True
+        
+        def mock_query_side_effect(model):
+            mock_query = Mock()
+            if model == User:
+                mock_query.filter.return_value.first.return_value = mock_user
+            elif model == ModeratorProfile:
+                mock_query.filter.return_value.first.return_value = sample_moderator_profile
+            elif model in [ModeratorDomain, ModeratorTopic]:
+                mock_query.filter.return_value.delete.return_value = None
+                return mock_query
+            return mock_query
+        
+        mock_db.query.side_effect = mock_query_side_effect
+        mock_db.commit.side_effect = Exception("Database commit failed")
+
+        response = client.delete("/api/v1/content-moderator/profile")
+
+        assert response.status_code == 500
+        mock_db.rollback.assert_called()
+
+    def test_moderate_quiz_database_error(self, mock_moderator_user, sample_quiz):
+        """Test quiz moderation with database error"""
+        app.dependency_overrides[get_current_user] = lambda: mock_moderator_user
+        
+        mock_db = Mock()
+        app.dependency_overrides[get_db] = lambda: mock_db
+        
+        # Mock user as moderator
+        mock_user = Mock()
+        mock_user.uid = mock_moderator_user["uid"]
+        mock_user.is_moderator = True
+        
+        def mock_query_side_effect(model):
+            mock_query = Mock()
+            if model == User:
+                mock_query.filter.return_value.first.return_value = mock_user
+            elif model == Quiz:
+                mock_query.filter.return_value.first.return_value = sample_quiz
+            elif model == ModeratorProfile:
+                mock_query.filter.return_value.first.return_value = None
+            return mock_query
+        
+        mock_db.query.side_effect = mock_query_side_effect
+        mock_db.commit.side_effect = Exception("Database commit failed")
+
+        quiz_id = str(sample_quiz.quiz_id)
+        request_data = {
+            "topic": "Updated Topic",
+            "approve": True
+        }
+
+        response = client.put(f"/api/v1/content-moderator/quiz/{quiz_id}/moderate", json=request_data)
+
+        assert response.status_code == 500
+        mock_db.rollback.assert_called()
+
+    def test_get_all_moderator_profiles_database_error(self, mock_moderator_user):
+        """Test getting all moderator profiles with database error"""
+        app.dependency_overrides[get_current_user] = lambda: mock_moderator_user
+        
+        mock_db = Mock()
+        app.dependency_overrides[get_db] = lambda: mock_db
+        
+        # Mock database error
+        mock_db.query.side_effect = Exception("Database connection failed")
+
+        response = client.get("/api/v1/content-moderator/profiles/all")
+
+        assert response.status_code == 500
+        assert "internal server error" in response.json()["detail"].lower()
+
+    def test_edit_raw_content_no_existing_urls(self, mock_moderator_user, sample_pending_content):
+        """Test editing raw content when no existing URLs are present"""
+        app.dependency_overrides[get_current_user] = lambda: mock_moderator_user
+        
+        mock_db = Mock()
+        app.dependency_overrides[get_db] = lambda: mock_db
+        
+        # Mock user as moderator
+        mock_user = Mock()
+        mock_user.uid = mock_moderator_user["uid"]
+        mock_user.is_moderator = True
+        
+        # Mock content with no existing URLs
+        sample_pending_content.raw_source = None
+        sample_pending_content.content_url = None
+        
+        def mock_query_side_effect(model):
+            mock_query = Mock()
+            if model == User:
+                mock_query.filter.return_value.first.return_value = mock_user
+            elif model == ContentItem:
+                mock_query.filter.return_value.first.return_value = sample_pending_content
+            elif model == ModeratorProfile:
+                mock_query.filter.return_value.first.return_value = None
+            return mock_query
+        
+        mock_db.query.side_effect = mock_query_side_effect
+
+        content_id = str(sample_pending_content.id)
+        request_data = {
+            "raw_content": "\\documentclass{beamer}\\begin{document}\\end{document}"
+        }
+
+        with patch('firebase_admin.storage.bucket') as mock_bucket, \
+             patch('app.api.v1.routes.contentModerator.compile_latex_to_pdf') as mock_compile:
+            
+            # Mock Firebase bucket and blob
+            mock_bucket_instance = Mock()
+            mock_bucket.return_value = mock_bucket_instance
+            mock_bucket_instance.name = "test-bucket"
+            
+            mock_blob = Mock()
+            mock_bucket_instance.blob.return_value = mock_blob
+            mock_blob.public_url = "https://example.com/raw.tex"
+            
+            # Mock successful LaTeX compilation
+            mock_compile.return_value = b"mock pdf content"
+
+            response = client.put(f"/api/v1/content-moderator/{content_id}/raw_content", json=request_data)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["compilation_successful"] is True
+        # Should generate new paths for both raw and PDF
+        mock_bucket_instance.blob.assert_called()
