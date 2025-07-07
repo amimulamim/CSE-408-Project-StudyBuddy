@@ -6,6 +6,10 @@
     "test": "playwright test",
     "test:headed": "playwright test --headed",
     "test:ui": "playwright test --ui",
+    "test:demo": "playwright test --config=playwright.demo.config.ts --headed --workers=1",
+    "test:demo:auth": "playwright test tests/auth --config=playwright.demo.config.ts --headed --workers=1",
+    "test:demo:chat": "playwright test tests/chat --config=playwright.demo.config.ts --headed --workers=1",
+    "test:background": "playwright test --config=playwright.config.ts",
     "test:docker": "playwright test --config=playwright.docker.config.ts",
     "install:browsers": "playwright install",
     "report": "playwright show-report"
