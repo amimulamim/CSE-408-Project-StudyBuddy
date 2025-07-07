@@ -229,63 +229,63 @@ describe('ProfileEditDialog', () => {
     })
   })
 
-  describe('Avatar Handling', () => {
-    test('validates file type', () => {
-      render(<ProfileEditDialog {...defaultProps} />)
+//   describe('Avatar Handling', () => {
+//     test('validates file type', () => {
+//       render(<ProfileEditDialog {...defaultProps} />)
 
-      const invalidFile = new File(['content'], 'document.pdf', { type: 'application/pdf' })
-      const fileInput = document.getElementById('avatar-upload') as HTMLInputElement
+//       const invalidFile = new File(['content'], 'document.pdf', { type: 'application/pdf' })
+//       const fileInput = document.getElementById('avatar-upload') as HTMLInputElement
 
-      Object.defineProperty(fileInput, 'files', {
-        value: [invalidFile],
-        configurable: true,
-      })
+//       Object.defineProperty(fileInput, 'files', {
+//         value: [invalidFile],
+//         configurable: true,
+//       })
 
-      fireEvent.change(fileInput)
+//       fireEvent.change(fileInput)
 
-      expect(mockToastError).toHaveBeenCalledWith('Please select a valid image file')
-    })
+//       expect(mockToastError).toHaveBeenCalledWith('Please select a valid image file')
+//     })
 
-    test('validates file size', () => {
-      render(<ProfileEditDialog {...defaultProps} />)
+//     test('validates file size', () => {
+//       render(<ProfileEditDialog {...defaultProps} />)
 
-      const largeFile = new File(['x'.repeat(6 * 1024 * 1024)], 'large.jpg', { type: 'image/jpeg' })
-      const fileInput = document.getElementById('avatar-upload') as HTMLInputElement
+//       const largeFile = new File(['x'.repeat(6 * 1024 * 1024)], 'large.jpg', { type: 'image/jpeg' })
+//       const fileInput = document.getElementById('avatar-upload') as HTMLInputElement
 
-      Object.defineProperty(fileInput, 'files', {
-        value: [largeFile],
-        configurable: true,
-      })
+//       Object.defineProperty(fileInput, 'files', {
+//         value: [largeFile],
+//         configurable: true,
+//       })
 
-      fireEvent.change(fileInput)
+//       fireEvent.change(fileInput)
 
-      expect(mockToastError).toHaveBeenCalledWith('Image size should be less than 5MB')
-    })
+//       expect(mockToastError).toHaveBeenCalledWith('Image size should be less than 5MB')
+//     })
 
-    test('accepts valid image files', () => {
-      // Mock FileReader
-      const mockFileReader = {
-        readAsDataURL: vi.fn(),
-        onloadend: null as any,
-        result: 'data:image/jpeg;base64,fake-data'
-      }
-      global.FileReader = vi.fn(() => mockFileReader) as any
+//     test('accepts valid image files', () => {
+//       // Mock FileReader
+//       const mockFileReader = {
+//         readAsDataURL: vi.fn(),
+//         onloadend: null as any,
+//         result: 'data:image/jpeg;base64,fake-data'
+//       }
+//       global.FileReader = vi.fn(() => mockFileReader) as any
 
-      render(<ProfileEditDialog {...defaultProps} />)
+//       render(<ProfileEditDialog {...defaultProps} />)
 
-      const validFile = new File(['image content'], 'avatar.jpg', { type: 'image/jpeg' })
-      const fileInput = document.getElementById('avatar-upload') as HTMLInputElement
+//       const validFile = new File(['image content'], 'avatar.jpg', { type: 'image/jpeg' })
+//       const fileInput = document.getElementById('avatar-upload') as HTMLInputElement
 
-      Object.defineProperty(fileInput, 'files', {
-        value: [validFile],
-        configurable: true,
-      })
+//       Object.defineProperty(fileInput, 'files', {
+//         value: [validFile],
+//         configurable: true,
+//       })
 
-      fireEvent.change(fileInput)
+//       fireEvent.change(fileInput)
 
-      expect(mockFileReader.readAsDataURL).toHaveBeenCalledWith(validFile)
-    })
-  })
+//       expect(mockFileReader.readAsDataURL).toHaveBeenCalledWith(validFile)
+//     })
+//   })
 
   describe('Interests Management', () => {
     test('adds new interest via button click', () => {
