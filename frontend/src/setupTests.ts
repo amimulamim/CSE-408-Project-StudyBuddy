@@ -1,6 +1,23 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
+// Mock environment variables for testing
+vi.stubEnv('VITE_BACKEND_URL', 'http://localhost:8000');
+
+// Override import.meta.env to ensure our test environment variables are used
+Object.defineProperty(import.meta, 'env', {
+  value: {
+    ...import.meta.env,
+    VITE_BACKEND_URL: 'http://localhost:8000',
+    MODE: 'test',
+    DEV: false,
+    PROD: false,
+    SSR: false
+  },
+  writable: true,
+  configurable: true
+});
+
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
   constructor(cb: ResizeObserverCallback) {
