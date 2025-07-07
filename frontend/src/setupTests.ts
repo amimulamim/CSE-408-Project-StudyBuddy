@@ -1,40 +1,20 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
-// Global variable to track current test file
-(global as any).__BILLING_TEST__ = false;
-
-// Function to get the appropriate backend URL based on the test context
-function getTestBackendUrl() {
-  // Check if this is a billing test through global flag or stack trace
-  if ((global as any).__BILLING_TEST__) {
-    return 'https://studdybuddy.me';
-  }
-  
-  // Fallback: check stack trace for billing directory
-  const stack = new Error().stack;
-  if (stack?.includes('/billing/') || stack?.includes('billing')) {
-    return 'https://studdybuddy.me';
-  }
-  
-  return 'http://localhost:8000';
-}
-
 // Mock environment variables for testing
 vi.stubEnv('VITE_BACKEND_URL', 'http://localhost:8000');
 
-// Override import.meta.env with dynamic URL resolution
+// Override import.meta.env to ensure our test environment variables are used
 Object.defineProperty(import.meta, 'env', {
-  get() {
-    return {
-      ...import.meta.env,
-      VITE_BACKEND_URL: getTestBackendUrl(),
-      MODE: 'test',
-      DEV: false,
-      PROD: false,
-      SSR: false
-    };
+  value: {
+    ...import.meta.env,
+    VITE_BACKEND_URL: 'http://localhost:8000',
+    MODE: 'test',
+    DEV: false,
+    PROD: false,
+    SSR: false
   },
+  writable: true,
   configurable: true
 });
 
