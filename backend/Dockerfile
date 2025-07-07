@@ -1,5 +1,14 @@
 FROM python:3.11-slim
 
+# Install full LaTeX for robust PDF compilation (Beamer, TikZ, fonts, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    texlive-latex-base \
+    texlive-latex-recommended \
+    texlive-fonts-recommended \
+    texlive-fonts-extra \
+    texlive-latex-extra \
+    && rm -rf /var/lib/apt/lists/*
+
 # Create non-root user (optional but recommended)
 RUN adduser --disabled-password --no-create-home appuser
 
