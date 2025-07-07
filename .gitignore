@@ -8,3 +8,8 @@ test_env*
 *venv*
 
 *.pem
+
+node_modules/
+dist/
+test-results/
+test-results.*

@@ -203,7 +203,15 @@ def moderate_content(
         request=request
     )
     
-    return {"message": f"Content {action}d successfully", "content_id": content_id}
+    # Create appropriate success message based on action
+    action_messages = {
+        "delete": "deleted",
+        "flag": "flagged", 
+        "approve": "approved"
+    }
+    action_past = action_messages.get(action.lower(), f"{action}d")
+    
+    return {"message": f"Content {action_past} successfully", "content_id": content_id}
 
 @router.get("/quiz-results", response_model=QuizResultsResponse)
 def get_all_quiz_results(
@@ -590,11 +598,11 @@ def get_vector_db_collections(
     require_admin_access(db, user_info)
     
     try:
-        from app.core.vector_db import QdrantDB
+        from app.core.vector_db import VectorDatabaseManager
         from app.core.config import settings
         
         # Initialize Qdrant client
-        vector_db = QdrantDB(
+        vector_db = VectorDatabaseManager(
             qdrant_url=settings.QDRANT_URL,
             qdrant_api_key=settings.QDRANT_API_KEY,
             collection_name=settings.QDRANT_COLLECTION_NAME
