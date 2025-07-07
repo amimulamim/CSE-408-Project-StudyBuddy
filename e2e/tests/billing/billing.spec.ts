@@ -179,11 +179,11 @@ test.describe('Billing Management', () => {
     // Look for cancel plan button
     const cancelButton = page.locator('button:has-text("Cancel Plan"), button:has-text("Cancel Subscription")');
     
-    if (await cancelButton.isVisible({ timeout: 5000 })) {
+    if (await cancelButton.first().isVisible({ timeout: 5000 })) {
       console.log('✅ Cancel Plan button found');
       
       // Click cancel button
-      await cancelButton.click();
+      await cancelButton.first().click();
       await page.waitForTimeout(2000);
       
       // Look for confirmation dialog
@@ -198,10 +198,10 @@ test.describe('Billing Management', () => {
         const denyButton = page.locator('button:has-text("No"), button:has-text("Keep Plan"), button:has-text("Cancel")');
         
         // For demo purposes, we'll cancel the cancellation to avoid actually canceling
-        if (await denyButton.isVisible({ timeout: 3000 })) {
-          await denyButton.click();
+        if (await denyButton.first().isVisible({ timeout: 3000 })) {
+          await denyButton.first().click();
           console.log('✅ Cancelled the cancellation (keeping plan active for demo)');
-        } else if (await confirmCancelButton.isVisible({ timeout: 3000 })) {
+        } else if (await confirmCancelButton.first().isVisible({ timeout: 3000 })) {
           // In a real test environment, you might want to actually cancel
           console.log('ℹ️ Cancellation confirmation available but not proceeding for demo');
         }
