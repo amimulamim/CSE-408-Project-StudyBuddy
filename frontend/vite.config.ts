@@ -38,6 +38,9 @@ export default defineConfig(({ mode }) => ({
         "**/build/**",
         "**/*.conf**",
         "**/*.d.ts*",
+        "**/components/quiz/**",
+        "**/components/admin/**",
+        "**/components/ui/t**"
       ],
     },
   },
