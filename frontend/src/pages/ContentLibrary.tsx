@@ -130,15 +130,15 @@ export default function ContentLibrary() {
           </TabsList>
           
           <TabsContent value="all">
-            <ContentList contents={contents} loading={loading} />
+            <ContentList contents={contents} loading={loading} setContents={setContents} />
           </TabsContent>
           
           <TabsContent value="flashcards">
-            <ContentList contents={flashcards} loading={loading} />
+            <ContentList contents={flashcards} loading={loading} setContents={setContents} />
           </TabsContent>
           
           <TabsContent value="slides">
-            <ContentList contents={slides} loading={loading} />
+            <ContentList contents={slides} loading={loading} setContents={setContents} />
           </TabsContent>
         </Tabs>
       </div>
