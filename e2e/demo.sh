@@ -61,6 +61,9 @@ run_demo() {
         "chat")
             npm run test:demo:chat
             ;;
+        "user")
+            npm run test:demo:user
+            ;;
         "all")
             npm run test:demo
             ;;
@@ -83,11 +86,13 @@ show_usage() {
     echo "Demo types:"
     echo "  auth    - Run authentication tests only"
     echo "  chat    - Run chat functionality tests only"
+    echo "  user    - Run user profile tests only"
     echo "  all     - Run all e2e tests"
     echo ""
     echo "Examples:"
     echo "  $0 auth    # Demo authentication features"
     echo "  $0 chat    # Demo chat functionality"
+    echo "  $0 user    # Demo user profile features"
     echo "  $0 all     # Demo complete application"
     echo ""
     echo "Regular development (background) testing:"
