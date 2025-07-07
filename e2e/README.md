@@ -33,6 +33,9 @@ npm run test:demo:chat
 # Demo user profile features
 npm run test:demo:user
 
+# Demo billing features
+npm run test:demo:billing
+
 # Demo all features
 npm run test:demo
 ```
@@ -50,6 +53,7 @@ npm run test:demo
 demo.bat auth     # Demo authentication
 demo.bat chat     # Demo chat features
 demo.bat user     # Demo user profile features
+demo.bat billing  # Demo billing features
 demo.bat all      # Demo everything
 ```
 
