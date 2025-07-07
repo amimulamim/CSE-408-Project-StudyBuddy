@@ -5,6 +5,9 @@ import { vi, beforeEach, test, expect, describe, afterEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { PaymentResult } from '@/components/billing/PaymentResult'
 
+// Set global flag for billing tests to use production URL
+;(global as any).__BILLING_TEST__ = true
+
 // Mock react-router-dom
 const mockNavigate = vi.fn()
 vi.mock('react-router-dom', async () => {

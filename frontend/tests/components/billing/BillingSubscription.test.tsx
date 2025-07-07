@@ -4,6 +4,9 @@ import '@testing-library/jest-dom'
 import { vi, beforeEach, test, expect, describe } from 'vitest'
 import type { SubscriptionStatus } from '@/lib/billingTypes'
 
+// Set global flag for billing tests to use production URL
+;(global as any).__BILLING_TEST__ = true
+
 // Mock billing lib
 vi.mock('@/lib/billing', () => ({
   getSubscriptionStatus: vi.fn(),
