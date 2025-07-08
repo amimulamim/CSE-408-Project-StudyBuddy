@@ -362,14 +362,27 @@ class TestContentRoutes:
 
         content_id = str(sample_content_item.id)
 
-        # Act
-        response = client.get(f"/api/v1/content/{content_id}")
+        # Mock requests.get for flashcards content fetching
+        mock_flashcards_data = {
+            "flashcards": [
+                {"front": "What is Python?", "back": "A programming language"}
+            ]
+        }
+        
+        with patch('requests.get') as mock_get:
+            mock_response = Mock()
+            mock_response.json.return_value = mock_flashcards_data
+            mock_response.raise_for_status.return_value = None
+            mock_get.return_value = mock_response
+
+            # Act
+            response = client.get(f"/api/v1/content/{content_id}")
 
         # Assert
         assert response.status_code == 200
         data = response.json()
         assert data["contentId"] == sample_content_item.id
-        assert data["content"] == sample_content_item.content_url
+        assert data["content"] == mock_flashcards_data  # For flashcards, content should be the parsed JSON
         assert data["metadata"]["type"] == "flashcards"
         assert data["metadata"]["topic"] == "Python Programming"
 
