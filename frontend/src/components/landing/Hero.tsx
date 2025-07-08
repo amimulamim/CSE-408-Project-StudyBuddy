@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import dashboard from '@/assets/dashboard.png';
+import heroPicture from '@/assets/hero-3d.png'; // Add your 3D picture import
 import BlinkingOwl from '../animations/Owl';
 
 interface HeroProps {
@@ -156,7 +157,13 @@ export function Hero({ onSignUp }: HeroProps) {
               }}
             />
             
-            <BlinkingOwl />
+            <motion.img
+              src={heroPicture}
+              alt="AI Study Buddy 3D Illustration"
+              className="max-w-full h-auto mx-auto"
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.3 }}
+            />
           </motion.div>
         </motion.div>
       </div>

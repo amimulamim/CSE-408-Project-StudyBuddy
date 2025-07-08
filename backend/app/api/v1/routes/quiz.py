@@ -436,7 +436,7 @@ async def get_all_quizzes(
         for quiz in quizzes:
             result.append({
                 "quiz_id": str(quiz.quiz_id),
-                "created_at": quiz.created_at,
+                "createdAt": quiz.created_at,
                 "difficulty": quiz.difficulty.value if hasattr(quiz.difficulty, "value") else str(quiz.difficulty),
                 "duration": getattr(quiz, "duration", None),
                 "collection_name": getattr(quiz, "collection_name", None),
@@ -478,7 +478,7 @@ async def get_quiz_marks(
                 "domain":quiz.domain,
                 "duration": quiz.duration,
                 "collection_name": quiz.collection_name,
-                "created_at": quiz.created_at,
+                "createdAt": quiz.created_at,
             })
         return response
     except Exception as e:

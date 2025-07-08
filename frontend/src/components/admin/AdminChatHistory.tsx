@@ -95,7 +95,7 @@ export function AdminChatHistory() {
   );
 
   return (
-    <Card>
+    <Card className="glass-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MessageSquare className="h-5 w-5" />
@@ -116,7 +116,7 @@ export function AdminChatHistory() {
           </div>
 
           <div className="border rounded-lg overflow-hidden">
-            <Table>
+            <Table className="enhanced-table">
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>
