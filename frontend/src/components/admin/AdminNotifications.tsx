@@ -530,7 +530,7 @@ export function AdminNotifications() {
           </div>
 
           <div className="border rounded-lg overflow-hidden">
-            <Table>
+            <Table className="enhanced-table">
               <TableHeader>
                 <TableRow>
                   <TableHead>Type</TableHead>

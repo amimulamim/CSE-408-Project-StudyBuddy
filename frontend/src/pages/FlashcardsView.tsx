@@ -40,13 +40,13 @@ export default function FlashcardsView() {
       
       // Use the raw endpoint instead of fetching JSON directly
       const response:ApiResponse = await makeRequest(
-        `${API_BASE_URL}/api/v1/content/raw/${contentId}`,
+        `${API_BASE_URL}/api/v1/content/${contentId}`,
         'GET'
       );
 
       if (response?.status === 'success') {
-        setMetadata(response.data.data.metadata);
-        setFlashcards(response.data.data.content); // Content is already parsed JSON
+        setMetadata(response.data.metadata);
+        setFlashcards(response.data.content); // Content is already parsed JSON
       } else {
         throw new Error('Failed to load content');
       }

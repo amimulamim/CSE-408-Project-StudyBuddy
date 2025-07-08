@@ -12,6 +12,7 @@ import uuid
 from firebase_admin import storage
 from pydantic import BaseModel, Field
 from typing import Literal
+import requests
 
 
 
@@ -137,15 +138,43 @@ async def get_content(
         if not content:
             raise HTTPException(status_code=404, detail="Content not found or access denied")
 
+        # For flashcards, fetch and return the JSON content directly
+        if content.content_type == "flashcards":
+            try:
+                # Fetch the JSON content from Firebase Storage
+                response = requests.get(content.content_url, timeout=30)
+                response.raise_for_status()
+                
+                # Parse and return the JSON content
+                flashcards_data = response.json()
+                
+                return {
+                    "contentId": content.id,
+                    "content": flashcards_data,  # Return parsed JSON data
+                    "metadata": {
+                        "type": content.content_type,
+                        "topic": content.topic,
+                        "createdAt": content.created_at
+                    }
+                }
+            except requests.RequestException as e:
+                logger.error(f"Error fetching flashcards content from storage for {contentId}: {str(e)}")
+                raise HTTPException(status_code=500, detail="Failed to fetch content from storage")
+            except ValueError as e:
+                logger.error(f"Error parsing flashcards JSON for {contentId}: {str(e)}")
+                raise HTTPException(status_code=500, detail="Invalid content format")
+        
+        # For slides and other content types, return the URL
         return {
             "contentId": content.id,
-            "content": content.content_url,
+            "content": content.content_url,  # Return URL for slides/PDFs
             "metadata": {
                 "type": content.content_type,
                 "topic": content.topic,
                 "createdAt": content.created_at
             }
         }
+        
     except HTTPException as e:
         raise
     except Exception as e:
