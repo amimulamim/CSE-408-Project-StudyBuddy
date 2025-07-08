@@ -278,13 +278,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
     }
     ).catch((error) => {
-      console.error('Error loading more messages:', error);
       // Handle error appropriately, e.g., show a toast notification
-      // toast({
-      //   title: "Error loading messages",
-      //   description: error.message || "An unexpected error occurred.",
-      //   variant: "destructive",
-      // });
+      toast.error(`Error loading messages: ${error.message || 'An unexpected error occurred.'}`);
     });
       
   }, [getChatHistory, setCurrentChat, currentChat]);

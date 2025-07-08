@@ -287,7 +287,7 @@ export function AdminNotifications() {
   };
 
   return (
-    <Card>
+    <Card className="glass-card">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
@@ -530,7 +530,7 @@ export function AdminNotifications() {
           </div>
 
           <div className="border rounded-lg overflow-hidden">
-            <Table>
+            <Table className="enhanced-table">
               <TableHeader>
                 <TableRow>
                   <TableHead>Type</TableHead>

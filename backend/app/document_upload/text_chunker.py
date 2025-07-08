@@ -19,13 +19,23 @@ class TextChunker:
             
             while start < text_length:
                 end = min(start + self.chunk_size, text_length)
-                while end < text_length and text[end] not in [' ', '\n', '.', '!', '?']:
+                original_end = end
+                
+                # Try to find a word boundary, but don't go back too far
+                while end > start and end < text_length and text[end] not in [' ', '\n', '.', '!', '?']:
                     end -= 1
+                
+                # If we couldn't find a boundary or went back too far, use the original end
                 if end == start:
-                    end = min(start + self.chunk_size, text_length)
+                    end = original_end
                 
                 chunks.append(text[start:end].strip())
-                start = end - self.overlap if end < text_length else end
+                
+                # Ensure we always make progress - start must advance by at least 1
+                if end < text_length:
+                    start = max(start + 1, end - self.overlap)
+                else:
+                    start = end
             
             return chunks
         except Exception as e:

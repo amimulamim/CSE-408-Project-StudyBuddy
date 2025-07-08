@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, TEXT, DateTime, ForeignKey, ARRAY, Enum, Text, PrimaryKeyConstraint, UniqueConstraint, Boolean
+from sqlalchemy import Column, String, Float, TEXT, DateTime, ForeignKey, ARRAY, Enum, Text, PrimaryKeyConstraint, UniqueConstraint, Boolean, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from app.core.database import Base
 from datetime import datetime, timezone
@@ -11,15 +11,20 @@ class QuestionType(enum.Enum):
     TrueFalse = "TrueFalse"
 
 class DifficultyLevel(enum.Enum):
-    Easy = "easy"
-    Medium = "medium"
-    Hard = "hard"
+    Easy = "Easy"
+    Medium = "Medium"
+    Hard = "Hard"
 
 class Quiz(Base):
     __tablename__ = "quizzes"
     quiz_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(String, ForeignKey("users.uid", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    difficulty = Column(Enum(DifficultyLevel), nullable=False, default=DifficultyLevel.Easy)
+    duration = Column(Integer, nullable=False, default=0)
+    collection_name = Column(String, nullable=False, default="")
+    topic = Column(String)  # Added topic to quizzes
+    domain = Column(String)  # Added domain to quizzes
 
 class QuizQuestion(Base):
     __tablename__ = "quiz_questions"
@@ -43,8 +48,6 @@ class QuizResult(Base):
     score = Column(Float, nullable=False)  # Total score achieved
     total = Column(Float, nullable=False)  # Maximum possible score
     feedback = Column(Text)  # Optional feedback
-    topic = Column(String)  # Optional topic
-    domain = Column(String)  # Optional domain
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class QuestionResult(Base):

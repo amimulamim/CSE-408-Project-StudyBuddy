@@ -8,7 +8,6 @@ import { Footer } from '@/components/landing/Footer';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { GradientBackground } from '@/components/animations/GradientBackground';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -19,7 +18,6 @@ const Index = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signIn' | 'signUp' | 'onboarding'>('signIn');
   const [onboardingDone, setOnboardingDone] = useState(false);
-  const { toast } = useToast();
   const navigate = useNavigate();
 
   // Animation variants

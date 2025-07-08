@@ -1,4 +1,6 @@
 import { makeRequest } from "@/lib/apiCall";
+import { SubscriptionStatus } from "@/lib/billingTypes";
+import { ApiResponse } from "./api";
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
@@ -12,22 +14,22 @@ export interface Plan {
   is_active: boolean;
 }
 
-export interface SubscriptionStatus {
-  id: string;
-  user_id: string;
-  plan_id: string;
-  status: string;
-  start_date: string;
-  end_date?: string;
-  cancel_at?: string;
-  created_at: string;
-  updated_at: string;
-}
+// export interface SubscriptionStatus {
+//   id: string;
+//   user_id: string;
+//   plan_id: string;
+//   status: string;
+//   start_date: string;
+//   end_date?: string;
+//   cancel_at?: string;
+//   created_at: string;
+//   updated_at: string;
+// }
 
 export interface CheckoutSession {
   plan_id: string;
-  success_url: string;
-  cancel_url: string;
+  success_url?: string;
+  cancel_url?: string;
 }
 
 export interface CheckoutResponse {
@@ -55,7 +57,7 @@ export async function createCheckoutSession(session: CheckoutSession): Promise<C
 
 export async function getSubscriptionStatus(): Promise<SubscriptionStatus | null> {
   const url = `${API_BASE_URL}/api/v1/billing/status`;
-  const result = await makeRequest<SubscriptionStatus>(url, "GET", null);
+  const result:ApiResponse = await makeRequest(url, "GET", null);
   // Unwrap ApiResponse: return data on success, else null
   if (typeof result === 'object' && 'status' in result) {
     return result.status === 'success' ? result.data : null;

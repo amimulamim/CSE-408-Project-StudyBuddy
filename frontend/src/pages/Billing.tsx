@@ -1,8 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
 import { ArrowLeft } from "lucide-react";
 import { BillingSubscription } from '@/components/billing/BillingSubscription';
 import { toast } from 'sonner';

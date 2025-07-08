@@ -374,14 +374,32 @@ def get_usage_statistics(
     except Exception:
         total_chats = 0
     
-    # TODO: Implement when content model is ready
-    total_content = 0
+    # Calculate content generation statistics
+    try:
+        from app.content_generator.models import ContentItem
+        total_content = db.query(ContentItem).filter(
+            and_(ContentItem.created_at >= start_time, ContentItem.created_at <= end_time)
+        ).count()
+    except Exception:
+        total_content = 0
     
-    # TODO: Implement when quiz model is ready  
-    total_quiz = 0
+    # Calculate quiz generation statistics
+    try:
+        from app.quiz_generator.models import Quiz
+        total_quiz = db.query(Quiz).filter(
+            and_(Quiz.created_at >= start_time, Quiz.created_at <= end_time)
+        ).count()
+    except Exception:
+        total_quiz = 0
     
-    # TODO: Implement when file upload model is ready
-    total_uploaded = 0
+    # Calculate file upload statistics
+    try:
+        from app.document_upload.models import UploadedDocument
+        total_uploaded = db.query(UploadedDocument).filter(
+            and_(UploadedDocument.created_at >= start_time, UploadedDocument.created_at <= end_time)
+        ).count()
+    except Exception:
+        total_uploaded = 0
     
     return UsageStatsResponse(
         users_added=total_users,
