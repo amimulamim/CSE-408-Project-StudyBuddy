@@ -1,11 +1,37 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { vi, test, expect, describe, beforeEach } from 'vitest';
-import { QuizResults } from '@/components/quiz/QuizResults';
+import { QuizResults } from '../../../src/components/quiz/QuizResults';
+import { toast } from 'sonner';
+import { makeRequest } from '../../../src/lib/apiCall';
+import { MemoryRouter } from 'react-router-dom';
+
+// Mock sonner
+vi.mock('sonner', () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn()
+  }
+}));
+
+// Mock API call
+vi.mock('@/lib/apiCall', () => ({
+  makeRequest: vi.fn()
+}));
+
+// Mock react-router-dom
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate
+  };
+});
 
 // Mock UI components
-vi.mock('@/components/ui/card', () => ({
+vi.mock('../../../src/components/ui/card', () => ({
   Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div data-testid="card" className={className}>{children}</div>
   ),
@@ -17,30 +43,36 @@ vi.mock('@/components/ui/card', () => ({
   ),
   CardTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div data-testid="card-title" className={className}>{children}</div>
+  ),
+  CardDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="card-description" className={className}>{children}</div>
   )
 }));
 
-vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, onClick, variant, className }: {
+vi.mock('../../../src/components/ui/button', () => ({
+  Button: ({ children, onClick, variant, disabled, type, className }: {
     children: React.ReactNode;
     onClick?: () => void;
     variant?: string;
+    disabled?: boolean;
+    type?: 'submit' | 'reset' | 'button';
     className?: string;
   }) => (
     <button
       onClick={onClick}
-      data-variant={variant}
+      disabled={disabled}
+      type={type}
       className={className}
-      data-testid={`button-${children?.toString().toLowerCase().replace(/\s+/g, '-')}`}
+      data-variant={variant}
     >
       {children}
     </button>
   )
 }));
 
-vi.mock('@/components/ui/badge', () => ({
-  Badge: ({ children, variant, className }: {
-    children: React.ReactNode;
+vi.mock('../../../src/components/ui/badge', () => ({
+  Badge: ({ children, variant, className }: { 
+    children: React.ReactNode; 
     variant?: string;
     className?: string;
   }) => (
@@ -50,195 +82,249 @@ vi.mock('@/components/ui/badge', () => ({
   )
 }));
 
-vi.mock('@/components/ui/progress', () => ({
-  Progress: ({ value, className }: { value?: number; className?: string }) => (
-    <div data-testid="progress" data-value={value} className={className}>
-      Progress: {value}%
-    </div>
+vi.mock('../../../src/components/ui/tabs', () => ({
+  Tabs: ({ children, defaultValue }: { children: React.ReactNode; defaultValue?: string }) => (
+    <div data-testid="tabs" data-default-value={defaultValue}>{children}</div>
+  ),
+  TabsContent: ({ children, value }: { children: React.ReactNode; value: string }) => (
+    <div data-testid={`tabs-content-${value}`}>{children}</div>
+  ),
+  TabsList: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="tabs-list">{children}</div>
+  ),
+  TabsTrigger: ({ children, value }: { children: React.ReactNode; value: string }) => (
+    <button data-testid={`tabs-trigger-${value}`}>{children}</button>
   )
 }));
 
-// Mock Lucide React icons
+// Mock lucide-react icons
 vi.mock('lucide-react', () => ({
-  ArrowLeft: () => <div data-testid="arrow-left-icon">ArrowLeft</div>,
-  Trophy: () => <div data-testid="trophy-icon">Trophy</div>,
-  Clock: () => <div data-testid="clock-icon">Clock</div>,
-  CheckCircle: () => <div data-testid="check-circle-icon">CheckCircle</div>,
-  XCircle: () => <div data-testid="x-circle-icon">XCircle</div>,
-  Info: () => <div data-testid="info-icon">Info</div>,
-  Star: () => <div data-testid="star-icon">Star</div>
+  Trophy: () => <div data-testid="trophy-icon" />,
+  Target: () => <div data-testid="target-icon" />,
+  CheckCircle: () => <div data-testid="check-circle-icon" />,
+  XCircle: () => <div data-testid="x-circle-icon" />,
+  ArrowLeft: () => <div data-testid="arrow-left-icon" />,
+  BarChart3: () => <div data-testid="bar-chart-icon" />,
+  Loader2: () => <div data-testid="loader2-icon" />
 }));
 
+const mockMakeRequest = makeRequest as any;
+
+const mockResultsData = {
+  quiz_id: 'test-quiz-id',
+  topic: 'Mathematics',
+  domain: 'Math',
+  score: 85,
+  total: 100,
+  question_results: [
+    {
+      question_id: 'q1',
+      question_text: 'What is 2 + 2?',
+      type: 'MultipleChoice',
+      options: ['3', '4', '5', '6'],
+      score: 10,
+      is_correct: true,
+      student_answer: '4',
+      correct_answer: '4',
+      explanation: 'Basic addition: 2 + 2 = 4'
+    },
+    {
+      question_id: 'q2',
+      question_text: 'What is the capital of France?',
+      type: 'ShortAnswer',
+      score: 0,
+      is_correct: false,
+      student_answer: 'London',
+      correct_answer: 'Paris',
+      explanation: 'The capital of France is Paris, not London.'
+    }
+  ]
+};
+
 describe('QuizResults', () => {
-  const mockQuiz = {
-    id: 'quiz-1',
-    title: 'Mathematics Quiz',
-    subject: 'Mathematics',
-    topic: 'Calculus',
-    difficulty: 'Medium' as const,
-    totalQuestions: 10,
-    duration: 30,
-    marks: 50,
-    status: 'completed' as const,
-    createdAt: '2023-01-01',
-    score: 70,
-    timeTaken: 12
-  };
-
-  const mockOnBack = vi.fn();
-
   beforeEach(() => {
     vi.clearAllMocks();
+    mockMakeRequest.mockResolvedValue({
+      status: 'success',
+      data: mockResultsData
+    });
   });
 
-  test('renders quiz results header correctly', () => {
-    render(<QuizResults quiz={mockQuiz} onBack={mockOnBack} />);
+  const renderWithRouter = (component: React.ReactElement) => {
+    return render(
+      <MemoryRouter>
+        {component}
+      </MemoryRouter>
+    );
+  };
 
-    expect(screen.getByText('Quiz Complete!')).toBeInTheDocument();
-    expect(screen.getByText('Mathematics Quiz')).toBeInTheDocument();
-    // Use accessible role for back button
-    expect(screen.getByRole('button', { name: /Back to Dashboard/ })).toBeInTheDocument();
-    expect(screen.getByTestId('arrow-left-icon')).toBeInTheDocument();
+  test('renders quiz results with score overview', async () => {
+    renderWithRouter(<QuizResults quizId="test-quiz-id" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Quiz Results')).toBeInTheDocument();
+    });
+
+    expect(screen.getAllByText('85%')).toHaveLength(2); // Should appear in two places
+    expect(screen.getByText('85/100')).toBeInTheDocument();
+    expect(screen.getByText('1/2')).toBeInTheDocument(); // correct answers out of total questions
   });
 
-  test('displays quiz score correctly', () => {
-    render(<QuizResults quiz={mockQuiz} onBack={mockOnBack} />);
+  test('fetches results on component mount', async () => {
+    renderWithRouter(<QuizResults quizId="test-quiz-id" />);
 
-    expect(screen.getByText('70%')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(mockMakeRequest).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/quiz/quizzes/test-quiz-id?take=false'),
+        'GET'
+      );
+    });
   });
 
-  test('displays grade based on score', () => {
-    render(<QuizResults quiz={mockQuiz} onBack={mockOnBack} />);
+  test('displays loading state initially', () => {
+    renderWithRouter(<QuizResults quizId="test-quiz-id" />);
 
-    // Default score 70 uses this message
-    expect(screen.getByText('Good work! Keep it up!')).toBeInTheDocument();
+    expect(screen.getByTestId('loader2-icon')).toBeInTheDocument();
   });
 
-  test('displays different grades for different scores', () => {
-    const highScoreQuiz = { ...mockQuiz, score: 90 };
-    const { rerender } = render(<QuizResults quiz={highScoreQuiz} onBack={mockOnBack} />);
+  test('displays correct and incorrect answer statistics', async () => {
+    renderWithRouter(<QuizResults quizId="test-quiz-id" />);
 
-    // High score displays full combined message
-    expect(screen.getByText('Excellent! Outstanding performance!')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Quiz Results')).toBeInTheDocument();
+    });
 
-    const lowScoreQuiz = { ...mockQuiz, score: 45 };
-    rerender(<QuizResults quiz={lowScoreQuiz} onBack={mockOnBack} />);
-
-    // Low score uses default encouragement
-    expect(screen.getByText('Keep practicing! You can do better!')).toBeInTheDocument();
+    expect(screen.getAllByText('1')).toHaveLength(2); // Correct and incorrect answers are both 1 in our test data
   });
 
-  test('displays quiz statistics', () => {
-    render(<QuizResults quiz={mockQuiz} onBack={mockOnBack} />);
+  test('shows detailed question results', async () => {
+    renderWithRouter(<QuizResults quizId="test-quiz-id" />);
 
-    // Progress summary
-    expect(screen.getByText(/7\s*\/\s*10\s*questions correct/)).toBeInTheDocument();
-    // Statistics grid
-    // Use getAllByText to avoid ambiguity when multiple 'Correct' elements exist
-    expect(screen.getAllByText('Correct').length).toBeGreaterThan(0);
-    expect(screen.getByText('12')).toBeInTheDocument(); // Minutes value
-    expect(screen.getByText('Minutes')).toBeInTheDocument();
-    expect(screen.getByText('Total Marks')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Question 1')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Question 2')).toBeInTheDocument();
+    
+    // Use getAllByText for elements that appear multiple times
+    const yourAnswer4Elements = screen.getAllByText((content, element) => {
+      return element?.textContent === 'Your Answer: 4' || content === 'Your Answer: 4';
+    });
+    expect(yourAnswer4Elements.length).toBeGreaterThan(0);
+    
+    const yourAnswerLondonElements = screen.getAllByText((content, element) => {
+      return element?.textContent === 'Your Answer: London' || content === 'Your Answer: London';
+    });
+    expect(yourAnswerLondonElements.length).toBeGreaterThan(0);
   });
 
-  test('displays progress bar with correct value', () => {
-    render(<QuizResults quiz={mockQuiz} onBack={mockOnBack} />);
+  test('displays explanations for questions', async () => {
+    renderWithRouter(<QuizResults quizId="test-quiz-id" />);
 
-    const progress = screen.getByTestId('progress');
-    expect(progress).toHaveAttribute('data-value', '70');
+    await waitFor(() => {
+      expect(screen.getByText('Basic addition: 2 + 2 = 4')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('The capital of France is Paris, not London.')).toBeInTheDocument();
   });
 
-  test('shows question review section', () => {
-    render(<QuizResults quiz={mockQuiz} onBack={mockOnBack} />);
+  test('shows correct answer for incorrect responses', async () => {
+    renderWithRouter(<QuizResults quizId="test-quiz-id" />);
 
-    expect(screen.getByText('Question Review')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText((content, element) => {
+        return element?.textContent === 'Correct Answer: Paris' || content === 'Correct Answer: Paris';
+      })).toBeInTheDocument();
+    });
   });
 
-  test('displays individual questions with answers', () => {
-    render(<QuizResults quiz={mockQuiz} onBack={mockOnBack} />);
+  test('handles results fetch error', async () => {
+    mockMakeRequest.mockRejectedValueOnce(new Error('Failed to fetch results'));
 
-    expect(screen.getByText('What is the derivative of x²?')).toBeInTheDocument();
-    expect(screen.getByText('What is the integral of 2x?')).toBeInTheDocument();
-    expect(screen.getByText('2x')).toBeInTheDocument(); // Correct answer
+    renderWithRouter(<QuizResults quizId="test-quiz-id" />);
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Failed to load quiz results');
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboard/quiz');
+    });
   });
 
-  test('shows correct and incorrect answer indicators', () => {
-    render(<QuizResults quiz={mockQuiz} onBack={mockOnBack} />);
+  test('navigates back to quiz dashboard when back button is clicked', async () => {
+    renderWithRouter(<QuizResults quizId="test-quiz-id" />);
 
-    // Ensure at least one indicator for correct and incorrect
-    expect(screen.getAllByTestId('check-circle-icon').length).toBeGreaterThan(0);
-    expect(screen.getAllByTestId('x-circle-icon').length).toBeGreaterThan(0);
-  });
+    await waitFor(() => {
+      expect(screen.getByText('Back to Quizzes')).toBeInTheDocument();
+    });
 
-  test('displays explanations for questions', () => {
-    render(<QuizResults quiz={mockQuiz} onBack={mockOnBack} />);
-
-    expect(screen.getByText(/The integral of 2x is x² \+ C/)).toBeInTheDocument();
-  });
-
-  test('calls onBack when back button is clicked', () => {
-    render(<QuizResults quiz={mockQuiz} onBack={mockOnBack} />);
-
-    const backButton = screen.getByRole('button', { name: /Back to Dashboard/ });
+    const backButton = screen.getByText('Back to Quizzes');
     fireEvent.click(backButton);
 
-    expect(mockOnBack).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith('/dashboard/quiz');
   });
 
-  test('shows correct badge styling for correct answers', () => {
-    render(<QuizResults quiz={mockQuiz} onBack={mockOnBack} />);
+  test('displays different badges for correct and incorrect answers', async () => {
+    renderWithRouter(<QuizResults quizId="test-quiz-id" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Quiz Results')).toBeInTheDocument();
+    });
 
     const badges = screen.getAllByTestId('badge');
-    const correctBadge = badges.find(badge => badge.textContent === 'Correct');
-    const incorrectBadge = badges.find(badge => badge.textContent === 'Incorrect');
-
-    expect(correctBadge).toHaveAttribute('data-variant', 'default');
-    expect(incorrectBadge).toHaveAttribute('data-variant', 'destructive');
+    
+    // Should have badges for correct/incorrect answers
+    expect(badges.some(badge => badge.textContent?.includes('Correct'))).toBeTruthy();
+    expect(badges.some(badge => badge.textContent?.includes('Incorrect'))).toBeTruthy();
   });
 
-  test('applies correct score color classes', () => {
-    const highScoreQuiz = { ...mockQuiz, score: 85 };
-    const { rerender } = render(<QuizResults quiz={highScoreQuiz} onBack={mockOnBack} />);
+  test('shows performance statistics correctly', async () => {
+    renderWithRouter(<QuizResults quizId="test-quiz-id" />);
 
-    let scoreElement = screen.getByText('85%');
-    expect(scoreElement).toHaveClass('text-green-600');
+    await waitFor(() => {
+      expect(screen.getByText('Quiz Results')).toBeInTheDocument();
+    });
 
-    const mediumScoreQuiz = { ...mockQuiz, score: 65 };
-    rerender(<QuizResults quiz={mediumScoreQuiz} onBack={mockOnBack} />);
-
-    scoreElement = screen.getByText('65%');
-    expect(scoreElement).toHaveClass('text-yellow-600');
-
-    const lowScoreQuiz = { ...mockQuiz, score: 45 };
-    rerender(<QuizResults quiz={lowScoreQuiz} onBack={mockOnBack} />);
-
-    scoreElement = screen.getByText('45%');
-    expect(scoreElement).toHaveClass('text-red-600');
+    // Check that percentage and scores are displayed (expect multiple instances)
+    expect(screen.getAllByText('85%')).toHaveLength(2);
+    expect(screen.getByText((content, element) => {
+      return element?.textContent === 'Mathematics • Math' || false;
+    })).toBeInTheDocument();
   });
 
-  test('renders all required icons', () => {
-    render(<QuizResults quiz={mockQuiz} onBack={mockOnBack} />);
+  test('displays question types and scores correctly', async () => {
+    renderWithRouter(<QuizResults quizId="test-quiz-id" />);
 
-    expect(screen.getByTestId('trophy-icon')).toBeInTheDocument();
-    expect(screen.getAllByTestId('star-icon').length).toBeGreaterThan(0);
-    // Multiple info icons may appear, ensure at least one
-    expect(screen.getAllByTestId('info-icon').length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(screen.getByText('Question 1')).toBeInTheDocument();
+    });
+
+    // Check that question types are shown
+    expect(screen.getByText('10 points • MultipleChoice')).toBeInTheDocument();
+    expect(screen.getByText('0 points • ShortAnswer')).toBeInTheDocument();
   });
 
-  test('handles quiz without custom score', () => {
-    const quizWithoutScore = { ...mockQuiz, score: undefined };
-    render(<QuizResults quiz={quizWithoutScore} onBack={mockOnBack} />);
+  test('handles empty or null results gracefully', async () => {
+    mockMakeRequest.mockResolvedValueOnce({
+      status: 'success',
+      data: null
+    });
 
-    // Should default to 70% as per component logic
-    expect(screen.getByText('70%')).toBeInTheDocument();
+    renderWithRouter(<QuizResults quizId="test-quiz-id" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Quiz results not found.')).toBeInTheDocument();
+    });
   });
 
-  test('handles quiz without custom time taken', () => {
-    const quizWithoutTime = { ...mockQuiz, timeTaken: undefined };
-    render(<QuizResults quiz={quizWithoutTime} onBack={mockOnBack} />);
+  test('shows quiz topic and domain information', async () => {
+    renderWithRouter(<QuizResults quizId="test-quiz-id" />);
 
-    // Should display default timeTaken and label as per component logic
-    expect(screen.getByText('12')).toBeInTheDocument();
-    expect(screen.getByText('Minutes')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText((content, element) => {
+        return element?.textContent === 'Mathematics • Math' || false;
+      })).toBeInTheDocument();
+    });
+
+    // Check for the exact text content in the description element
+    expect(screen.getByText('Mathematics • Math')).toBeInTheDocument();
   });
 });
