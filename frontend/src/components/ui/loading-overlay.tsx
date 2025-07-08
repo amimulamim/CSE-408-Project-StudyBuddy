@@ -6,7 +6,7 @@ interface LoadingOverlayProps {
 
 export function LoadingOverlay({ message = "Loading..." }: LoadingOverlayProps) {
   return (
-      <div className="absolute inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
         {/* Blur backdrop */}
         <div className="absolute inset-0 bg-study-dark/50 backdrop-blur-sm" />
         
@@ -17,7 +17,7 @@ export function LoadingOverlay({ message = "Loading..." }: LoadingOverlayProps) 
           
           {/* Loading text */}
           <div className="text-center">
-            <h3 className="text-xl font-semibold text-white mb-2">Loading</h3>
+            <h3 className="text-xl font-semibold text-white mb-2">Loading...</h3>
             <p className="text-sm text-white/70">{message}</p>
           </div>
         </div>
