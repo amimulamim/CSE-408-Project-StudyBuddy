@@ -10,6 +10,10 @@ from firebase_admin import credentials
 
 # Set test environment variables before any imports
 os.environ.setdefault("TESTING", "1")
+# Load test environment variables from .env.test
+from dotenv import load_dotenv
+load_dotenv('.env.test')
+# Only set defaults if not already set in .env.test
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("FIREBASE_KEY_PATH", "/tmp/test_firebase_key.json")
 os.environ.setdefault("FIREBASE_STORAGE_BUCKET", "test-bucket")
@@ -59,8 +63,9 @@ def mock_firebase():
 @pytest.fixture(scope="session")
 def test_db():
     """Create a test database."""
-    engine = create_engine("sqlite:///:memory:", echo=True)
-    from app.core.database import Base
+    # Use the DATABASE_URL from environment (which should be PostgreSQL from .env.test)
+    from app.core.database import get_engine, Base
+    engine = get_engine()
     Base.metadata.create_all(bind=engine)
     
     test_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)

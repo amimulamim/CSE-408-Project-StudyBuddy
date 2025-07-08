@@ -7,6 +7,14 @@ CREATE TABLE quizzes (
 CREATE TYPE question_type AS ENUM ('MultipleChoice', 'ShortAnswer', 'TrueFalse');
 CREATE TYPE difficulty_level AS ENUM ('Easy', 'Medium', 'Hard');
 
+
+ALTER TABLE quizzes
+ADD COLUMN difficulty difficulty_level NOT NULL DEFAULT 'Easy',
+ADD COLUMN duration INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN collection_name TEXT NOT NULL DEFAULT '',
+ADD COLUMN topic TEXT,
+ADD COLUMN domain TEXT;
+
 CREATE TABLE quiz_questions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),                          -- DB primary key                                                       -- Optional logical ID
     quiz_id UUID NOT NULL REFERENCES quizzes(quiz_id) ON DELETE CASCADE,   -- FK to quizzes
@@ -29,8 +37,6 @@ CREATE TABLE quiz_results (
     score NUMERIC NOT NULL,
     total NUMERIC NOT NULL,
     feedback TEXT,
-    topic TEXT,
-    domain TEXT,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 

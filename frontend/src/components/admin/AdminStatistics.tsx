@@ -27,9 +27,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg p-3 animate-in slide-in-from-bottom-2 duration-200">
-        <p className="font-semibold text-gray-800">{`${label}`}</p>
+        {label && (<p className="font-semibold text-gray-800">{`${label}`}</p>)}
         {payload.map((entry: any, index: number) => (
-          <p key={index} className="text-sm" style={{ color: entry.color }}>
+          <p key={index} className="text-sm" style={{ color: 'black' }}>
             {`${entry.name}: ${entry.value}`}
           </p>
         ))}
@@ -109,7 +109,7 @@ export function AdminStatistics() {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="glass-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
@@ -231,10 +231,12 @@ export function AdminStatistics() {
                           margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
                         >
                           <defs>
-                            <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
-                              <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.2}/>
-                            </linearGradient>
+                            {chartData.map((entry, index) => (
+                              <linearGradient key={index} id={`gradient${index}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor={entry.color} stopOpacity={0.8}/>
+                                <stop offset="95%" stopColor={entry.color} stopOpacity={0.3}/>
+                              </linearGradient>
+                            ))}
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="#e0e7ff" />
                           <XAxis 
@@ -256,7 +258,7 @@ export function AdminStatistics() {
                             animationEasing="ease-out"
                           >
                             {chartData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
+                              <Cell key={`cell-${index}`} fill={`url(#gradient${index})`} />
                             ))}
                           </Bar>
                         </BarChart>
@@ -271,10 +273,18 @@ export function AdminStatistics() {
                     <CardTitle>Usage Distribution</CardTitle>
                     <CardDescription>Percentage breakdown of activities</CardDescription>
                   </CardHeader>
-                  <CardContent className="p-4">
+                  <CardContent className="p-2">
                     <div className="h-[300px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
+                          <defs>
+                            {chartData.map((entry, index) => (
+                              <linearGradient key={index} id={`pieGradient${index}`} x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor={entry.color} stopOpacity={0.9}/>
+                                <stop offset="100%" stopColor={entry.color} stopOpacity={0.4}/>
+                              </linearGradient>
+                            ))}
+                          </defs>
                           <Pie
                             data={chartData}
                             cx="50%"
@@ -289,7 +299,7 @@ export function AdminStatistics() {
                             labelLine={false}
                           >
                             {chartData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
+                              <Cell key={`cell-${index}`} fill={`url(#pieGradient${index})`} />
                             ))}
                           </Pie>
                           <Tooltip content={<CustomTooltip />} />

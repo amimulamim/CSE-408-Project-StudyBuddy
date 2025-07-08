@@ -65,7 +65,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background dashboard-bg-animated">
       {/* Header */}
       <div className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">

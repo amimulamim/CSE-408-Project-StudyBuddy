@@ -22,7 +22,7 @@ class ExamGenerator:
             logger.error(f"Error initializing ExamGenerator: {str(e)}")
             raise
 
-    def generate_questions(self, context: str, num_questions: int, question_type: str) -> List[Dict[str, Any]]:
+    def generate_questions(self, context: str, num_questions: int, question_type: str,difficulty : str) -> List[Dict[str, Any]]:
         """Generates a list of unique questions based on context."""
         try:
             # Map underscore inputs to camel case for compatibility
@@ -38,7 +38,7 @@ class ExamGenerator:
             if not normalized_type:
                 raise ValueError(f"Unsupported question type: {question_type}")
 
-            prompt = self._build_prompt(context, num_questions, normalized_type)
+            prompt = self._build_prompt(context, num_questions, normalized_type,difficulty)
             response = self.model.generate_content(prompt)
             if not response or not hasattr(response, 'text') or not response.text:
                 logger.error(f"Invalid Gemini API response: {response}")
@@ -52,7 +52,7 @@ class ExamGenerator:
             logger.error(f"Error generating questions: {str(e)}")
             raise Exception(f"Error generating questions: {str(e)}")
 
-    def _build_prompt(self, context: str, num_questions: int, question_type: str) -> str:
+    def _build_prompt(self, context: str, num_questions: int, question_type: str, difficulty:str) -> str:
         """Builds a prompt for Gemini API to generate questions."""
         question_type_description = {
             "MultipleChoice": "multiple-choice questions with 4 options, specifying the correct option index (0-3)",
@@ -73,6 +73,7 @@ class ExamGenerator:
         - explanation: Brief explanation of the correct answer
         - correct_answer: For MultipleChoice, the option index (e.g., "0"); for others, the answer text
         
+        The average difficulty of all the questions should be {difficulty}
         Ensure questions and options (for MultipleChoice) are semantically distinct to avoid paraphrasing or similar meanings. Return the output as a valid JSON array, wrapped in triple backticks:
         ```json
         [

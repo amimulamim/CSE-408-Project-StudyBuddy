@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
 from pydantic import BaseModel , Field
 from typing import List, Dict, Any, Optional
 from app.rag.query_processor import QueryProcessor
@@ -37,13 +37,16 @@ class ExamRequest(BaseModel):
     num_questions: int
     question_type: str  # Expected: MultipleChoice, ShortAnswer, TrueFalse (also accepts multiple_choice, short_answer, true_false)
     collection_name: str
+    difficulty: str  # e.g., "Easy", "Medium", "Hard"
+    duration: int    # in minutes
+    topic: str
+    domain: str
 
 class EvaluateRequest(BaseModel):
     quiz_id: str
     question_id: str
     student_answer: str
-    topic: str
-    domain: str
+
 
 class CompleteQuizRequest(BaseModel):
     topic: str
@@ -72,12 +75,16 @@ async def generate_exam(
             question_type=request.question_type,
             user_id=user_id,
             collection_name=request.collection_name,
+            difficulty=request.difficulty,
+            duration=request.duration,
+            topic=request.topic,
+            domain=request.domain,
             db=db
         )
         return result
     except Exception as e:
         logger.error(f"Error generating exam: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
 
 @router.post("/evaluate")
 async def evaluate_answer(
@@ -102,38 +109,40 @@ async def evaluate_answer(
         }
     except Exception as e:
         logger.error(f"Error evaluating answer: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
 
 @router.delete("/quizzes/{quiz_id}")
 async def delete_exam(
-    exam_id: str,
+    quiz_id: str,
     db: Session = Depends(get_db),
     user_info: Dict[str, Any] = Depends(get_current_user)
 ):
     try:
         user_id = user_info["uid"]
-        quiz = db.query(Quiz).filter(Quiz.quiz_id == exam_id).first()
+        quiz = db.query(Quiz).filter(Quiz.quiz_id == quiz_id).first()
         if not quiz:
             raise HTTPException(status_code=404, detail="Exam not found")
         if quiz.user_id != user_id:
             raise HTTPException(status_code=403, detail="Not authorized")
-        await get_query_processor().delete_exam(exam_id, db)
-        return {"message": f"Exam {exam_id} deleted successfully"}
+        await get_query_processor().delete_exam(quiz_id, db)
+        return {"message": f"Exam {quiz_id} deleted successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error deleting exam: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
 
 # evaluate before submitting
 @router.post("/quizzes/{quiz_id}/submit")
 async def complete_quiz(
-    exam_id: str,
+    quiz_id: str,
     request: CompleteQuizRequest,
     db: Session = Depends(get_db),
     user_info: Dict[str, Any] = Depends(get_current_user)
 ):
     try:
         user_id = user_info["uid"]
-        quiz = db.query(Quiz).filter(Quiz.quiz_id == exam_id).first()
+        quiz = db.query(Quiz).filter(Quiz.quiz_id == quiz_id).first()
         if not quiz:
             raise HTTPException(status_code=404, detail="Quiz not found")
         if quiz.user_id != user_id:
@@ -142,7 +151,7 @@ async def complete_quiz(
         # Calculate total score from question_results table
         question_results = db.query(QuestionResult).filter(
             QuestionResult.user_id == user_id,
-            QuestionResult.quiz_id == exam_id
+            QuestionResult.quiz_id == quiz_id
         ).all()
         if not question_results:
             raise HTTPException(status_code=400, detail="No answers submitted")
@@ -150,59 +159,101 @@ async def complete_quiz(
         score = sum(res.score for res in question_results)
 
         # Calculate maximum possible score
-        questions = db.query(QuizQuestion).filter(QuizQuestion.quiz_id == exam_id).all()
+        questions = db.query(QuizQuestion).filter(QuizQuestion.quiz_id == quiz_id).all()
         total = sum(q.marks for q in questions)
 
         # Store in quiz_results
         result = QuizResult(
             id=str(uuid.uuid4()),
             user_id=user_id,
-            quiz_id=exam_id,
+            quiz_id=quiz_id,
             score=score,
             total=total,
             feedback=request.feedback,
-            topic=request.topic,
-            domain=request.domain,
             created_at=datetime.now(timezone.utc)
         )
         db.add(result)
         db.commit()
 
-        logger.info(f"Stored quiz result: score {score}/{total} for quiz {exam_id}")
+        logger.info(f"Stored quiz result: score {score}/{total} for quiz {quiz_id}")
         return {
-            "quiz_id": exam_id,
+            "quiz_id": quiz_id,
             "score": score,
             "total": total,
             "message": "Quiz completed successfully"
         }
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
-        logger.error(f"Error completing quiz {exam_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error completing quiz {quiz_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
     
 @router.get("/quizzes/{quiz_id}", response_model=Dict[str, Any])
 async def get_quiz(
     quiz_id: str,
+    take: bool = Query(True, description="If true, return questions for taking the quiz. If false, return detailed result if already taken."),
     user_info: Dict[str, Any] = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Fetches a previously generated quiz by quiz_id for the user."""
+    """Fetches a quiz for taking or, if already taken, returns detailed result."""
     try:
-        # First check if the quiz exists and belongs to the user
+        user_id = user_info["uid"]
         quiz_record = db.query(Quiz).filter(
             Quiz.quiz_id == quiz_id,
-            Quiz.user_id == user_info["uid"]
+            Quiz.user_id == user_id
         ).first()
         if not quiz_record:
             raise HTTPException(status_code=404, detail="Quiz not found or not accessible")
-        
-        # Then fetch the questions for this quiz
+
+        # If take is False, check if already taken
+        if not take:
+            quiz_result = db.query(QuizResult).filter(
+                QuizResult.quiz_id == quiz_id,
+                QuizResult.user_id == user_id
+            ).first()
+            if not quiz_result:
+                raise HTTPException(status_code=404, detail="Quiz result not found. You have not taken this quiz yet.")
+            question_results = db.query(QuestionResult).filter(
+                QuestionResult.quiz_id == quiz_id,
+                QuestionResult.user_id == user_id
+            ).all()
+            # Fetch all questions for correct_answer, explanation, etc.
+            questions_data = db.query(QuizQuestion).filter(
+                QuizQuestion.quiz_id == quiz_id
+            ).all()
+            question_map = {str(q.id): q for q in questions_data}
+            return {
+                "quiz_id": quiz_id,
+                "score": quiz_result.score,
+                "total": quiz_result.total,
+                "topic": quiz_record.topic,
+                "domain": quiz_record.domain,
+                "feedback": quiz_result.feedback,
+                "created_at": quiz_result.created_at,
+                "collection_name": getattr(quiz_record, "collection_name", None),
+                "difficulty": quiz_record.difficulty.value if hasattr(quiz_record.difficulty, "value") else str(quiz_record.difficulty),
+                "duration": getattr(quiz_record, "duration", None),
+                "question_results": [
+                    {
+                        "question_id": qr.question_id,
+                        "score": qr.score,
+                        "is_correct": qr.is_correct,
+                        "student_answer": qr.student_answer,
+                        "correct_answer": question_map[str(qr.question_id)].correct_answer if str(qr.question_id) in question_map else None,
+                        "explanation": question_map[str(qr.question_id)].explanation if str(qr.question_id) in question_map else None,
+                        "type": question_map[str(qr.question_id)].type.value if str(qr.question_id) in question_map and hasattr(question_map[str(qr.question_id)].type, "value") else str(question_map[str(qr.question_id)].type) if str(qr.question_id) in question_map else None,
+                        "options": question_map[str(qr.question_id)].options if str(qr.question_id) in question_map else None
+                    }
+                    for qr in question_results
+                ]
+            }
+        # If take is True or not taken yet, return quiz for taking
         questions_data = db.query(QuizQuestion).filter(
             QuizQuestion.quiz_id == quiz_id
         ).all()
         if not questions_data:
             raise HTTPException(status_code=404, detail="No questions found for this quiz")
-        
         questions = [
             {
                 "question_id": q.id,
@@ -215,16 +266,20 @@ async def get_quiz(
             }
             for q in questions_data
         ]
-        
         return {
             "quiz_id": quiz_id,
-            "questions": questions
+            "questions": questions,
+            "collection_name": getattr(quiz_record, "collection_name", None),
+            "difficulty": quiz_record.difficulty.value if hasattr(quiz_record.difficulty, "value") else str(quiz_record.difficulty),
+            "duration": getattr(quiz_record, "duration", None),
+            "created_at": quiz_record.created_at,
+            # Add more fields as needed
         }
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error fetching quiz {quiz_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
 
 @router.get("/quizzes/{quiz_id}/result", response_model=Dict[str, Any])
 async def get_quiz_result(
@@ -240,18 +295,17 @@ async def get_quiz_result(
         ).first()
         if not quiz_result:
             raise HTTPException(status_code=404, detail="Quiz result not found or not accessible")
-        
+        quiz_record = db.query(Quiz).filter(Quiz.quiz_id == quiz_id).first()
         question_results = db.query(QuestionResult).filter(
             QuestionResult.quiz_id == quiz_id,
             QuestionResult.user_id == user_info["uid"]
         ).all()
-        
         return {
             "quiz_id": quiz_id,
             "score": quiz_result.score,
             "total": quiz_result.total,
-            "topic": quiz_result.topic,
-            "domain": quiz_result.domain,
+            "topic": quiz_record.topic if quiz_record else None,
+            "domain": quiz_record.domain if quiz_record else None,
             "feedback": quiz_result.feedback,
             "question_results": [
                 {
@@ -267,7 +321,7 @@ async def get_quiz_result(
         raise
     except Exception as e:
         logger.error(f"Error fetching quiz result {quiz_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
     
 @router.post("/quizzes/{quiz_id}/evaluate_all", response_model=Dict[str, Any])
 async def evaluate_all_answers(
@@ -284,15 +338,15 @@ async def evaluate_all_answers(
         user_id = user_info["uid"]
 
         # Check if user already has a result for this quiz
-        existing_result = db.query(QuizResult).filter(
-            QuizResult.quiz_id == quiz_id,
-            QuizResult.user_id == user_id
-        ).first()
-        if existing_result:
-            raise HTTPException(
-                status_code=400,
-                detail="You have already submitted this quiz. Multiple submissions are not allowed."
-            )
+        # existing_result = db.query(QuizResult).filter(
+        #     QuizResult.quiz_id == quiz_id,
+        #     QuizResult.user_id == user_id
+        # ).first()
+        # if existing_result:
+        #     raise HTTPException(
+        #         status_code=400,
+        #         detail="You have already submitted this quiz. Multiple submissions are not allowed."
+        #     )
 
         # Fetch all questions for the quiz
         questions = db.query(QuizQuestion).filter(QuizQuestion.quiz_id == quiz_id).all()
@@ -349,8 +403,6 @@ async def evaluate_all_answers(
             score=total_score,
             total=total_marks,
             feedback="",
-            topic=(getattr(quiz, "topic", "") if quiz and getattr(quiz, "topic", None) is not None else ""),
-            domain=(getattr(quiz, "domain", "") if quiz and getattr(quiz, "domain", None) is not None else ""),
             created_at=datetime.now(timezone.utc)
         )
         db.add(quiz_result)
@@ -369,4 +421,66 @@ async def evaluate_all_answers(
     except Exception as e:
         db.rollback()
         logger.error(f"Error in bulk evaluation for quiz {quiz_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
+
+@router.get("/quizzes", response_model=List[Dict[str, Any]])
+async def get_all_quizzes(
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Fetches all quizzes created by the current user."""
+    try:
+        user_id = user_info["uid"]
+        quizzes = db.query(Quiz).filter(Quiz.user_id == user_id).order_by(Quiz.created_at.desc()).all()
+        result = []
+        for quiz in quizzes:
+            result.append({
+                "quiz_id": str(quiz.quiz_id),
+                "createdAt": quiz.created_at,
+                "difficulty": quiz.difficulty.value if hasattr(quiz.difficulty, "value") else str(quiz.difficulty),
+                "duration": getattr(quiz, "duration", None),
+                "collection_name": getattr(quiz, "collection_name", None),
+                # Add more fields as needed
+            })
+        return result
+    except Exception as e:
+        logger.error(f"Error fetching all quizzes for user: {str(e)}")
+        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
+
+@router.get("/quiz-marks", response_model=List[Dict[str, Any]])
+async def get_quiz_marks(
+    collection: Optional[str] = None,
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns all quiz marks for the user, with quiz details. If 'collection' is provided, filters by collection_name.
+    """
+    try:
+        user_id = user_info["uid"]
+        # Join quiz_results and quizzes
+        query = db.query(
+            QuizResult,
+            Quiz
+        ).join(Quiz, QuizResult.quiz_id == Quiz.quiz_id)
+        query = query.filter(QuizResult.user_id == user_id)
+        if collection:
+            query = query.filter(Quiz.collection_name == collection)
+        results = query.all()
+        response = []
+        for quiz_result, quiz in results:
+            response.append({
+                "quiz_id": str(quiz.quiz_id),
+                "score": float(quiz_result.score),
+                "total": float(quiz_result.total),
+                "difficulty": str(quiz.difficulty),
+                "topic": quiz.topic,
+                "domain":quiz.domain,
+                "duration": quiz.duration,
+                "collection_name": quiz.collection_name,
+                "createdAt": quiz.created_at,
+            })
+        return response
+    except Exception as e:
+        logger.error(f"Error fetching quiz marks: {str(e)}")
+        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")

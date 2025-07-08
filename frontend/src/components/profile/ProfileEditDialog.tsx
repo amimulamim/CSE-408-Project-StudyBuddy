@@ -9,8 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { X, Plus, Loader2, Upload, Camera } from 'lucide-react';
 import { toast } from 'sonner';
-import { makeRequest } from '@/lib/apiCall';
 import { ApiResponse } from '@/lib/api';
+import { updateProfileData, uploadAvatar } from './api';
 
 interface UserProfile {
   uid: string;
@@ -150,20 +150,21 @@ export function ProfileEditDialog({ isOpen, onClose, userProfile, onSave }: Prof
 
     setIsLoading(true);
     try {
-      const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+      // const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
       
       // Handle avatar upload first if file is selected
       let avatarUrl = formData.avatar;
       if (avatarFile) {
         try {
-          const avatarFormData = new FormData();
-          avatarFormData.append('avatar', avatarFile);
+          // const avatarFormData = new FormData();
+          // avatarFormData.append('avatar', avatarFile);
 
-          const avatarResponse:ApiResponse = await makeRequest(
-            `${API_BASE_URL}/api/v1/user/profile/avatar`,
-            'PUT',
-            avatarFormData
-          );
+          // const avatarResponse:ApiResponse = await makeRequest(
+          //   `${API_BASE_URL}/api/v1/user/profile/avatar`,
+          //   'PUT',
+          //   avatarFormData
+          // );
+          const avatarResponse:ApiResponse = await uploadAvatar(avatarFile);
 
           if (avatarResponse.status === 'success') {
             avatarUrl = avatarResponse.data?.avatar_url; 
@@ -201,11 +202,12 @@ export function ProfileEditDialog({ isOpen, onClose, userProfile, onSave }: Prof
         updateData.interests = formatInterestsForAPI(originalInterests, newInterests);
       }
 
-      const response:ApiResponse = await makeRequest(
-        `${API_BASE_URL}/api/v1/user/profile`,
-        'PUT',
-        updateData
-      );
+      // const response:ApiResponse = await makeRequest(
+      //   `${API_BASE_URL}/api/v1/user/profile`,
+      //   'PUT',
+      //   updateData
+      // );
+      const response:ApiResponse = await updateProfileData(updateData);
 
       if (response && typeof response === 'object' && 'status' in response) {
         if (response.status === 'success') {

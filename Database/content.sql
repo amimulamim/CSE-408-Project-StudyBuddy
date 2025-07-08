@@ -9,3 +9,6 @@ CREATE TABLE content_items (
     content_type TEXT,
     created_at TIMESTAMPTZ DEFAULT now()
 );
+
+ALTER TABLE content_items
+ADD COLUMN raw_source TEXT

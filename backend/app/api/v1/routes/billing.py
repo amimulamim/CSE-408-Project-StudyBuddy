@@ -119,6 +119,9 @@ async def payment_success(
             "transaction_id": tran_id,
             "status": "success"
         }
+    except HTTPException as he:
+        print(f"Payment success error: {str(he)}")
+        raise he  # Re-raise HTTPException as-is
     except Exception as e:
         print(f"Payment success error: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to process payment success")

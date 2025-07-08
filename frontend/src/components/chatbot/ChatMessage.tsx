@@ -1,5 +1,3 @@
-
-import React from 'react';
 import { User, Bot, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ChatMessage as ChatMessageType } from './chat';

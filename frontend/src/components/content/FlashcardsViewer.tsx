@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, ArrowRight, RotateCcw, Volume2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import MarkdownRenderer from '../chatbot/MarkdownRenderer';
 
 interface Flashcard {
   front: string;
@@ -162,7 +163,7 @@ export function FlashcardsViewer({ flashcards, topic, onClose }: FlashcardsViewe
                     </Badge>
                   </div>
                   <div className="text-2xl font-bold leading-relaxed text-white flashcard-text-shadow max-w-lg">
-                    {currentCard.front}
+                    <MarkdownRenderer content={currentCard.front} textSize='text-2xl' font='font-bold'/>
                   </div>
                   <div className="mt-8 text-white/80 flashcard-light-text-shadow">
                     <div className="flex items-center justify-center gap-2 mb-2">
@@ -186,7 +187,7 @@ export function FlashcardsViewer({ flashcards, topic, onClose }: FlashcardsViewe
                     </Badge>
                   </div>
                   <div className="text-2xl font-bold leading-relaxed text-white flashcard-text-shadow max-w-lg whitespace-pre-wrap">
-                    {currentCard.back}
+                    <MarkdownRenderer content={currentCard.back} textSize='text-xl'/>
                   </div>
                   <div className="mt-8 flex flex-col items-center gap-4">
                     <div className="text-white/80 flashcard-light-text-shadow">

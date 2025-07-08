@@ -1,0 +1,26 @@
+{
+  "name": "studybuddy-e2e-tests",
+  "version": "1.0.0",
+  "description": "End-to-end tests for StudyBuddy application",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:demo": "playwright test --config=playwright.demo.config.ts --headed --workers=1",
+    "test:demo:auth": "playwright test tests/auth --config=playwright.demo.config.ts --headed --workers=1",
+    "test:demo:chat": "playwright test tests/chat --config=playwright.demo.config.ts --headed --workers=1",
+    "test:demo:user": "playwright test tests/user --config=playwright.demo.config.ts --headed --workers=1",
+    "test:demo:billing": "playwright test tests/billing --config=playwright.demo.config.ts --headed --workers=1",
+    "test:background": "playwright test --config=playwright.config.ts",
+    "test:docker": "playwright test --config=playwright.docker.config.ts",
+    "install:browsers": "playwright install",
+    "report": "playwright show-report"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@types/node": "^22.15.21",
+    "dotenv": "^16.4.5",
+    "typescript": "^5.5.3"
+  }
+}
