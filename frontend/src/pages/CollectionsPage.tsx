@@ -121,6 +121,7 @@ export default function CollectionsPage() {
 
     try {
       setActionLoading(true);
+      setUploadDialogOpen(false);
       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
       const formData = new FormData();
       formData.append('file', uploadFile);
@@ -129,7 +130,6 @@ export default function CollectionsPage() {
       await makeRequest(`${API_BASE_URL}/api/v1/document/documents`, 'POST', formData);
       
       toast.success('Document uploaded successfully');
-      setUploadDialogOpen(false);
       setUploadFile(null);
       setUploadCollectionName('');
       setNameSelected(false);
@@ -156,6 +156,7 @@ export default function CollectionsPage() {
 
     try {
       setActionLoading(true);
+      setRenameDialogOpen(false);
       // Note: You'll need to implement the rename endpoint in the backend
       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
       await makeRequest(
@@ -165,7 +166,6 @@ export default function CollectionsPage() {
       );
       
       toast.success('Collection renamed successfully');
-      setRenameDialogOpen(false);
       setSelectedCollection(null);
       setNewName('');
       await fetchCollections();
@@ -187,7 +187,7 @@ export default function CollectionsPage() {
 
   return (
     <>
-      {actionLoading && <LoadingOverlay message="Processing..." />}
+      {actionLoading && <LoadingOverlay message="Updating your collection" />}
       
       <div className="min-h-screen dashboard-bg-animated">
         <div className="container mx-auto py-8 max-w-6xl">
