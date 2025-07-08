@@ -83,7 +83,7 @@ export function AdminQuizResults() {
   };
 
   return (
-    <Card>
+    <Card className="glass-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <BarChart3 className="h-5 w-5" />
@@ -104,7 +104,7 @@ export function AdminQuizResults() {
           </div>
 
           <div className="border rounded-lg overflow-hidden">
-            <Table>
+            <Table className="enhanced-table">
               <TableHeader>
                 <TableRow>
                   <TableHead>Quiz Title</TableHead>

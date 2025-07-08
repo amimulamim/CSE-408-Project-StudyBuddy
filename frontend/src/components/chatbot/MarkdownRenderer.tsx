@@ -5,11 +5,17 @@ import rehypeRaw from 'rehype-raw';
 
 interface MarkdownRendererProps {
   content: string;
+  textSize?: string; // Optional text size class (e.g., "text-lg", "text-2xl")
+  font?: string;     // Optional font class (e.g., "font-bold", "font-medium")
 }
 
-const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
+const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ 
+  content, 
+  textSize = 'text-sm', 
+  font = '' 
+}) => {
   return (
-    <div className="prose prose-neutral dark:prose-invert max-w-none text-sm">
+    <div className={`prose prose-neutral dark:prose-invert max-w-none ${textSize} ${font}`}>
       <ReactMarkdown
         children={content}
         remarkPlugins={[remarkGfm]}

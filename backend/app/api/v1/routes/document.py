@@ -92,3 +92,49 @@ async def delete_collection(
     except Exception as e:
         logger.error(f"Error deleting collection: {str(e)}")
         raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
+
+class RenameCollectionRequest(BaseModel):
+    new_name: str
+
+@router.put("/collections/{collection_name}/rename")
+async def rename_collection(
+    collection_name: str,
+    request: RenameCollectionRequest,
+    db: Session = Depends(get_db),
+    user_info: Dict[str, Any] = Depends(get_current_user)
+):
+    try:
+        user_id = user_info["uid"]
+        
+        # Find the existing collection
+        collection = db.query(UserCollection).filter(
+            UserCollection.user_id == user_id,
+            UserCollection.collection_name == collection_name
+        ).first()
+        
+        if not collection:
+            raise HTTPException(status_code=404, detail="Collection not found")
+        
+        # Check if new name already exists
+        existing = db.query(UserCollection).filter(
+            UserCollection.user_id == user_id,
+            UserCollection.collection_name == request.new_name
+        ).first()
+        
+        if existing:
+            raise HTTPException(status_code=400, detail="Collection with this name already exists")
+        
+        # Update the collection name
+        collection.collection_name = request.new_name
+        collection.full_collection_name = f"{user_id}_{request.new_name}"
+        
+        db.commit()
+        
+        return {"message": f"Collection renamed to {request.new_name} successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error renaming collection: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")

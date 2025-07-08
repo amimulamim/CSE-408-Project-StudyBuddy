@@ -202,7 +202,7 @@ export function AdminUserManagement() {
           </div>
 
           <div className="border rounded-lg overflow-hidden">
-            <Table>
+            <Table className="enhanced-table">
               <TableHeader>
                 <TableRow>
                   <TableHead>Avatar</TableHead>
@@ -231,7 +231,7 @@ export function AdminUserManagement() {
                 ) : (
                   filteredUsers.map((user) => (
                     <TableRow key={user.uid}>
-                      <TableCell className="flex items-center space-x-2">
+                      <TableCell className="space-x-2">
                         <img
                           src={user.avatar || '/default-avatar.png'}
                           alt={'User'}

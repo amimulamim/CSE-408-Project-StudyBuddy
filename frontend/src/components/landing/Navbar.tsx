@@ -69,7 +69,7 @@ export function Navbar({ onSignIn, onSignUp }: NavbarProps) {
                 Get Started
               </Button>
             </div>
-          </nav>l
+          </nav>
           
           {/* Mobile Menu Button */}
           <button

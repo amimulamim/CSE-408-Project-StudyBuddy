@@ -7,7 +7,6 @@ import { getAuth, signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { ChatbotFAB } from '@/components/chatbot/ChatbotFAB';
-import { QuizDashboard } from '@/components/quiz/QuizDashboard';
 import { CreditCard, MessageSquare, BookOpen, Settings, Loader2, Brain, User, Crown, LogOut, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -15,8 +14,8 @@ import {
   getSubscriptionStatus, 
   getStatusColor, 
   getStatusLabel,
-  type SubscriptionStatus 
 } from "@/lib/billing";
+import { SubscriptionStatus } from "@/lib/billingTypes";
 import { clearAuthCache } from "@/lib/authState";
 
 export default function Dashboard() {
@@ -105,7 +104,7 @@ export default function Dashboard() {
             title: "Quiz Center",
             description: "Take quizzes and test your knowledge",
             icon: Brain,
-            onClick: () => {},
+            onClick: () => navigate("/dashboard/quiz"),
             color: "text-purple-500"
         },
         {
@@ -133,21 +132,14 @@ export default function Dashboard() {
             color: "text-indigo-500"
         },
         {
-            id: "settings",
-            title: "Settings",
-            description: "Manage your account settings", 
-            icon: Settings,
-            onClick: () => navigate("/dashboard/settings"),
+            id: "collections",
+            title: "Collections",
+            description: "View your uploaded resources", 
+            icon: BookOpen,
+            onClick: () => navigate("/collections"),
             color: "text-gray-500"
         }
     ];
-
-    const scrollToQuiz = () => {
-        const quizSection = document.getElementById('quiz-section');
-        if (quizSection) {
-            quizSection.scrollIntoView({ behavior: 'smooth' });
-        }
-    };
 
     return (
         <div className="min-h-screen dashboard-bg-animated">
@@ -230,7 +222,7 @@ export default function Dashboard() {
                     <div className="absolute bottom-0 left-0 -mb-4 -ml-4 h-32 w-32 rounded-full bg-gradient-to-tr from-purple-400/20 to-pink-400/20 blur-xl"></div>
                 </div>
 
-                {/* Main Content Grid - Updated to single column */}
+                {/* Main Content Grid */}
                 <div className="space-y-6">
                     {/* Quick Actions */}
                     <div>
@@ -239,8 +231,8 @@ export default function Dashboard() {
                             {dashboardCards.map((card) => (
                                 <Card 
                                     key={card.id} 
-                                    className="glass-card-hover-strong"
-                                    onClick={card.id === 'quiz' ? scrollToQuiz : card.onClick}
+                                    className="glass-card-hover-strong cursor-pointer"
+                                    onClick={card.onClick}
                                 >
                                     <CardHeader className="pb-3">
                                         <CardTitle className="flex items-center gap-2 text-lg">
@@ -272,12 +264,6 @@ export default function Dashboard() {
                         </div>
                     </CardContent>
                 </Card>
-                
-                {/* Quiz Section */}
-                <div id="quiz-section">
-                    <QuizDashboard />
-                </div>
-
             </div>
             
             <ChatbotFAB />
