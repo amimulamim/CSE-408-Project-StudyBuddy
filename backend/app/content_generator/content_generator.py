@@ -171,7 +171,7 @@ class ContentGenerator:
         difficulty: str,
         length: str,
         tone: str,
-        max_retries: int = 3,
+        max_retries: int = 5,
         return_latex: bool = False
     ) -> Any:
         """Generates LaTeX slides and compiles to PDF, retrying on error. Returns PDF bytes and optionally the LaTeX source."""
@@ -184,19 +184,42 @@ class ContentGenerator:
                 You are an expert educator creating a LaTeX Beamer presentation on the topic '{topic}' with a {tone} tone and {difficulty} difficulty.
                 Based on the following context, generate {num_slides} slides:
                 {context}
-                Use the Beamer class with proper LaTeX syntax. Return ONLY the LaTeX code starting with \\begin{{document}} and ending with \\end{{document}}.
-                Do NOT include markdown, code fences (e.g., ```latex), or any explanatory text outside the LaTeX code.
-                Ensure each slide has:
-                - A clear title using \\frame{{\\frametitle{{Title}}}}
-                - Concise content (bullet points, equations, or diagrams using \\itemize, \\amsmath, or \\tikz where appropriate)
-                - Valid LaTeX syntax that compiles without errors
-                - strictly follow the example structure . No need to add anything extra before or after the example structure .
-                - don't hallucinate
-                Example structure:
+
+                Strict formatting instructions:
+                - Use LaTeX Beamer syntax only
+                - Each slide must be created with: \\begin{{frame}}...\\end{{frame}}
+                - If the slide contains code or uses \\verb, \\texttt (with special characters), or \\begin{{verbatim}}, use \\begin{{frame}}[fragile]
+                - NEVER use \\texttt for multi-line code or anything containing quotes, slashes, or backslashes
+                - Use only \\begin{{verbatim}} or \\begin{{lstlisting}} for multi-line code blocks, and always inside a [fragile] frame
+                - Do NOT use \\section, \\subsection, or markdown (e.g., ###, **bold**, ```latex)
+                - Do NOT include any explanation, markdown fences, or extra content
+
+                Required output:
+                - Start with \\begin{{document}} and end with \\end{{document}}
+                - Between these, include only valid LaTeX code that fully compiles
+
+                Correct example:
+
                 \\begin{{document}}
-                \\frame{{\\frametitle{{Introduction}} \\begin{{itemize}} \\item Point 1 \\end{{itemize}}}}
+
+                \\begin{{frame}}
+                \\frametitle{{Intro}}
+                \\begin{{itemize}}
+                \\item Key Point 1
+                \\end{{itemize}}
+                \\end{{frame}}
+
+                \\begin{{frame}}[fragile]
+                \\frametitle{{Example Code}}
+                \\begin{{verbatim}}
+                SELECT * FROM users WHERE username = '$username';
+                \\end{{verbatim}}
+                \\end{{frame}}
+
                 \\end{{document}}
                 """
+
+
                 response = await asyncio.to_thread(self.model.generate_content, prompt)
                 if not response or not hasattr(response, 'text') or not response.text:
                     raise ValueError("No valid response from Gemini API")
