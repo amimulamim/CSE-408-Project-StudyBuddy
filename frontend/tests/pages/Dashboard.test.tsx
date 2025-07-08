@@ -70,9 +70,7 @@ vi.mock('@/components/chatbot/ChatbotFAB', () => ({
   ChatbotFAB: () => <div data-testid="chatbot-fab">ChatbotFAB</div>,
 }))
 
-vi.mock('@/components/quiz/QuizDashboard', () => ({
-  QuizDashboard: () => <div data-testid="quiz-dashboard">QuizDashboard</div>,
-}))
+
 
 // Mock Avatar components to avoid DOM issues
 vi.mock('@/components/ui/avatar', () => ({
@@ -199,7 +197,7 @@ test('renders quick action cards', async () => {
     expect(screen.getByText('Billing')).toBeInTheDocument()
     expect(screen.getByText('Content Library')).toBeInTheDocument()
     expect(screen.getByText('Profile')).toBeInTheDocument()
-    expect(screen.getByText('Settings')).toBeInTheDocument()
+    expect(screen.getByText('Collections')).toBeInTheDocument()
   })
 })
 
@@ -222,7 +220,7 @@ test('navigates to chat when AI Chat card is clicked', async () => {
   await waitFor(() => {
     const chatCard = screen.getByText('AI Chat').closest('[role="button"], button, div')
     expect(chatCard).toBeInTheDocument()
-    fireEvent.click(chatCard!)
+    if (chatCard) fireEvent.click(chatCard)
   })
 
   expect(mockNavigate).toHaveBeenCalledWith('/chatbot')
@@ -247,7 +245,7 @@ test('navigates to billing when Billing card is clicked', async () => {
   await waitFor(() => {
     const billingCard = screen.getByText('Billing').closest('[role="button"], button, div')
     expect(billingCard).toBeInTheDocument()
-    fireEvent.click(billingCard!)
+    if (billingCard) fireEvent.click(billingCard)
   })
 
   expect(mockNavigate).toHaveBeenCalledWith('/dashboard/billing')
@@ -335,7 +333,7 @@ test('displays free plan when no subscription', async () => {
   })
 })
 
-test('scrolls to quiz section when quiz card is clicked', async () => {
+test('navigates to quiz dashboard when quiz card is clicked', async () => {
   const { useUserRole } = await import('@/hooks/useUserRole')
   const { getSubscriptionStatus } = await import('@/lib/billing')
   
@@ -349,21 +347,15 @@ test('scrolls to quiz section when quiz card is clicked', async () => {
   
   vi.mocked(getSubscriptionStatus).mockResolvedValue(mockSubscription)
 
-  // Mock scrollIntoView
-  const mockScrollIntoView = vi.fn()
-  const mockElement = { scrollIntoView: mockScrollIntoView }
-  vi.spyOn(document, 'getElementById').mockReturnValue(mockElement as any)
-
   renderDashboard()
 
   await waitFor(() => {
     const quizCard = screen.getByText('Quiz Center').closest('[role="button"], button, div')
     expect(quizCard).toBeInTheDocument()
-    fireEvent.click(quizCard!)
+    if (quizCard) fireEvent.click(quizCard)
   })
 
-  expect(document.getElementById).toHaveBeenCalledWith('quiz-section')
-  expect(mockScrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth' })
+  expect(mockNavigate).toHaveBeenCalledWith('/dashboard/quiz')
 })
 
 test('shows recent activity section', async () => {
@@ -388,26 +380,6 @@ test('shows recent activity section', async () => {
   })
 })
 
-test('renders quiz dashboard component', async () => {
-  const { useUserRole } = await import('@/hooks/useUserRole')
-  const { getSubscriptionStatus } = await import('@/lib/billing')
-  
-  vi.mocked(useUserRole).mockReturnValue({
-    userProfile: mockUserProfile,
-    loading: false,
-    refetching: false,
-    error: null,
-    refetchUserProfile: vi.fn(),
-  })
-  
-  vi.mocked(getSubscriptionStatus).mockResolvedValue(mockSubscription)
-
-  renderDashboard()
-
-  await waitFor(() => {
-    expect(screen.getByTestId('quiz-dashboard')).toBeInTheDocument()
-  })
-})
 
 test('renders chatbot FAB', async () => {
   const { useUserRole } = await import('@/hooks/useUserRole')
