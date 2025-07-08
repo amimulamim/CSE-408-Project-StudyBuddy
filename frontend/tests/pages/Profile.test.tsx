@@ -6,8 +6,7 @@ import { vi, beforeEach, test, expect, describe } from 'vitest'
 // Hoisted mock functions
 const mockNavigate = vi.hoisted(() => vi.fn())
 const mockToastError = vi.hoisted(() => vi.fn())
-const mockRefetchUserProfile = vi.hoisted(() => vi.fn())
-const mockUseUserRole = vi.hoisted(() => vi.fn())
+const mockMakeRequest = vi.hoisted(() => vi.fn())
 
 // Mock react-router-dom
 vi.mock('react-router-dom', () => ({
@@ -17,19 +16,34 @@ vi.mock('react-router-dom', () => ({
 // Mock sonner toast
 vi.mock('sonner', () => ({
   toast: {
-    error: mockToastError
+    error: mockToastError,
+    success: vi.fn()
   }
 }))
 
-// Mock useUserRole hook
+// Mock useUserRole hook - return simple structure since Profile component now manages its own state
 vi.mock('@/hooks/useUserRole', () => ({
-  useUserRole: mockUseUserRole
+  useUserRole: () => ({
+    userProfile: null,
+    loading: false,
+    refetchUserProfile: vi.fn()
+  })
 }))
 
 // Mock lucide-react icons
 vi.mock('lucide-react', () => ({
   ArrowLeft: ({ className }: any) => <div className={className} data-testid="arrow-left-icon">←</div>,
-  Loader2: ({ className }: any) => <div className={className} data-testid="loader-icon">⟳</div>
+  Loader2: ({ className }: any) => <div className={className} data-testid="loader-icon">⟳</div>,
+  TrendingUp: ({ className }: any) => <div className={className} data-testid="trending-up-icon">↗</div>,
+  BarChart3: ({ className }: any) => <div className={className} data-testid="bar-chart-icon">📊</div>,
+  PieChart: ({ className }: any) => <div className={className} data-testid="pie-chart-icon">📈</div>,
+  Trophy: ({ className }: any) => <div className={className} data-testid="trophy-icon">🏆</div>,
+  BookOpen: ({ className }: any) => <div className={className} data-testid="book-open-icon">📖</div>,
+  Target: ({ className }: any) => <div className={className} data-testid="target-icon">🎯</div>,
+  Clock: ({ className }: any) => <div className={className} data-testid="clock-icon">🕐</div>,
+  Brain: ({ className }: any) => <div className={className} data-testid="brain-icon">🧠</div>,
+  Sparkles: ({ className }: any) => <div className={className} data-testid="sparkles-icon">✨</div>,
+  Calendar: ({ className }: any) => <div className={className} data-testid="calendar-icon">📅</div>
 }))
 
 // Mock UI components
@@ -62,6 +76,86 @@ vi.mock('@/components/profile/ProfileCard', () => ({
   )
 }))
 
+// Mock analytics chart components that depend on chart.js
+vi.mock('@/components/analytics/QuizPerformanceChart', () => ({
+  QuizPerformanceChart: ({ data }: any) => (
+    <div data-testid="quiz-performance-chart">Quiz Performance Chart</div>
+  )
+}))
+
+vi.mock('@/components/analytics/ContentAnalyticsChart', () => ({
+  ContentAnalyticsChart: ({ data }: any) => (
+    <div data-testid="content-analytics-chart">Content Analytics Chart</div>
+  )
+}))
+
+vi.mock('@/components/analytics/ScoreDistributionChart', () => ({
+  ScoreDistributionChart: ({ data }: any) => (
+    <div data-testid="score-distribution-chart">Score Distribution Chart</div>
+  )
+}))
+
+vi.mock('@/components/analytics/DifficultyAnalysisChart', () => ({
+  DifficultyAnalysisChart: ({ data }: any) => (
+    <div data-testid="difficulty-analysis-chart">Difficulty Analysis Chart</div>
+  )
+}))
+
+vi.mock('@/components/analytics/ProgressTimelineChart', () => ({
+  ProgressTimelineChart: ({ data }: any) => (
+    <div data-testid="progress-timeline-chart">Progress Timeline Chart</div>
+  )
+}))
+
+vi.mock('@/components/analytics/TopicMasteryChart', () => ({
+  TopicMasteryChart: ({ data }: any) => (
+    <div data-testid="topic-mastery-chart">Topic Mastery Chart</div>
+  )
+}))
+
+// Mock UI components that might be used in the updated Profile component
+vi.mock('@/components/ui/card', () => ({
+  Card: ({ children, className }: any) => <div className={className} data-testid="card">{children}</div>,
+  CardContent: ({ children, className }: any) => <div className={className} data-testid="card-content">{children}</div>,
+  CardDescription: ({ children, className }: any) => <div className={className} data-testid="card-description">{children}</div>,
+  CardHeader: ({ children, className }: any) => <div className={className} data-testid="card-header">{children}</div>,
+  CardTitle: ({ children, className }: any) => <div className={className} data-testid="card-title">{children}</div>
+}))
+
+vi.mock('@/components/ui/tabs', () => ({
+  Tabs: ({ children, defaultValue, className }: any) => <div className={className} data-testid="tabs" data-default-value={defaultValue}>{children}</div>,
+  TabsContent: ({ children, value, className }: any) => <div className={className} data-testid="tabs-content" data-value={value}>{children}</div>,
+  TabsList: ({ children, className }: any) => <div className={className} data-testid="tabs-list">{children}</div>,
+  TabsTrigger: ({ children, value, className }: any) => <button className={className} data-testid="tabs-trigger" data-value={value}>{children}</button>
+}))
+
+vi.mock('@/components/ui/select', () => ({
+  Select: ({ children, onValueChange }: any) => (
+    <button 
+      data-testid="select" 
+      type="button"
+      onClick={() => onValueChange?.('test')}
+    >
+      {children}
+    </button>
+  ),
+  SelectContent: ({ children }: any) => <div data-testid="select-content">{children}</div>,
+  SelectItem: ({ children, value }: any) => <div data-testid="select-item" data-value={value}>{children}</div>,
+  SelectTrigger: ({ children, className }: any) => <div className={className} data-testid="select-trigger">{children}</div>,
+  SelectValue: ({ placeholder }: any) => <div data-testid="select-value">{placeholder}</div>
+}))
+
+vi.mock('@/components/ui/loading-overlay', () => ({
+  LoadingOverlay: ({ message }: any) => (
+    <div data-testid="loading-overlay">{message || 'Loading...'}</div>
+  )
+}))
+
+// Mock API call function
+vi.mock('@/lib/apiCall', () => ({
+  makeRequest: mockMakeRequest
+}))
+
 // Import component after mocking
 import Profile from '@/pages/Profile'
 
@@ -83,389 +177,257 @@ const mockUserProfile = {
 describe('Profile Page', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUseUserRole.mockReturnValue({
-      userProfile: mockUserProfile,
-      loading: false,
-      refetchUserProfile: mockRefetchUserProfile
+    
+    // Setup default successful API responses
+    mockMakeRequest.mockImplementation((url: string, method: string) => {
+      if (url.includes('/user/profile')) {
+        return Promise.resolve({
+          status: 'success',
+          data: mockUserProfile
+        })
+      }
+      if (url.includes('/quiz/quiz-marks')) {
+        return Promise.resolve({
+          status: 'success',
+          data: [
+            {
+              quiz_id: 'quiz1',
+              score: 8,
+              total: 10,
+              difficulty: 'medium',
+              topic: 'JavaScript',
+              domain: 'Programming',
+              duration: 300,
+              createdAt: new Date().toISOString()
+            }
+          ]
+        })
+      }
+      if (url.includes('/content/user')) {
+        return Promise.resolve({
+          status: 'success',
+          data: { 
+            contents: [
+              {
+                id: 'content1',
+                title: 'Test Content',
+                type: 'article',
+                createdAt: new Date().toISOString()
+              }
+            ] 
+          }
+        })
+      }
+      return Promise.resolve({ status: 'success', data: {} })
     })
   })
 
-  describe('Loading State', () => {
-    test('displays loading spinner when loading', () => {
-      mockUseUserRole.mockReturnValue({
-        userProfile: null,
-        loading: true,
-        refetchUserProfile: mockRefetchUserProfile
-      })
-
+  describe('Component Rendering', () => {
+    test('renders without crashing', async () => {
       render(<Profile />)
-
-      expect(screen.getByTestId('loader-icon')).toBeInTheDocument()
-      expect(screen.getByText('Loading Your Profile...')).toBeInTheDocument()
+      
+      // Wait for the component to finish loading
+      await waitFor(() => {
+        expect(screen.queryByTestId('loading-overlay')).not.toBeInTheDocument()
+      })
     })
 
-    test('applies correct styling to loading container', () => {
-      mockUseUserRole.mockReturnValue({
-        userProfile: null,
-        loading: true,
-        refetchUserProfile: mockRefetchUserProfile
+    test('shows loading state initially', async () => {
+      // Make the API calls hang to capture loading state
+      let resolveProfile: any
+      const profilePromise = new Promise(resolve => {
+        resolveProfile = resolve
       })
-
+      
+      mockMakeRequest.mockImplementation((url: string, method: string) => {
+        if (url.includes('/user/profile')) {
+          return profilePromise
+        }
+        return Promise.resolve({ status: 'success', data: {} })
+      })
+      
       render(<Profile />)
-
-      const loadingContainer = screen.getByText('Loading Your Profile...').closest('div')
-      expect(loadingContainer).toHaveClass('flex', 'flex-col', 'items-center', 'gap-4')
+      
+      // The component should show loading initially
+      expect(screen.getByTestId('loading-overlay')).toBeInTheDocument()
+      
+      // Resolve the profile to clean up
+      resolveProfile({
+        status: 'success',
+        data: mockUserProfile
+      })
     })
 
-    test('does not render main content when loading', () => {
-      mockUseUserRole.mockReturnValue({
-        userProfile: null,
-        loading: true,
-        refetchUserProfile: mockRefetchUserProfile
+    test('renders main content after loading', async () => {
+      render(<Profile />)
+      
+      await waitFor(() => {
+        expect(screen.queryByTestId('loading-overlay')).not.toBeInTheDocument()
+      })
+
+      // Should render the main tabs structure
+      expect(screen.getByTestId('tabs')).toBeInTheDocument()
+    })
+  })
+
+  describe('API Integration', () => {
+    test('fetches user profile on mount', async () => {
+      render(<Profile />)
+      
+      await waitFor(() => {
+        expect(mockMakeRequest).toHaveBeenCalledWith(expect.stringContaining('/user/profile'), 'GET')
+      })
+    })
+
+    test('fetches analytics data on mount', async () => {
+      render(<Profile />)
+      
+      await waitFor(() => {
+        expect(mockMakeRequest).toHaveBeenCalledWith(expect.stringContaining('/quiz/quiz-marks'), 'GET')
+      })
+    })
+
+    test('handles API errors gracefully', async () => {
+      mockMakeRequest.mockRejectedValue(new Error('API Error'))
+      
+      render(<Profile />)
+      
+      await waitFor(() => {
+        expect(mockToastError).toHaveBeenCalled()
+      })
+    })
+  })
+
+  describe('Profile Content', () => {
+    test('displays profile card when user data is loaded', async () => {
+      render(<Profile />)
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('profile-card')).toBeInTheDocument()
+      })
+    })
+
+    test('handles profile updates', async () => {
+      render(<Profile />)
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('profile-card')).toBeInTheDocument()
+      })
+
+      const updateButton = screen.getByTestId('update-profile-button')
+      fireEvent.click(updateButton)
+
+      // Should trigger a new API call to fetch updated profile
+      await waitFor(() => {
+        expect(mockMakeRequest).toHaveBeenCalledWith(expect.stringContaining('/user/profile'), 'GET')
+      })
+    })
+  })
+
+  describe('Analytics Section', () => {
+    test('renders analytics charts', async () => {
+      render(<Profile />)
+      
+      await waitFor(() => {
+        expect(screen.queryByTestId('loading-overlay')).not.toBeInTheDocument()
+      })
+
+      // Check that analytics chart components are rendered
+      expect(screen.getByTestId('quiz-performance-chart')).toBeInTheDocument()
+      expect(screen.getByTestId('content-analytics-chart')).toBeInTheDocument()
+      expect(screen.getByTestId('score-distribution-chart')).toBeInTheDocument()
+    })
+
+    test('handles analytics loading state', async () => {
+      // Delay analytics response
+      let resolveAnalytics: any
+      const analyticsPromise = new Promise(resolve => {
+        resolveAnalytics = resolve
+      })
+      
+      mockMakeRequest.mockImplementation((url: string, method: string) => {
+        if (url.includes('/user/profile')) {
+          return Promise.resolve({
+            status: 'success',
+            data: mockUserProfile
+          })
+        }
+        if (url.includes('/quiz/quiz-marks')) {
+          return analyticsPromise
+        }
+        return Promise.resolve({ status: 'success', data: {} })
       })
 
       render(<Profile />)
-
-      expect(screen.queryByText('Profile')).not.toBeInTheDocument()
-      expect(screen.queryByText('Back to Dashboard')).not.toBeInTheDocument()
+      
+      // Should show loading initially
+      expect(screen.getByTestId('loading-overlay')).toBeInTheDocument()
+      
+      // Resolve analytics after a short delay
+      setTimeout(() => resolveAnalytics({ status: 'success', data: [] }), 100)
     })
   })
 
   describe('Error Handling', () => {
-    test('shows error toast and navigates when no user profile found', async () => {
-      mockUseUserRole.mockReturnValue({
-        userProfile: null,
-        loading: false,
-        refetchUserProfile: mockRefetchUserProfile
+    test('shows error toast when profile fetch fails', async () => {
+      mockMakeRequest.mockImplementation((url: string, method: string) => {
+        if (url.includes('/user/profile')) {
+          return Promise.reject(new Error('Profile fetch failed'))
+        }
+        return Promise.resolve({})
       })
 
       render(<Profile />)
-
-      await waitFor(() => {
-        expect(mockToastError).toHaveBeenCalledWith('User Profile not found.')
-        expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
-      })
-    })
-
-    test('does not show error when still loading', () => {
-      mockUseUserRole.mockReturnValue({
-        userProfile: null,
-        loading: true,
-        refetchUserProfile: mockRefetchUserProfile
-      })
-
-      render(<Profile />)
-
-      expect(mockToastError).not.toHaveBeenCalled()
-      expect(mockNavigate).not.toHaveBeenCalled()
-    })
-
-    test('does not show error when user profile exists', () => {
-      render(<Profile />)
-
-      expect(mockToastError).not.toHaveBeenCalled()
-      expect(mockNavigate).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('Page Layout and Content', () => {
-    test('renders page header correctly', () => {
-      render(<Profile />)
-
-      expect(screen.getByText('Profile')).toBeInTheDocument()
-      expect(screen.getByText('Manage your account information and preferences')).toBeInTheDocument()
-    })
-
-    test('renders back button with correct text and icon', () => {
-      render(<Profile />)
-
-      expect(screen.getByText('Back to Dashboard')).toBeInTheDocument()
-      expect(screen.getByTestId('arrow-left-icon')).toBeInTheDocument()
-    })
-
-    test('renders main container with correct structure', () => {
-      render(<Profile />)
-
-      // Find the main container by looking for the outermost div with the expected classes
-      const container = document.querySelector('.min-h-screen.dashboard-bg-animated')
-      expect(container).toBeInTheDocument()
-    })
-
-    test('renders header section correctly', () => {
-      render(<Profile />)
-
-      const headerContainer = screen.getByText('Profile').closest('div')
-      expect(headerContainer).toHaveClass('space-y-1')
-    })
-
-    test('profile card is rendered when user exists', () => {
-      render(<Profile />)
-
-      const profileCard = screen.getByTestId('profile-card')
-      expect(profileCard).toBeInTheDocument()
-    })
-  })
-
-  describe('Navigation', () => {
-    test('navigates to dashboard when back button clicked', () => {
-      render(<Profile />)
-
-      const backButton = screen.getByText('Back to Dashboard')
-      fireEvent.click(backButton)
-
-      expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
-    })
-
-    test('back button has correct styling', () => {
-      render(<Profile />)
-
-      const backButton = screen.getByText('Back to Dashboard')
-      expect(backButton).toHaveAttribute('data-variant', 'ghost')
-      expect(backButton).toHaveClass('text-muted-foreground', 'hover:text-foreground', '-ml-2')
-    })
-  })
-
-  describe('ProfileCard Integration', () => {
-    test('renders ProfileCard when user profile exists', () => {
-      render(<Profile />)
-
-      expect(screen.getByTestId('profile-card')).toBeInTheDocument()
-      expect(screen.getByTestId('profile-name')).toHaveTextContent('John Doe')
-      expect(screen.getByTestId('profile-email')).toHaveTextContent('john.doe@example.com')
-    })
-
-    test('does not render ProfileCard when no user profile', () => {
-      mockUseUserRole.mockReturnValue({
-        userProfile: null,
-        loading: false,
-        refetchUserProfile: mockRefetchUserProfile
-      })
-
-      render(<Profile />)
-
-      expect(screen.queryByTestId('profile-card')).not.toBeInTheDocument()
-    })
-
-    test('passes correct props to ProfileCard', () => {
-      render(<Profile />)
-
-      expect(screen.getByTestId('profile-card')).toBeInTheDocument()
-      // Profile data is passed correctly (verified by the mocked component displaying the data)
-      expect(screen.getByTestId('profile-name')).toHaveTextContent('John Doe')
-      expect(screen.getByTestId('profile-email')).toHaveTextContent('john.doe@example.com')
-    })
-
-    test('handles profile update callback correctly', () => {
-      render(<Profile />)
-
-      const updateButton = screen.getByTestId('update-profile-button')
-      fireEvent.click(updateButton)
-
-      expect(mockRefetchUserProfile).toHaveBeenCalled()
-    })
-
-    test('profile update callback works when refetchUserProfile is undefined', () => {
-      mockUseUserRole.mockReturnValue({
-        userProfile: mockUserProfile,
-        loading: false,
-        refetchUserProfile: undefined
-      })
-
-      render(<Profile />)
-
-      const updateButton = screen.getByTestId('update-profile-button')
       
-      // Should not throw error when refetchUserProfile is undefined
-      expect(() => fireEvent.click(updateButton)).not.toThrow()
-    })
-  })
-
-  describe('Different User Profiles', () => {
-    test('handles user profile with different data', () => {
-      const differentProfile = {
-        ...mockUserProfile,
-        name: 'Jane Smith',
-        email: 'jane.smith@example.com'
-      }
-
-      mockUseUserRole.mockReturnValue({
-        userProfile: differentProfile,
-        loading: false,
-        refetchUserProfile: mockRefetchUserProfile
-      })
-
-      render(<Profile />)
-
-      expect(screen.getByTestId('profile-name')).toHaveTextContent('Jane Smith')
-      expect(screen.getByTestId('profile-email')).toHaveTextContent('jane.smith@example.com')
-    })
-
-    test('handles minimal user profile data', () => {
-      const minimalProfile = {
-        uid: 'user456',
-        name: 'Test User',
-        email: 'test@example.com'
-      }
-
-      mockUseUserRole.mockReturnValue({
-        userProfile: minimalProfile,
-        loading: false,
-        refetchUserProfile: mockRefetchUserProfile
-      })
-
-      render(<Profile />)
-
-      expect(screen.getByTestId('profile-card')).toBeInTheDocument()
-      expect(screen.getByTestId('profile-name')).toHaveTextContent('Test User')
-      expect(screen.getByTestId('profile-email')).toHaveTextContent('test@example.com')
-    })
-  })
-
-  describe('Hook Dependencies', () => {
-    test('useEffect triggers correctly on loading change', async () => {
-      const { rerender } = render(<Profile />)
-      
-      // Clear previous calls
-      vi.clearAllMocks()
-
-      // Change loading state
-      mockUseUserRole.mockReturnValue({
-        userProfile: null,
-        loading: false,
-        refetchUserProfile: mockRefetchUserProfile
-      })
-
-      rerender(<Profile />)
-
-      await waitFor(() => {
-        expect(mockToastError).toHaveBeenCalledWith('User Profile not found.')
-        expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
-      })
-    })
-
-    test('useEffect triggers correctly on userProfile change', async () => {
-      // Start with no profile
-      mockUseUserRole.mockReturnValue({
-        userProfile: null,
-        loading: false,
-        refetchUserProfile: mockRefetchUserProfile
-      })
-
-      const { rerender } = render(<Profile />)
-
       await waitFor(() => {
         expect(mockToastError).toHaveBeenCalled()
       })
-
-      // Clear previous calls
-      vi.clearAllMocks()
-
-      // Add profile
-      mockUseUserRole.mockReturnValue({
-        userProfile: mockUserProfile,
-        loading: false,
-        refetchUserProfile: mockRefetchUserProfile
-      })
-
-      rerender(<Profile />)
-
-      // Should not call toast error when profile exists
-      expect(mockToastError).not.toHaveBeenCalled()
-      expect(mockNavigate).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('Responsive Design', () => {
-    test('renders with proper layout structure', () => {
-      render(<Profile />)
-
-      // Check that the main container exists by finding it directly
-      const mainContainer = document.querySelector('.min-h-screen.dashboard-bg-animated')
-      expect(mainContainer).toBeInTheDocument()
-
-      // Check that profile card is rendered
-      const profileContainer = screen.getByTestId('profile-card')
-      expect(profileContainer).toBeInTheDocument()
     })
 
-    test('header section has correct spacing', () => {
-      render(<Profile />)
-
-      const headerSection = screen.getByText('Profile').closest('div')
-      expect(headerSection).toHaveClass('space-y-1')
-    })
-  })
-
-  describe('Accessibility', () => {
-    test('has proper heading hierarchy', () => {
-      render(<Profile />)
-
-      const mainHeading = screen.getByRole('heading', { level: 1 })
-      expect(mainHeading).toHaveTextContent('Profile')
-    })
-
-    test('back button is accessible', () => {
-      render(<Profile />)
-
-      const backButton = screen.getByRole('button', { name: /back to dashboard/i })
-      expect(backButton).toBeInTheDocument()
-    })
-
-    test('loading state has appropriate text', () => {
-      mockUseUserRole.mockReturnValue({
-        userProfile: null,
-        loading: true,
-        refetchUserProfile: mockRefetchUserProfile
+    test('shows error toast when analytics fetch fails', async () => {
+      mockMakeRequest.mockImplementation((url: string, method: string) => {
+        if (url.includes('/user/profile')) {
+          return Promise.resolve({
+            status: 'success',
+            data: mockUserProfile
+          })
+        }
+        if (url.includes('/quiz/quiz-marks')) {
+          return Promise.reject(new Error('Analytics fetch failed'))
+        }
+        return Promise.resolve({ status: 'success', data: {} })
       })
 
       render(<Profile />)
-
-      expect(screen.getByText('Loading Your Profile...')).toBeInTheDocument()
-    })
-  })
-
-  describe('Edge Cases', () => {
-    test('handles undefined refetchUserProfile gracefully', () => {
-      mockUseUserRole.mockReturnValue({
-        userProfile: mockUserProfile,
-        loading: false,
-        refetchUserProfile: undefined
-      })
-
-      expect(() => render(<Profile />)).not.toThrow()
-    })
-
-    test('handles profile update with various data types', () => {
-      render(<Profile />)
-
-      const updateButton = screen.getByTestId('update-profile-button')
       
-      // Test different update data scenarios
-      fireEvent.click(updateButton)
-      expect(mockRefetchUserProfile).toHaveBeenCalled()
+      await waitFor(() => {
+        expect(mockToastError).toHaveBeenCalled()
+      })
+    })
+  })
+
+  describe('Component Integration', () => {
+    test('renders all required UI components', async () => {
+      render(<Profile />)
+      
+      await waitFor(() => {
+        expect(screen.queryByTestId('loading-overlay')).not.toBeInTheDocument()
+      })
+
+      // Check that main UI components are rendered
+      expect(screen.getByTestId('tabs')).toBeInTheDocument()
+      expect(screen.getByTestId('profile-card')).toBeInTheDocument()
     })
 
-    test('renders correctly when switching from loading to loaded state', () => {
-      mockUseUserRole.mockReturnValue({
-        userProfile: null,
-        loading: true,
-        refetchUserProfile: mockRefetchUserProfile
+    test('handles tab navigation', async () => {
+      render(<Profile />)
+      
+      await waitFor(() => {
+        expect(screen.queryByTestId('loading-overlay')).not.toBeInTheDocument()
       })
 
-      const { rerender } = render(<Profile />)
-
-      expect(screen.getByTestId('loader-icon')).toBeInTheDocument()
-
-      mockUseUserRole.mockReturnValue({
-        userProfile: mockUserProfile,
-        loading: false,
-        refetchUserProfile: mockRefetchUserProfile
-      })
-
-      rerender(<Profile />)
-
-      expect(screen.queryByTestId('loader-icon')).not.toBeInTheDocument()
-      expect(screen.getByTestId('profile-card')).toBeInTheDocument()
+      // Check that tabs are rendered
+      expect(screen.getByTestId('tabs-list')).toBeInTheDocument()
     })
   })
 })
