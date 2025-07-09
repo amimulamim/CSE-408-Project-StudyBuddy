@@ -5,9 +5,9 @@ interface DifficultyAnalysisChartProps {
 }
 
 const COLORS = {
-  Easy: '#22c55e',
-  Medium: '#f59e0b', 
-  Hard: '#ef4444'
+  Easy: 'rgba(34, 197, 94, 0.7)',
+  Medium: 'rgba(245, 158, 11, 0.7)', 
+  Hard: 'rgba(239, 68, 68, 0.7)'
 };
 
 export function DifficultyAnalysisChart({ data }: DifficultyAnalysisChartProps) {
@@ -29,7 +29,7 @@ export function DifficultyAnalysisChart({ data }: DifficultyAnalysisChartProps) 
           />
           <Tooltip 
             contentStyle={{
-              backgroundColor: 'rgba(15, 23, 42, 0.9)',
+              backgroundColor: 'rgba(15, 23, 42, 0.1)',
               border: '1px solid #7c3aed',
               borderRadius: '8px',
               color: '#e2e8f0'
@@ -39,9 +39,13 @@ export function DifficultyAnalysisChart({ data }: DifficultyAnalysisChartProps) 
               name === 'averageScore' ? 'Average Score' : name === 'count' ? 'Quiz Count' : name
             ]}
           />
-          <Bar dataKey="averageScore" name="Average Score">
-            {processedData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[entry.difficulty as keyof typeof COLORS]} />
+          <Bar dataKey="averageScore" name="Average Score" cursor="default">
+            {processedData.map((entry) => (
+              <Cell 
+                key={entry.difficulty} 
+                fill={COLORS[entry.difficulty as keyof typeof COLORS]}
+                style={{ pointerEvents: 'none' }}
+              />
             ))}
           </Bar>
         </BarChart>
@@ -51,7 +55,9 @@ export function DifficultyAnalysisChart({ data }: DifficultyAnalysisChartProps) 
 }
 
 function processDifficultyData(data: any[]) {
-  const difficulties = ['Easy', 'Medium', 'Hard'];
+  const difficulties = ['DifficultyLevel.Easy', 'DifficultyLevel.Medium', 'DifficultyLevel.Hard'];
+  console.log('difficulties');
+  console.log(data);
   
   return difficulties.map(difficulty => {
     const quizzesForDifficulty = data.filter(quiz => 
