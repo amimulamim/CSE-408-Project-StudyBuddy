@@ -201,6 +201,8 @@ class TestVectorDatabaseManager:
             vector=[1.0, 2.0, 3.0],
             payload={
                 "document_id": document_id,
+                "document_name": None,
+                "storage_path": None,
                 "chunk_index": 0,
                 "text": "chunk1"
             }
@@ -212,6 +214,8 @@ class TestVectorDatabaseManager:
             vector=[4.0, 5.0, 6.0],
             payload={
                 "document_id": document_id,
+                "document_name": None,
+                "storage_path": None,
                 "chunk_index": 1,
                 "text": "chunk2"
             }
