@@ -30,6 +30,7 @@ class CollectionResponse(BaseModel):
 
 class DocumentResponse(BaseModel):
     document_id: str
+    document_name: str
     chunks_count: int
     first_chunk: str
 

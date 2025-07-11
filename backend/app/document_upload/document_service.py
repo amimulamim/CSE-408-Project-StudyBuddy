@@ -118,7 +118,7 @@ class DocumentService:
                 raise ValueError("No chunks generated from document text")
             document_id = str(uuid.uuid4())
             embeddings = [self.embedding_generator.get_embedding(chunk) for chunk in chunks]
-            vector_db.upsert_vectors(document_id, chunks, embeddings)
+            vector_db.upsert_vectors(document_id, chunks, embeddings, file.filename)
             logger.debug(f"Stored {len(chunks)} embeddings for document {document_id} in {full_collection_name}")
             return {
                 "document_id": document_id,
