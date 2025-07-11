@@ -14,6 +14,8 @@ from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
+INTERNAL_SERVER_ERROR_MSG = "An internal server error occurred. Please try again later."
+
 router = APIRouter()
 query_processor = QueryProcessor()
 document_service = DocumentService()
@@ -26,6 +28,11 @@ class CollectionResponse(BaseModel):
     full_collection_name: str
     created_at: str
 
+class DocumentResponse(BaseModel):
+    document_id: str
+    chunks_count: int
+    first_chunk: str
+
 @router.post("/documents")
 async def upload_document(
     file: UploadFile = File(...),
@@ -35,11 +42,11 @@ async def upload_document(
 ):
     try:
         user_id = user_info["uid"]
-        result = await document_service.upload_document(file, user_id, collection_name, db)
+        await document_service.upload_document(file, user_id, collection_name, db)
         return {"message": "Document uploaded successfully"}
     except Exception as e:
         logger.error(f"Error uploading document: {str(e)}")
-        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
+        raise HTTPException(status_code=500, detail=INTERNAL_SERVER_ERROR_MSG)
 
 @router.get("/collections", response_model=List[CollectionResponse])
 async def list_collections(
@@ -59,7 +66,7 @@ async def list_collections(
         ]
     except Exception as e:
         logger.error(f"Error listing collections: {str(e)}")
-        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
+        raise HTTPException(status_code=500, detail=INTERNAL_SERVER_ERROR_MSG)
 
 @router.post("/collections")
 async def create_collection(
@@ -77,7 +84,7 @@ async def create_collection(
         return {"message": f"Collection {request.collection_name} created", "full_collection_name": full_collection_name}
     except Exception as e:
         logger.error(f"Error creating collection: {str(e)}")
-        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
+        raise HTTPException(status_code=500, detail=INTERNAL_SERVER_ERROR_MSG)
 
 @router.delete("/collections/{collection_name}")
 async def delete_collection(
@@ -91,7 +98,23 @@ async def delete_collection(
         return {"message": f"Collection {collection_name} deleted successfully"}
     except Exception as e:
         logger.error(f"Error deleting collection: {str(e)}")
-        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
+        raise HTTPException(status_code=500, detail=INTERNAL_SERVER_ERROR_MSG)
+
+@router.get("/collections/{collection_name}/documents", response_model=List[DocumentResponse])
+async def list_documents_in_collection(
+    collection_name: str,
+    db: Session = Depends(get_db),
+    user_info: Dict[str, Any] = Depends(get_current_user)
+):
+    try:
+        user_id = user_info["uid"]
+        documents = document_service.list_documents_in_collection(user_id, collection_name, db)
+        return documents
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error listing documents in collection: {str(e)}")
+        raise HTTPException(status_code=500, detail=INTERNAL_SERVER_ERROR_MSG)
 
 class RenameCollectionRequest(BaseModel):
     new_name: str
@@ -137,4 +160,4 @@ async def rename_collection(
     except Exception as e:
         logger.error(f"Error renaming collection: {str(e)}")
         db.rollback()
-        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
+        raise HTTPException(status_code=500, detail=INTERNAL_SERVER_ERROR_MSG)

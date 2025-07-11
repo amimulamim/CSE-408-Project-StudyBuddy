@@ -156,3 +156,32 @@ class DocumentService:
         except Exception as e:
             logger.error(f"Error searching documents: {str(e)}")
             raise Exception(f"Error searching documents: {str(e)}")
+
+    def list_documents_in_collection(self, user_id: str, collection_name: str, db: Session) -> List[Dict[str, Any]]:
+        """Lists all documents in a user's collection."""
+        try:
+            # Verify collection exists
+            collection = db.query(UserCollection).filter(
+                UserCollection.user_id == user_id,
+                UserCollection.collection_name == collection_name
+            ).first()
+            
+            if not collection:
+                raise ValueError(f"Collection {collection_name} not found")
+            
+            full_collection_name = f"{user_id}_{collection_name}"
+            vector_db = VectorDatabaseManager(
+                qdrant_url=settings.QDRANT_HOST,
+                qdrant_api_key=settings.QDRANT_API_KEY,
+                collection_name=full_collection_name
+            )
+            
+            documents = vector_db.list_documents()
+            logger.debug(f"Listed {len(documents)} documents in collection {full_collection_name}")
+            return documents
+            
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error(f"Error listing documents in collection: {str(e)}")
+            raise RuntimeError(f"Error listing documents in collection: {str(e)}")
