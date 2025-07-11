@@ -40,7 +40,11 @@ export default defineConfig(({ mode }) => ({
         "**/*.d.ts*",
         "**/components/quiz/**",
         "**/components/admin/**",
-        "**/components/ui/t**"
+        "**/components/ui/t**",
+        "**/components/analytics/**",
+        "**/pages/Qui**",
+        "**/lib**",
+        "**/hooks/**",
       ],
     },
   },
