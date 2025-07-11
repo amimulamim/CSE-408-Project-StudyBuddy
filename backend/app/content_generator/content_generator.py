@@ -291,28 +291,63 @@ class ContentGenerator:
                 - Use LaTeX Beamer syntax only: \\begin{{frame}}...\\end{{frame}}
                 - Each slide must be created with: \\begin{{frame}}...\\end{{frame}}
 
-                - If the slide contains code or uses \\verb, \\texttt (with special characters), or \\begin{{verbatim}}, use \\begin{{frame}}[fragile]
-                - NEVER use \\texttt for multi-line code or anything containing quotes, slashes, or backslashes
-                - Use only \\begin{{verbatim}} or \\begin{{lstlisting}} for multi-line code blocks, and always inside a [fragile] frame
+                CRITICAL CHARACTER ENCODING RULES:
+                - NEVER use special Unicode characters like ×, ∇, ⊙, •, –, —, ", ", ', '
+                - Use proper LaTeX math mode for mathematical symbols: $\\times$, $\\nabla$, $\\odot$
+                - Use standard ASCII characters: -, x, *, +, =, <, >, etc.
+                - For multiplication use: $\\times$ or $\\cdot$ in math mode
+                - For bullets use standard LaTeX itemize (automatic bullets)
+                - For subscripts use: $\\text{{subscript}}$ or \\textsubscript{{text}}
+                - For mathematical expressions, always use math mode: $expression$
+                - Use \\textbf{{}} for bold text, \\textit{{}} for italic text
+                - Use standard ASCII quotes: " instead of " or "
+                - Use standard hyphens and dashes: - instead of – or —
+
+                MATH MODE REQUIREMENTS:
+                - All mathematical expressions MUST be in math mode: $expression$
+                - Variables: $x$, $y$, $z$, $N$, $P$, etc.
+                - Equations: $N = (b-a) \\times (c-a)$
+                - Greek letters: $\\alpha$, $\\beta$, $\\gamma$, $\\nabla$
+                - Mathematical operators: $\\times$, $\\cdot$, $\\div$, $\\pm$
+                - Fractions: $\\frac{{numerator}}{{denominator}}$
+                - Subscripts and superscripts: $x_1$, $x^2$
+                
+                FRAGILE FRAMES:
+                - Use \\begin{{frame}}[fragile] ONLY for code blocks or verbatim content
+                - If using \\texttt with special characters, use [fragile]
+                - For mathematical content, use regular frames with proper math mode
+                - Code blocks must use \\begin{{verbatim}} or \\begin{{lstlisting}}
+                
+                SAFE FORMATTING:
                 - Do NOT use \\section, \\subsection, or markdown (e.g., ###, **bold**, ```latex)
                 - Do NOT include any unnecessary explanation, markdown fences, or extra content
+                - Stick to basic LaTeX commands that compile reliably
+                - Test readability: avoid overly complex formatting
 
 
 
                 EXAMPLE SLIDE STRUCTURE:
                 \\begin{{frame}}
-                \\frametitle{{Detailed Topic Analysis}}
+                \\frametitle{{Mathematical Concepts}}
                 \\begin{{itemize}}
                 \\item First comprehensive point with specific details from context
                 \\begin{{itemize}}
-                \\item Supporting detail or example
-                \\item Additional clarification or application
+                \\item Supporting detail or example with proper math: $x = y + z$
+                \\item Additional clarification: Use $\\times$ instead of × for multiplication
                 \\end{{itemize}}
                 \\item Second substantial point covering different aspect
-                \\item Third point connecting to previous concepts
-                \\item Fourth point with practical implications
+                \\item Mathematical formula: $N = (b-a) \\times (c-a)$ where variables are in math mode
+                \\item Practical application: Calculate $|N| = 1$ for unit normal vectors
                 \\end{{itemize}}
                 \\end{{frame}}
+                
+                LATEX COMPILATION SAFETY:
+                - Always use ASCII characters in text: -, +, =, <, >
+                - Put ALL mathematical content in math mode: $content$
+                - Use \\textbf{{bold}} and \\textit{{italic}} for emphasis
+                - Use \\textsubscript{{sub}} and \\textsuperscript{{sup}} for non-math subscripts
+                - Avoid Unicode symbols completely - they cause compilation failures
+                - Test mental compilation: would this LaTeX compile on a basic system?
                 
                 CRITICAL REQUIREMENTS:
                 - Generate exactly {num_slides} slides (including title and conclusion)
@@ -339,6 +374,38 @@ class ContentGenerator:
                     latex_content = latex_content[latex_content.find('\n')+1:].strip()
                 if latex_content.endswith('```'):
                     latex_content = latex_content[:latex_content.rfind('```')].strip()
+                
+                # Replace problematic Unicode characters with LaTeX equivalents
+                unicode_replacements = {
+                    '×': r'$\times$',
+                    '∇': r'$\nabla$',
+                    '⊙': r'$\odot$',
+                    '•': r'',  # Remove bullets, itemize handles them
+                    '–': r'-',
+                    '—': r'--',
+                    '"': r'"',  # Left double quote
+                    '"': r'"',  # Right double quote
+                    ''': r"'",  # Left single quote
+                    ''': r"'",  # Right single quote
+                    '…': r'...',
+                    '≤': r'$\leq$',
+                    '≥': r'$\geq$',
+                    '≠': r'$\neq$',
+                    '±': r'$\pm$',
+                    '∞': r'$\infty$',
+                    '∈': r'$\in$',
+                    '∩': r'$\cap$',
+                    '∪': r'$\cup$',
+                    '⟨': r'$\langle$',
+                    '⟩': r'$\rangle$',
+                    'â‹…': r'$\cdot$',  # Sometimes appears as mangled encoding
+                    'âˆ‡': r'$\nabla$',  # Sometimes appears as mangled encoding
+                    'âŠ™': r'$\odot$',   # Sometimes appears as mangled encoding
+                    'Ã—': r'$\times$',   # Sometimes appears as mangled encoding
+                }
+                
+                for unicode_char, latex_replacement in unicode_replacements.items():
+                    latex_content = latex_content.replace(unicode_char, latex_replacement)
                 
                 # Remove any duplicate preamble elements that AI might have added
                 lines = latex_content.split('\n')
@@ -448,13 +515,17 @@ class ContentGenerator:
                         if attempt < max_retries:
                             # Add specific error feedback to the prompt for the next iteration
                             common_errors = {
-                                "Undefined control sequence": "avoiding undefined LaTeX commands",
-                                "Missing $": "ensuring proper math mode syntax",
-                                "Runaway argument": "checking for unmatched braces or brackets",
+                                "Undefined control sequence": "avoiding undefined LaTeX commands and using only standard LaTeX commands",
+                                "Missing $": "ensuring proper math mode syntax - put all mathematical expressions in $...$",
+                                "Runaway argument": "checking for unmatched braces or brackets and avoiding special Unicode characters",
                                 "File ended while scanning": "ensuring all environments are properly closed",
                                 "Extra }": "balancing braces correctly",
-                                "LaTeX Error": "fixing LaTeX syntax errors",
-                                "duplicate": "removing duplicate preamble commands"
+                                "LaTeX Error": "fixing LaTeX syntax errors and using only ASCII characters",
+                                "duplicate": "removing duplicate preamble commands",
+                                "Unicode": "using only ASCII characters - replace × with $\\times$, ∇ with $\\nabla$, • with standard bullets",
+                                "Package inputenc Error": "avoiding Unicode characters and using proper LaTeX encoding",
+                                "Unknown character": "using only standard ASCII characters and proper LaTeX math symbols",
+                                "Invalid UTF-8": "replacing all special characters with proper LaTeX equivalents"
                             }
                             
                             error_feedback = ""
