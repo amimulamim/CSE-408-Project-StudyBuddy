@@ -423,3 +423,71 @@ class TestDocumentRoutes:
         # Assert
         assert response.status_code == 200
         mock_delete_collection.assert_called_once_with("test-uid", unicode_name, self.mock_db)
+
+    @patch('app.api.v1.routes.document.document_service.list_documents_in_collection')
+    def test_list_documents_in_collection_success(self, mock_list_documents):
+        """Test successful listing of documents in a collection"""
+        # Arrange
+        mock_documents = [
+            {
+                "document_id": "doc-1",
+                "chunks_count": 5,
+                "first_chunk": "This is the first chunk of document 1..."
+            },
+            {
+                "document_id": "doc-2", 
+                "chunks_count": 3,
+                "first_chunk": "This is the first chunk of document 2..."
+            }
+        ]
+        mock_list_documents.return_value = mock_documents
+        
+        # Act
+        response = client.get("/api/v1/document/collections/test-collection/documents")
+        
+        # Assert
+        assert response.status_code == 200
+        assert response.json() == mock_documents
+        mock_list_documents.assert_called_once_with("test-uid", "test-collection", self.mock_db)
+
+    @patch('app.api.v1.routes.document.document_service.list_documents_in_collection')
+    def test_list_documents_collection_not_found(self, mock_list_documents):
+        """Test listing documents when collection doesn't exist"""
+        # Arrange
+        mock_list_documents.side_effect = ValueError("Collection test-collection not found")
+        
+        # Act
+        response = client.get("/api/v1/document/collections/test-collection/documents")
+        
+        # Assert
+        assert response.status_code == 404
+        assert "Collection test-collection not found" in response.json()["detail"]
+        mock_list_documents.assert_called_once_with("test-uid", "test-collection", self.mock_db)
+
+    @patch('app.api.v1.routes.document.document_service.list_documents_in_collection')
+    def test_list_documents_empty_collection(self, mock_list_documents):
+        """Test listing documents in an empty collection"""
+        # Arrange
+        mock_list_documents.return_value = []
+        
+        # Act
+        response = client.get("/api/v1/document/collections/empty-collection/documents")
+        
+        # Assert
+        assert response.status_code == 200
+        assert response.json() == []
+        mock_list_documents.assert_called_once_with("test-uid", "empty-collection", self.mock_db)
+
+    @patch('app.api.v1.routes.document.document_service.list_documents_in_collection')
+    def test_list_documents_internal_error(self, mock_list_documents):
+        """Test listing documents when an internal error occurs"""
+        # Arrange
+        mock_list_documents.side_effect = RuntimeError("Database connection error")
+        
+        # Act
+        response = client.get("/api/v1/document/collections/test-collection/documents")
+        
+        # Assert
+        assert response.status_code == 500
+        assert "An internal server error occurred" in response.json()["detail"]
+        mock_list_documents.assert_called_once_with("test-uid", "test-collection", self.mock_db)

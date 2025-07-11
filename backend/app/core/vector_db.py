@@ -110,3 +110,44 @@ class VectorDatabaseManager:
         except Exception as e:
             logger.error(f"Error searching vectors: {str(e)}")
             raise Exception(f"Error searching vectors: {str(e)}")
+
+    def list_documents(self, limit: int = 1000) -> List[Dict[str, Any]]:
+        """Lists all documents in the collection by retrieving unique document IDs."""
+        try:
+            scroll_result = self.client.scroll(
+                collection_name=self.collection_name,
+                limit=limit,
+                with_payload=True,
+                with_vectors=False
+            )
+            
+            documents = self._process_document_points(scroll_result[0])
+            result = list(documents.values())
+            logger.info(f"Found {len(result)} documents in collection {self.collection_name}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error listing documents: {str(e)}")
+            raise RuntimeError(f"Error listing documents: {str(e)}")
+    
+    def _process_document_points(self, points) -> Dict[str, Dict[str, Any]]:
+        """Helper method to process points and extract document information."""
+        documents = {}
+        for point in points:
+            if not (point.payload and "document_id" in point.payload):
+                continue
+                
+            doc_id = point.payload["document_id"]
+            if doc_id not in documents:
+                documents[doc_id] = {
+                    "document_id": doc_id,
+                    "chunks_count": 0,
+                    "first_chunk": None
+                }
+            
+            documents[doc_id]["chunks_count"] += 1
+            if documents[doc_id]["first_chunk"] is None and "text" in point.payload:
+                text = point.payload["text"]
+                documents[doc_id]["first_chunk"] = text[:200] + "..." if len(text) > 200 else text
+        
+        return documents
