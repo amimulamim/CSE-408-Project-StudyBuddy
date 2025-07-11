@@ -118,7 +118,7 @@ class DocumentService:
                 raise ValueError("No chunks generated from document text")
             document_id = str(uuid.uuid4())
             embeddings = [self.embedding_generator.get_embedding(chunk) for chunk in chunks]
-            vector_db.upsert_vectors(document_id, chunks, embeddings, file.filename)
+            vector_db.upsert_vectors(document_id, chunks, embeddings, file.filename, storage_path)
             logger.debug(f"Stored {len(chunks)} embeddings for document {document_id} in {full_collection_name}")
             return {
                 "document_id": document_id,
@@ -185,3 +185,76 @@ class DocumentService:
         except Exception as e:
             logger.error(f"Error listing documents in collection: {str(e)}")
             raise RuntimeError(f"Error listing documents in collection: {str(e)}")
+
+    def rename_document(self, user_id: str, collection_name: str, document_id: str, new_name: str, db: Session) -> bool:
+        """Rename a document in a user's collection."""
+        try:
+            # Verify collection exists
+            collection = db.query(UserCollection).filter(
+                UserCollection.user_id == user_id,
+                UserCollection.collection_name == collection_name
+            ).first()
+            
+            if not collection:
+                raise ValueError(f"Collection {collection_name} not found")
+            
+            full_collection_name = f"{user_id}_{collection_name}"
+            vector_db = VectorDatabaseManager(
+                qdrant_url=settings.QDRANT_HOST,
+                qdrant_api_key=settings.QDRANT_API_KEY,
+                collection_name=full_collection_name
+            )
+            
+            success = vector_db.update_document_name(document_id, new_name)
+            if success:
+                logger.debug(f"Renamed document {document_id} to {new_name} in collection {full_collection_name}")
+            return success
+            
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error(f"Error renaming document: {str(e)}")
+            raise RuntimeError(f"Error renaming document: {str(e)}")
+
+    def get_document_content_url(self, user_id: str, collection_name: str, document_id: str, db: Session) -> str:
+        """Get the Firebase download URL for a document."""
+        try:
+            # Verify collection exists
+            collection = db.query(UserCollection).filter(
+                UserCollection.user_id == user_id,
+                UserCollection.collection_name == collection_name
+            ).first()
+            
+            if not collection:
+                raise ValueError(f"Collection {collection_name} not found")
+            
+            full_collection_name = f"{user_id}_{collection_name}"
+            vector_db = VectorDatabaseManager(
+                qdrant_url=settings.QDRANT_HOST,
+                qdrant_api_key=settings.QDRANT_API_KEY,
+                collection_name=full_collection_name
+            )
+            
+            # Get document info to find storage path
+            documents = vector_db.list_documents()
+            document = next((doc for doc in documents if doc["document_id"] == document_id), None)
+            
+            if not document or not document.get("storage_path"):
+                raise ValueError(f"Document {document_id} not found or has no storage path")
+            
+            # Generate download URL from Firebase Storage
+            blob = self.bucket.blob(document["storage_path"])
+            download_url = blob.generate_signed_url(
+                version="v4",
+                expiration=3600,  # 1 hour
+                method="GET"
+            )
+            
+            logger.debug(f"Generated download URL for document {document_id}")
+            return download_url
+            
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error(f"Error getting document content URL: {str(e)}")
+            raise RuntimeError(f"Error getting document content URL: {str(e)}")
