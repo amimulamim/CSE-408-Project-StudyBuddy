@@ -60,7 +60,7 @@ class VectorDatabaseManager:
             logger.error(f"Error listing collections: {str(e)}")
             raise Exception(f"Error listing collections: {str(e)}")
     
-    def upsert_vectors(self, document_id: str, chunks: List[str], embeddings: List[List[float]], document_name: str = None):
+    def upsert_vectors(self, document_id: str, chunks: List[str], embeddings: List[List[float]], document_name: str = None, storage_path: str = None):
         """Upserts text chunks and their embeddings to Qdrant."""
         try:
             points = [
@@ -70,6 +70,7 @@ class VectorDatabaseManager:
                     payload={
                         "document_id": document_id,
                         "document_name": document_name,
+                        "storage_path": storage_path,
                         "chunk_index": idx,
                         "text": chunk
                     }
@@ -84,7 +85,7 @@ class VectorDatabaseManager:
             return {"message": f"Upserted {len(points)} points for document {document_id}"}
         except Exception as e:
             logger.error(f"Error upserting vectors for document {document_id}: {str(e)}")
-            raise Exception(f"Error upserting vectors: {str(e)}")
+            raise RuntimeError(f"Error upserting vectors: {str(e)}")
     
     def search_vectors(self, query_embedding: List[float], limit: int = 5) -> List[Dict[str, Any]]:
         """Performs similarity search in Qdrant."""
@@ -143,6 +144,7 @@ class VectorDatabaseManager:
                 documents[doc_id] = {
                     "document_id": doc_id,
                     "document_name": point.payload.get("document_name", "Unknown Document"),
+                    "storage_path": point.payload.get("storage_path"),
                     "chunks_count": 0,
                     "first_chunk": None
                 }
@@ -153,3 +155,51 @@ class VectorDatabaseManager:
                 documents[doc_id]["first_chunk"] = text[:200] + "..." if len(text) > 200 else text
         
         return documents
+
+    def update_document_name(self, document_id: str, new_name: str) -> bool:
+        """Update the document name for all chunks of a specific document."""
+        try:
+            # Scroll through all points to find those with the specific document_id
+            scroll_result = self.client.scroll(
+                collection_name=self.collection_name,
+                scroll_filter=models.Filter(
+                    must=[
+                        models.FieldCondition(
+                            key="document_id",
+                            match=models.MatchValue(value=document_id)
+                        )
+                    ]
+                ),
+                limit=1000,
+                with_payload=True,
+                with_vectors=True
+            )
+            
+            if not scroll_result[0]:
+                logger.warning(f"No points found for document {document_id}")
+                return False
+            
+            # Update all points with the new document name
+            points_to_update = []
+            for point in scroll_result[0]:
+                if point.payload:
+                    point.payload["document_name"] = new_name
+                    points_to_update.append(models.PointStruct(
+                        id=point.id,
+                        vector=point.vector,
+                        payload=point.payload
+                    ))
+            
+            if points_to_update:
+                self.client.upsert(
+                    collection_name=self.collection_name,
+                    points=points_to_update
+                )
+                logger.info(f"Updated document name for {len(points_to_update)} points")
+                return True
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error updating document name: {str(e)}")
+            raise RuntimeError(f"Error updating document name: {str(e)}")

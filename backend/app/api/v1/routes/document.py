@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from app.rag.query_processor import QueryProcessor
 from app.auth.firebase_auth import get_current_user
 from app.document_upload.document_service import DocumentService
@@ -33,6 +33,7 @@ class DocumentResponse(BaseModel):
     document_name: str
     chunks_count: int
     first_chunk: str
+    storage_path: Optional[str] = None
 
 @router.post("/documents")
 async def upload_document(
@@ -161,4 +162,45 @@ async def rename_collection(
     except Exception as e:
         logger.error(f"Error renaming collection: {str(e)}")
         db.rollback()
+        raise HTTPException(status_code=500, detail=INTERNAL_SERVER_ERROR_MSG)
+
+class RenameDocumentRequest(BaseModel):
+    new_name: str
+
+@router.put("/collections/{collection_name}/documents/{document_id}/rename")
+async def rename_document(
+    collection_name: str,
+    document_id: str,
+    request: RenameDocumentRequest,
+    db: Session = Depends(get_db),
+    user_info: Dict[str, Any] = Depends(get_current_user)
+):
+    try:
+        user_id = user_info["uid"]
+        success = document_service.rename_document(user_id, collection_name, document_id, request.new_name, db)
+        if success:
+            return {"message": f"Document renamed to {request.new_name} successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Document not found")
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error renaming document: {str(e)}")
+        raise HTTPException(status_code=500, detail=INTERNAL_SERVER_ERROR_MSG)
+
+@router.get("/collections/{collection_name}/documents/{document_id}/content")
+async def get_document_content_url(
+    collection_name: str,
+    document_id: str,
+    db: Session = Depends(get_db),
+    user_info: Dict[str, Any] = Depends(get_current_user)
+):
+    try:
+        user_id = user_info["uid"]
+        download_url = document_service.get_document_content_url(user_id, collection_name, document_id, db)
+        return {"download_url": download_url}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error getting document content URL: {str(e)}")
         raise HTTPException(status_code=500, detail=INTERNAL_SERVER_ERROR_MSG)
