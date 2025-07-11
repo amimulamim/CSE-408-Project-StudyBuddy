@@ -206,16 +206,19 @@ class ContentGenerator:
                 context_words = len(context.split())
                 context_sentences = len([s for s in context.replace('.', '.|').replace('!', '!|').replace('?', '?|').split('|') if s.strip()])
                 
-                # Determine optimal content density
+                # Determine optimal content density to prevent slide overflow
                 if context_words < 200:
                     content_density = "concise"
                     points_per_slide = "2-3"
+                    max_subpoints = 1
                 elif context_words < 500:
                     content_density = "balanced"
                     points_per_slide = "3-4"
+                    max_subpoints = 2
                 else:
                     content_density = "detailed"
-                    points_per_slide = "4-6"
+                    points_per_slide = "3-4"  # Reduced from 4-6 to prevent overflow
+                    max_subpoints = 2
                 
                 prompt = f"""
                 You are an expert educator creating a comprehensive LaTeX Beamer presentation on the topic '{topic}' with a {tone} tone and {difficulty} difficulty.
@@ -242,10 +245,11 @@ class ContentGenerator:
                 3. CONTENT SLIDES (Slides 3 to {num_slides-1}):
                    - Each slide covers one major concept/topic
                    - {points_per_slide} substantial bullet points or numbered items per slide
-                   - Each point should be 1-2 complete sentences
+                   - Each main point should be 1-2 complete sentences (maximum 25 words per bullet)
                    - Include specific details, examples, or explanations from context
-                   - Use subpoints (\\begin{{itemize}} inside \\item) when appropriate
-                   - Fill each slide meaningfully - avoid sparse content
+                   - Use maximum 1-2 subpoints per main point to avoid overcrowding
+                   - Keep slides readable - prioritize clarity over quantity of information
+                   - CRITICAL: Each slide must fit comfortably on one page without text overflow
                 
                 4. CONCLUSION/SUMMARY SLIDE (Slide {num_slides}):
                    - Summarize key takeaways
@@ -254,7 +258,7 @@ class ContentGenerator:
                 
                 CONTENT QUALITY STANDARDS:
                 ✓ NEVER use placeholder text like "...", "etc.", "and more"
-                ✓ Each bullet point must be a complete, informative statement (minimum 8-12 words)
+                ✓ Each bullet point must be a complete, informative statement (minimum 8-12 words, maximum 25 words)
                 ✓ Use specific information from the provided context
                 ✓ Provide examples, definitions, or explanations where relevant
                 ✓ Maintain logical flow between slides
@@ -262,6 +266,9 @@ class ContentGenerator:
                 ✓ If context is limited, focus deeply on available material rather than adding unrelated content
                 ✓ MINIMUM {points_per_slide} bullet points per content slide - NO EXCEPTIONS
                 ✓ Each slide must justify its existence with meaningful content
+                ✓ CRITICAL: Limit total text per slide to prevent overflow - max 6 lines of bullet points
+                ✓ Keep subpoints concise (maximum 15 words each) and use sparingly
+                ✓ Prefer fewer, well-developed points over many short points
                 
                 SLIDE CONTENT DISTRIBUTION:
                 - Distribute content evenly across {num_slides-2} content slides
@@ -271,6 +278,9 @@ class ContentGenerator:
                 - Make connections between concepts explicit
                 - Balance content depth: don't put all information on one slide
                 - Ensure progressive disclosure of information across slides
+                - CRITICAL TEXT LIMITS: Maximum 6-8 lines of content per slide to prevent overflow
+                - If a concept needs more explanation, split it across multiple slides
+                - Prioritize readability over information density
                 
                 STRICT LaTeX FORMATTING RULES:
                 - Use LaTeX Beamer syntax only
@@ -312,6 +322,10 @@ class ContentGenerator:
                 - Create a cohesive, educational presentation worthy of {num_slides} slides
                 - NEVER generate slides with only 1-2 bullet points - always fill slides appropriately
                 - If you cannot fill {num_slides} slides with quality content, focus on fewer slides with more detailed content per slide
+                - SLIDE OVERFLOW PREVENTION: Ensure no slide exceeds 7-8 lines of total content including subpoints
+                - Break long explanations across multiple slides rather than cramming into one
+                - Use concise, impactful language to maximize information density without overwhelming
+                - Test slide readability: each slide should be readable in a 2-minute window
                 """
 
 
@@ -371,6 +385,22 @@ class ContentGenerator:
 \\usepackage{{xcolor}}
 \\setbeamertemplate{{navigation symbols}}{{}}
 \\setbeamertemplate{{footline}}[frame number]
+
+% Improve slide spacing and prevent overflow
+\\setbeamertemplate{{itemize/enumerate body begin}}{{\\vspace{{0.2em}}}}
+\\setbeamertemplate{{itemize/enumerate subbody begin}}{{\\vspace{{0.1em}}}}
+\\setlength{{\\leftmargini}}{{1.2em}}
+\\setlength{{\\leftmarginii}}{{1em}}
+
+% Set frame title spacing
+\\setbeamertemplate{{frametitle}}{{%
+  \\nointerlineskip%
+  \\begin{{beamercolorbox}}[wd=\\paperwidth,ht=2.75ex,dp=1.375ex]{{frametitle}}
+    \\hspace*{{1ex}}\\insertframetitle%
+  \\end{{beamercolorbox}}%
+  \\vspace{{0.5em}}%
+}}
+
 \\title{{{topic}}}
 \\author{{StudyBuddy}}
 \\date{{\\today}}
