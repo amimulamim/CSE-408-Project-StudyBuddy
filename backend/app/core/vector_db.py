@@ -203,3 +203,64 @@ class VectorDatabaseManager:
         except Exception as e:
             logger.error(f"Error updating document name: {str(e)}")
             raise RuntimeError(f"Error updating document name: {str(e)}")
+
+    def rename_collection(self, old_name: str, new_name: str) -> bool:
+        """Rename a collection by creating a new one and moving all points."""
+        try:
+            # Check if old collection exists
+            collections = self.client.get_collections()
+            if old_name not in [c.name for c in collections.collections]:
+                logger.warning(f"Source collection {old_name} not found")
+                return False
+            
+            # Check if new collection already exists
+            if new_name in [c.name for c in collections.collections]:
+                logger.warning(f"Target collection {new_name} already exists")
+                return False
+            
+            # Create new collection with same configuration
+            self.client.create_collection(
+                collection_name=new_name,
+                vectors_config=models.VectorParams(size=768, distance=models.Distance.COSINE)
+            )
+            
+            # Get all points from old collection
+            scroll_result = self.client.scroll(
+                collection_name=old_name,
+                limit=10000,  # Large limit to get all points
+                with_payload=True,
+                with_vectors=True
+            )
+            
+            if scroll_result[0]:  # If there are points to migrate
+                # Prepare points for the new collection
+                points_to_migrate = []
+                for point in scroll_result[0]:
+                    points_to_migrate.append(models.PointStruct(
+                        id=point.id,
+                        vector=point.vector,
+                        payload=point.payload
+                    ))
+                
+                # Upsert all points to new collection
+                self.client.upsert(
+                    collection_name=new_name,
+                    points=points_to_migrate
+                )
+                
+                logger.info(f"Migrated {len(points_to_migrate)} points from {old_name} to {new_name}")
+            
+            # Delete old collection
+            self.client.delete_collection(collection_name=old_name)
+            
+            logger.info(f"Successfully renamed collection from {old_name} to {new_name}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error renaming collection: {str(e)}")
+            # Clean up new collection if it was created
+            try:
+                self.client.delete_collection(collection_name=new_name)
+            except Exception:
+                pass
+            raise RuntimeError(f"Error renaming collection: {str(e)}")
