@@ -60,7 +60,7 @@ class VectorDatabaseManager:
             logger.error(f"Error listing collections: {str(e)}")
             raise Exception(f"Error listing collections: {str(e)}")
     
-    def upsert_vectors(self, document_id: str, chunks: List[str], embeddings: List[List[float]]):
+    def upsert_vectors(self, document_id: str, chunks: List[str], embeddings: List[List[float]], document_name: str = None):
         """Upserts text chunks and their embeddings to Qdrant."""
         try:
             points = [
@@ -69,6 +69,7 @@ class VectorDatabaseManager:
                     vector=embedding,
                     payload={
                         "document_id": document_id,
+                        "document_name": document_name,
                         "chunk_index": idx,
                         "text": chunk
                     }
@@ -141,6 +142,7 @@ class VectorDatabaseManager:
             if doc_id not in documents:
                 documents[doc_id] = {
                     "document_id": doc_id,
+                    "document_name": point.payload.get("document_name", "Unknown Document"),
                     "chunks_count": 0,
                     "first_chunk": None
                 }

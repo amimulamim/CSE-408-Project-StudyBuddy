@@ -431,11 +431,13 @@ class TestDocumentRoutes:
         mock_documents = [
             {
                 "document_id": "doc-1",
+                "document_name": "test_document_1.pdf",
                 "chunks_count": 5,
                 "first_chunk": "This is the first chunk of document 1..."
             },
             {
                 "document_id": "doc-2", 
+                "document_name": "test_document_2.txt",
                 "chunks_count": 3,
                 "first_chunk": "This is the first chunk of document 2..."
             }
