@@ -38,8 +38,12 @@ class DocumentService:
         """Creates or updates a Qdrant collection and stores metadata in PostgreSQL."""
         full_collection_name = f"{user_id}_{collection_name}"
         try:
-            if not collection_name or len(collection_name) > 50 or not collection_name.isalnum():
-                raise ValueError("Invalid collection name. Use alphanumeric characters, max 50.")
+            if not collection_name or len(collection_name) > 50:
+                raise ValueError("Invalid collection name. Max 50 characters allowed.")
+            # Allow alphanumeric, underscore, and hyphen characters
+            import re
+            if not re.match(r'^[a-zA-Z0-9_-]+$', collection_name):
+                raise ValueError("Invalid collection name. Use alphanumeric characters, underscores, and hyphens only.")
             existing = db.query(UserCollection).filter(
                 UserCollection.user_id == user_id,
                 UserCollection.collection_name == collection_name
@@ -258,3 +262,53 @@ class DocumentService:
         except Exception as e:
             logger.error(f"Error getting document content URL: {str(e)}")
             raise RuntimeError(f"Error getting document content URL: {str(e)}")
+
+    def rename_collection_with_migration(self, user_id: str, old_collection_name: str, new_collection_name: str, db: Session) -> bool:
+        """Rename a collection including both database and Qdrant migration."""
+        try:
+            # Verify old collection exists
+            collection = db.query(UserCollection).filter(
+                UserCollection.user_id == user_id,
+                UserCollection.collection_name == old_collection_name
+            ).first()
+            
+            if not collection:
+                raise ValueError(f"Collection {old_collection_name} not found")
+            
+            # Check if new name already exists
+            existing = db.query(UserCollection).filter(
+                UserCollection.user_id == user_id,
+                UserCollection.collection_name == new_collection_name
+            ).first()
+            
+            if existing:
+                raise ValueError(f"Collection with name {new_collection_name} already exists")
+            
+            old_full_name = f"{user_id}_{old_collection_name}"
+            new_full_name = f"{user_id}_{new_collection_name}"
+            
+            # Rename the Qdrant collection
+            vector_db = VectorDatabaseManager(
+                qdrant_url=settings.QDRANT_HOST,
+                qdrant_api_key=settings.QDRANT_API_KEY,
+                collection_name=old_full_name  # This doesn't matter for rename operation
+            )
+            
+            success = vector_db.rename_collection(old_full_name, new_full_name)
+            if not success:
+                raise RuntimeError("Failed to rename Qdrant collection")
+            
+            # Update database metadata
+            collection.collection_name = new_collection_name
+            collection.full_collection_name = new_full_name
+            db.commit()
+            
+            logger.debug(f"Successfully renamed collection from {old_collection_name} to {new_collection_name}")
+            return True
+            
+        except ValueError:
+            raise
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error renaming collection with migration: {str(e)}")
+            raise RuntimeError(f"Error renaming collection: {str(e)}")

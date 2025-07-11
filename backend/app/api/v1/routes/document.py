@@ -130,35 +130,16 @@ async def rename_collection(
 ):
     try:
         user_id = user_info["uid"]
+        success = document_service.rename_collection_with_migration(
+            user_id, collection_name, request.new_name, db
+        )
+        if success:
+            return {"message": f"Collection renamed to {request.new_name} successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to rename collection")
         
-        # Find the existing collection
-        collection = db.query(UserCollection).filter(
-            UserCollection.user_id == user_id,
-            UserCollection.collection_name == collection_name
-        ).first()
-        
-        if not collection:
-            raise HTTPException(status_code=404, detail="Collection not found")
-        
-        # Check if new name already exists
-        existing = db.query(UserCollection).filter(
-            UserCollection.user_id == user_id,
-            UserCollection.collection_name == request.new_name
-        ).first()
-        
-        if existing:
-            raise HTTPException(status_code=400, detail="Collection with this name already exists")
-        
-        # Update the collection name
-        collection.collection_name = request.new_name
-        collection.full_collection_name = f"{user_id}_{request.new_name}"
-        
-        db.commit()
-        
-        return {"message": f"Collection renamed to {request.new_name} successfully"}
-        
-    except HTTPException:
-        raise
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Error renaming collection: {str(e)}")
         db.rollback()
