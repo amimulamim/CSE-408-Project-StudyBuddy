@@ -22,6 +22,7 @@ import QuizPage from './pages/QuizPage';
 import QuizTakePage from './pages/QuizTakePage';
 import QuizResultsPage from './pages/QuizResultsPage';
 import CollectionsPage from './pages/CollectionsPage';
+import DocumentsPage from './pages/DocumentsPage';
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => {
             <Route path="/dashboard/content" element={<ContentLibrary />} />
             <Route path="/dashboard/quiz" element={<QuizPage />} />
             <Route path="/collections" element={<CollectionsPage />} />
+            <Route path="/collections/:collectionName" element={<DocumentsPage />} />
             <Route path="/content/flashcards/:contentId" element={<FlashcardsView />} />
             <Route path="/content/slides/:contentId" element={<SlidesView />} />
             <Route path="/chatbot" element={<Chatbot />} />
