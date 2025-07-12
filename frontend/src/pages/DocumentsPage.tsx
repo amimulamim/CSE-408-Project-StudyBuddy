@@ -125,15 +125,11 @@ export default function DocumentsPage() {
                         
                         {/* Document Metadata */}
                         <div className="flex flex-wrap items-center gap-4 mb-3">
-                          <div className="text-sm glass-text-description">
-                            <strong>ID:</strong> {document.document_id.substring(0, 8)}...
-                          </div>
+
                           <Badge variant="outline" className="text-xs">
                             {document.chunks_count} chunks
                           </Badge>
-                          <div className="text-sm glass-text-description">
-                            <strong>Path:</strong> {document.storage_path?.split('/').pop() || ''}
-                          </div>
+
                         </div>
 
                         {/* Document Preview */}
