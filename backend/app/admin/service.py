@@ -13,6 +13,9 @@ from datetime import datetime, timezone
 import uuid
 import json
 
+# Constants
+UNTITLED_CONTENT = "Untitled Content"
+
 # Admin Logging Functions
 def create_admin_log(
     db: Session,
@@ -117,10 +120,11 @@ def get_all_content_paginated(
     db: Session,
     pagination: PaginationQuery
 ) -> Tuple[List[Dict[str, Any]], int]:
-    """Get paginated list of all generated content"""
+    """Get paginated list of all generated content with user information"""
     from app.content_generator.models import ContentItem
     
-    query = db.query(ContentItem)
+    # Join with users table to get user information
+    query = db.query(ContentItem, User).join(User, ContentItem.user_id == User.uid)
     total = query.count()
     
     content_items = query.order_by(ContentItem.created_at.desc())\
@@ -129,18 +133,121 @@ def get_all_content_paginated(
                          .all()
     
     content_list = []
-    for item in content_items:
+    for content_item, user in content_items:
+        # Generate a proper title from topic or use a default
+        title = content_item.topic if content_item.topic else UNTITLED_CONTENT
+        if len(title) > 50:
+            title = title[:47] + "..."
+            
         content_list.append({
-            "id": str(item.id),
-            "user_id": item.user_id,
-            "content_url": item.content_url,
-            "image_preview": item.image_preview,
-            "topic": item.topic,
-            "content_type": item.content_type,
-            "created_at": item.created_at.isoformat() if item.created_at else None
+            "id": str(content_item.id),
+            "title": title,
+            "user_id": content_item.user_id,
+            "user_name": user.name,
+            "user_email": user.email,
+            "content_url": content_item.content_url,
+            "image_preview": content_item.image_preview,
+            "topic": content_item.topic,
+            "content_type": content_item.content_type or "Unknown",
+            "raw_source": content_item.raw_source,
+            "created_at": content_item.created_at.isoformat() if content_item.created_at else None
         })
     
     return content_list, total
+
+def search_content_by_query(
+    db: Session, 
+    query: str, 
+    pagination: PaginationQuery
+) -> Tuple[List[Dict[str, Any]], int]:
+    """Search content by topic, content type, or user name"""
+    from app.content_generator.models import ContentItem
+    from sqlalchemy import or_, and_
+    
+    # Join with users table to get user information and enable search
+    base_query = db.query(ContentItem, User).join(User, ContentItem.user_id == User.uid)
+    
+    # Apply search filters
+    search_query = base_query.filter(
+        or_(
+            ContentItem.topic.ilike(f"%{query}%"),
+            ContentItem.content_type.ilike(f"%{query}%"),
+            User.name.ilike(f"%{query}%"),
+            User.email.ilike(f"%{query}%")
+        )
+    )
+    
+    total = search_query.count()
+    
+    content_items = search_query.order_by(ContentItem.created_at.desc())\
+                                .offset(pagination.offset)\
+                                .limit(pagination.size)\
+                                .all()
+    
+    content_list = []
+    for content_item, user in content_items:
+        # Generate a proper title from topic or use a default
+        title = content_item.topic if content_item.topic else UNTITLED_CONTENT
+        if len(title) > 50:
+            title = title[:47] + "..."
+            
+        content_list.append({
+            "id": str(content_item.id),
+            "title": title,
+            "user_id": content_item.user_id,
+            "user_name": user.name,
+            "user_email": user.email,
+            "content_url": content_item.content_url,
+            "image_preview": content_item.image_preview,
+            "topic": content_item.topic,
+            "content_type": content_item.content_type or "Unknown",
+            "raw_source": content_item.raw_source,
+            "created_at": content_item.created_at.isoformat() if content_item.created_at else None
+        })
+    
+    return content_list, total
+
+def get_content_details(
+    db: Session,
+    content_id: str
+) -> Optional[Dict[str, Any]]:
+    """Get detailed information about a specific content item"""
+    from app.content_generator.models import ContentItem
+    
+    # Join with users table to get user information
+    result = db.query(ContentItem, User).join(User, ContentItem.user_id == User.uid)\
+               .filter(ContentItem.id == content_id).first()
+    
+    if not result:
+        return None
+    
+    content_item, user = result
+    
+    return {
+        "id": str(content_item.id),
+        "title": content_item.topic if content_item.topic else UNTITLED_CONTENT,
+        "user_id": content_item.user_id,
+        "user_name": user.name,
+        "user_email": user.email,
+        "user_institution": user.institution,
+        "content_url": content_item.content_url,
+        "image_preview": content_item.image_preview,
+        "topic": content_item.topic,
+        "content_type": content_item.content_type,
+        "raw_source": content_item.raw_source,
+        "created_at": content_item.created_at.isoformat() if content_item.created_at else None,
+        "user_profile": {
+            "uid": user.uid,
+            "name": user.name,
+            "email": user.email,
+            "institution": user.institution,
+            "role": user.role,
+            "study_domain": user.study_domain,
+            "current_plan": user.current_plan,
+            "is_admin": user.is_admin,
+            "is_moderator": user.is_moderator
+        }
+    }
 
 def moderate_content(
     db: Session,
