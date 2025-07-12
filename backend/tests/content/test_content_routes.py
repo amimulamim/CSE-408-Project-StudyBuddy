@@ -297,7 +297,7 @@ class TestContentRoutes:
         app.dependency_overrides[get_db] = lambda: mock_db
         
         # Mock content query
-        mock_db.query.return_value.filter.return_value.all.return_value = [sample_content_item]
+        mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = [sample_content_item]
 
         # Act
         response = client.get("/api/v1/content/user")
@@ -320,7 +320,7 @@ class TestContentRoutes:
         app.dependency_overrides[get_db] = lambda: mock_db
         
         # Mock empty content query
-        mock_db.query.return_value.filter.return_value.all.return_value = []
+        mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = []
 
         # Act
         response = client.get("/api/v1/content/user")

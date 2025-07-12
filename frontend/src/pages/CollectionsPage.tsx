@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +32,8 @@ interface Collection {
 }
 
 export default function CollectionsPage() {
+  const navigate = useNavigate();
+
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -111,6 +114,10 @@ export default function CollectionsPage() {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const handleViewDocuments = (collectionName: string) => {
+    navigate(`/collections/${encodeURIComponent(collectionName)}`);
   };
 
   const handleUploadDocument = async () => {
@@ -378,6 +385,17 @@ export default function CollectionsPage() {
                           <span>{new Date(collection.created_at).toLocaleDateString()}</span>
                         </div>
                       </div>
+
+                      <Button 
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleViewDocuments(collection.collection_name)}
+
+                        className="button-light"
+                      >
+                        <FileText className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
 
                       <Button 
                         size="sm"

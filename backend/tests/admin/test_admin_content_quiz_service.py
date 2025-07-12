@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import uuid
 
 from app.admin.service import (
@@ -33,18 +33,28 @@ class TestAdminContentQuizService:
         mock_content.image_preview = "https://example.com/preview.png"
         mock_content.topic = "Test Topic"
         mock_content.content_type = "summary"
+        mock_content.raw_source = None
         mock_content.created_at = datetime.now(timezone.utc)
+        
+        mock_user = Mock()
+        mock_user.name = "Test User"
+        mock_user.email = "test@example.com"
+        
+        # Mock the joined query result (content_item, user)
+        mock_result = (mock_content, mock_user)
         
         mock_query = Mock()
         mock_db.query.return_value = mock_query
+        mock_query.join.return_value = mock_query
         mock_query.count.return_value = 1
         mock_query.order_by.return_value = mock_query
         mock_query.offset.return_value = mock_query
         mock_query.limit.return_value = mock_query
-        mock_query.all.return_value = [mock_content]
+        mock_query.all.return_value = [mock_result]
 
-        # Mock the ContentItem class
-        with patch('app.content_generator.models.ContentItem') as mock_content_item:
+        # Mock the ContentItem and User classes
+        with patch('app.content_generator.models.ContentItem') as mock_content_item, \
+             patch('app.admin.service.User'):
             mock_content_item.created_at = Mock()
             mock_content_item.created_at.desc.return_value = Mock()
             
@@ -56,8 +66,11 @@ class TestAdminContentQuizService:
         assert len(content) == 1
         assert content[0]["id"] == str(mock_content.id)
         assert content[0]["user_id"] == "user123"
+        assert content[0]["user_name"] == "Test User"
+        assert content[0]["user_email"] == "test@example.com"
         assert content[0]["content_url"] == "https://example.com/content"
         assert content[0]["topic"] == "Test Topic"
+        assert content[0]["title"] == "Test Topic"
 
     def test_moderate_content_delete_success(self, mock_db):
         """Test moderating content by deletion successfully"""
@@ -175,10 +188,26 @@ class TestAdminContentQuizService:
         mock_result.score = 8
         mock_result.total = 10
         mock_result.feedback = "Good job!"
-        mock_result.topic = "Mathematics"
-        mock_result.domain = "Science"
         mock_result.created_at = datetime.now(timezone.utc)
         
+        mock_quiz = Mock()
+        mock_quiz.topic = "Mathematics"
+        mock_quiz.domain = "Science"
+        mock_quiz.difficulty = Mock()
+        mock_quiz.difficulty.value = "Easy"
+        mock_quiz.duration = 30
+        mock_quiz.created_at = datetime.now(timezone.utc) - timedelta(minutes=5)
+        
+        mock_user = Mock()
+        mock_user.name = "Test User"
+        mock_user.email = "test@example.com"
+        
+        # Mock questions for the quiz
+        mock_question = Mock()
+        mock_question.type = Mock()
+        mock_question.type.value = "MultipleChoice"
+        
+        # Setup main query mock
         mock_query = Mock()
         mock_db.query.return_value = mock_query
         mock_query.join.return_value = mock_query
@@ -186,11 +215,29 @@ class TestAdminContentQuizService:
         mock_query.order_by.return_value = mock_query
         mock_query.offset.return_value = mock_query
         mock_query.limit.return_value = mock_query
-        mock_query.all.return_value = [mock_result]
+        mock_query.all.return_value = [(mock_result, mock_quiz, mock_user)]  # Return 3-tuple for join
+        
+        # Setup separate query for questions
+        mock_question_query = Mock()
+        mock_question_query.filter.return_value = mock_question_query
+        mock_question_query.all.return_value = [mock_question]  # Return list of questions
+        
+        # Configure db.query to return different mocks based on what's being queried
+        def mock_db_query(*models):
+            # Check if any of the models is QuizQuestion
+            for model in models:
+                model_str = str(model)
+                if 'QuizQuestion' in model_str or (hasattr(model, '__name__') and 'QuizQuestion' in model.__name__):
+                    return mock_question_query
+            return mock_query
+        
+        mock_db.query.side_effect = mock_db_query
 
         # Mock the quiz models
         with patch('app.quiz_generator.models.QuizResult') as mock_quiz_result, \
-             patch('app.quiz_generator.models.Quiz'):
+             patch('app.quiz_generator.models.Quiz'), \
+             patch('app.quiz_generator.models.QuizQuestion'), \
+             patch('app.admin.service.User'):
             mock_quiz_result.created_at = Mock()
             mock_quiz_result.created_at.desc.return_value = Mock()
             
@@ -201,10 +248,21 @@ class TestAdminContentQuizService:
         assert total == 1
         assert len(results) == 1
         assert results[0]["id"] == str(mock_result.id)
+        assert results[0]["quiz_title"] == "Mathematics"
+        assert results[0]["user_name"] == "Test User"
+        assert results[0]["user_email"] == "test@example.com"
+        assert results[0]["score"] == 8
+        assert results[0]["total"] == 10
+        assert results[0]["quiz_type"] == "MCQ"
+        assert results[0]["id"] == str(mock_result.id)
         assert results[0]["user_id"] == "user123"
         assert results[0]["score"] == 8
         assert results[0]["total"] == 10
         assert results[0]["percentage"] == 80
+        assert results[0]["topic"] == "Mathematics"
+        assert results[0]["domain"] == "Science"
+        assert results[0]["difficulty"] == "Easy"
+        assert results[0]["duration"] == 30
 
     def test_search_users_by_query_success(self, mock_db):
         """Test searching users by query successfully"""

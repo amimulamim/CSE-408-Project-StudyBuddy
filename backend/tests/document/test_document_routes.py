@@ -423,3 +423,136 @@ class TestDocumentRoutes:
         # Assert
         assert response.status_code == 200
         mock_delete_collection.assert_called_once_with("test-uid", unicode_name, self.mock_db)
+
+    @patch('app.api.v1.routes.document.document_service.list_documents_in_collection')
+    def test_list_documents_in_collection_success(self, mock_list_documents):
+        """Test successful listing of documents in a collection"""
+        # Arrange
+        mock_documents = [
+            {
+                "document_id": "doc-1",
+                "document_name": "test_document_1.pdf",
+                "chunks_count": 5,
+                "first_chunk": "This is the first chunk of document 1...",
+                "storage_path": "documents/test-uid/doc-1.pdf"
+            },
+            {
+                "document_id": "doc-2", 
+                "document_name": "test_document_2.txt",
+                "chunks_count": 3,
+                "first_chunk": "This is the first chunk of document 2...",
+                "storage_path": "documents/test-uid/doc-2.txt"
+            }
+        ]
+        mock_list_documents.return_value = mock_documents
+        
+        # Act
+        response = client.get("/api/v1/document/collections/test-collection/documents")
+        
+        # Assert
+        assert response.status_code == 200
+        assert response.json() == mock_documents
+        mock_list_documents.assert_called_once_with("test-uid", "test-collection", self.mock_db)
+
+    @patch('app.api.v1.routes.document.document_service.list_documents_in_collection')
+    def test_list_documents_collection_not_found(self, mock_list_documents):
+        """Test listing documents when collection doesn't exist"""
+        # Arrange
+        mock_list_documents.side_effect = ValueError("Collection test-collection not found")
+        
+        # Act
+        response = client.get("/api/v1/document/collections/test-collection/documents")
+        
+        # Assert
+        assert response.status_code == 404
+        assert "Collection test-collection not found" in response.json()["detail"]
+        mock_list_documents.assert_called_once_with("test-uid", "test-collection", self.mock_db)
+
+    @patch('app.api.v1.routes.document.document_service.list_documents_in_collection')
+    def test_list_documents_empty_collection(self, mock_list_documents):
+        """Test listing documents in an empty collection"""
+        # Arrange
+        mock_list_documents.return_value = []
+        
+        # Act
+        response = client.get("/api/v1/document/collections/empty-collection/documents")
+        
+        # Assert
+        assert response.status_code == 200
+        assert response.json() == []
+        mock_list_documents.assert_called_once_with("test-uid", "empty-collection", self.mock_db)
+
+    @patch('app.api.v1.routes.document.document_service.list_documents_in_collection')
+    def test_list_documents_internal_error(self, mock_list_documents):
+        """Test listing documents when an internal error occurs"""
+        # Arrange
+        mock_list_documents.side_effect = RuntimeError("Database connection error")
+        
+        # Act
+        response = client.get("/api/v1/document/collections/test-collection/documents")
+        
+        # Assert
+        assert response.status_code == 500
+        assert "An internal server error occurred" in response.json()["detail"]
+        mock_list_documents.assert_called_once_with("test-uid", "test-collection", self.mock_db)
+
+    @patch('app.api.v1.routes.document.document_service.rename_document')
+    def test_rename_document_success(self, mock_rename_document):
+        """Test successful document renaming"""
+        # Arrange
+        mock_rename_document.return_value = True
+        
+        # Act
+        response = client.put(
+            "/api/v1/document/collections/test-collection/documents/doc-123/rename",
+            json={"new_name": "renamed_document.pdf"}
+        )
+        
+        # Assert
+        assert response.status_code == 200
+        assert "Document renamed to renamed_document.pdf successfully" in response.json()["message"]
+        mock_rename_document.assert_called_once_with("test-uid", "test-collection", "doc-123", "renamed_document.pdf", self.mock_db)
+
+    @patch('app.api.v1.routes.document.document_service.rename_document')
+    def test_rename_document_not_found(self, mock_rename_document):
+        """Test renaming a document that doesn't exist"""
+        # Arrange
+        mock_rename_document.return_value = False
+        
+        # Act
+        response = client.put(
+            "/api/v1/document/collections/test-collection/documents/nonexistent/rename",
+            json={"new_name": "new_name.pdf"}
+        )
+        
+        # Assert
+        assert response.status_code == 500
+        assert "error" in response.json()["detail"]
+
+    @patch('app.api.v1.routes.document.document_service.get_document_content_url')
+    def test_get_document_content_url_success(self, mock_get_content_url):
+        """Test successful document content URL retrieval"""
+        # Arrange
+        mock_url = "https://storage.googleapis.com/bucket/documents/test-uid/doc-123.pdf?signature=..."
+        mock_get_content_url.return_value = mock_url
+        
+        # Act
+        response = client.get("/api/v1/document/collections/test-collection/documents/doc-123/content")
+        
+        # Assert
+        assert response.status_code == 200
+        assert response.json()["download_url"] == mock_url
+        mock_get_content_url.assert_called_once_with("test-uid", "test-collection", "doc-123", self.mock_db)
+
+    @patch('app.api.v1.routes.document.document_service.get_document_content_url')
+    def test_get_document_content_url_not_found(self, mock_get_content_url):
+        """Test getting content URL for a document that doesn't exist"""
+        # Arrange
+        mock_get_content_url.side_effect = ValueError("Document doc-123 not found or has no storage path")
+        
+        # Act
+        response = client.get("/api/v1/document/collections/test-collection/documents/doc-123/content")
+        
+        # Assert
+        assert response.status_code == 404
+        assert "Document doc-123 not found" in response.json()["detail"]

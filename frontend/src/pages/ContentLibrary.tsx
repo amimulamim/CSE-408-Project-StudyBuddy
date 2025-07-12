@@ -22,16 +22,21 @@ export default function ContentLibrary() {
   const [contents, setContents] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showGenerator, setShowGenerator] = useState(false);
+  const [filterTopic, setFilterTopic] = useState<string>('');
 
   useEffect(() => {
     fetchUserContent();
-  }, []);
+  }, [filterTopic]);
 
   const fetchUserContent = async () => {
     try {
       setLoading(true);
       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-      const response = await makeRequest(`${API_BASE_URL}/api/v1/content/user`, 'GET');
+      let url = `${API_BASE_URL}/api/v1/content/user`;
+      if (filterTopic?.trim()) {
+        url += `?filter_topic=${encodeURIComponent(filterTopic.trim())}`;
+      }
+      const response = await makeRequest(url, 'GET');
       
       if (response?.status === 'success') {
         setContents(response.data?.contents || []);
@@ -86,6 +91,16 @@ export default function ContentLibrary() {
               Back to Dashboard
             </Button>
           </div>
+        </div>
+        {/* Filter Input */}
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Search by topic…"
+            value={filterTopic}
+            onChange={e => setFilterTopic(e.target.value)}
+            className="w-full md:w-1/3 p-2 border rounded-md focus:outline-none focus:ring text-black placeholder-gray-500"
+          />
         </div>
 
         {/* Stats Cards */}
