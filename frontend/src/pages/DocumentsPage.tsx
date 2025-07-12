@@ -28,6 +28,11 @@ export default function DocumentsPage() {
       fetchDocuments(collectionName);
     }
   }, [collectionName]);
+  const handleDocumentClick = (documentId: string) => {
+    navigate(`/content/document/${collectionName}/${documentId}`);
+  };
+
+
 
   const fetchDocuments = async (collection: string) => {
     try {
@@ -37,9 +42,7 @@ export default function DocumentsPage() {
         `${API_BASE_URL}/api/v1/document/collections/${collection}/documents`, 
         'GET'
       );
-          // Check what the actual response structure is
-	  console.log('Full API Response:', response);
-	  console.log('Response Data:', response.data);
+
       if (response?.status === 'success' && Array.isArray(response.data)) {
         setDocuments(response.data);
       } else {
@@ -80,7 +83,7 @@ export default function DocumentsPage() {
               <FolderOpen className="h-8 w-8 text-purple-400" />
               <div>
                 <h1 className="text-3xl font-bold gradient-text">
-                  Documents in "{decodeURIComponent(collectionName || '')}"
+                  {decodeURIComponent(collectionName || '')}
                 </h1>
                 <p className="glass-text-description mt-1">
                   {documents.length} document{documents.length !== 1 ? 's' : ''} found
@@ -113,7 +116,11 @@ export default function DocumentsPage() {
         ) : (
           <div className="space-y-4">
             {documents.map((document) => (
-              <Card key={document.document_id} className="glass-card-hover-strong">
+              <Card 
+                key={document.document_id} 
+                className="glass-card-hover-strong cursor-pointer transition-all duration-200 hover:scale-[1.02]"
+                onClick={() => handleDocumentClick(document.document_id)}
+              >
                 <CardHeader className="pb-4">
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-4 flex-1">
