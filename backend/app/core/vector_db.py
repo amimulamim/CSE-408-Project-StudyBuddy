@@ -3,6 +3,7 @@ from typing import List, Dict, Any
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 import logging
+from datetime import datetime, timezone
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -63,6 +64,8 @@ class VectorDatabaseManager:
     def upsert_vectors(self, document_id: str, chunks: List[str], embeddings: List[List[float]], document_name: str = None, storage_path: str = None):
         """Upserts text chunks and their embeddings to Qdrant."""
         try:
+            upload_timestamp = datetime.now(timezone.utc).isoformat()
+            
             points = [
                 models.PointStruct(
                     id=str(uuid.uuid4()),
@@ -72,7 +75,8 @@ class VectorDatabaseManager:
                         "document_name": document_name,
                         "storage_path": storage_path,
                         "chunk_index": idx,
-                        "text": chunk
+                        "text": chunk,
+                        "upload_timestamp": upload_timestamp
                     }
                 )
                 for idx, (chunk, embedding) in enumerate(zip(chunks, embeddings))
@@ -125,6 +129,10 @@ class VectorDatabaseManager:
             
             documents = self._process_document_points(scroll_result[0])
             result = list(documents.values())
+            
+            # Sort by upload timestamp (recent to old), handling None timestamps
+            result.sort(key=lambda doc: doc.get("upload_timestamp") or "1900-01-01T00:00:00+00:00", reverse=True)
+            
             logger.info(f"Found {len(result)} documents in collection {self.collection_name}")
             return result
             
@@ -145,6 +153,7 @@ class VectorDatabaseManager:
                     "document_id": doc_id,
                     "document_name": point.payload.get("document_name", "Unknown Document"),
                     "storage_path": point.payload.get("storage_path"),
+                    "upload_timestamp": point.payload.get("upload_timestamp"),
                     "chunks_count": 0,
                     "first_chunk": None
                 }
