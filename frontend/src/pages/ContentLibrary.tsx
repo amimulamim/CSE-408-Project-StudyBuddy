@@ -99,7 +99,7 @@ export default function ContentLibrary() {
             placeholder="Search by topic…"
             value={filterTopic}
             onChange={e => setFilterTopic(e.target.value)}
-            className="w-full md:w-1/3 p-2 border rounded-md focus:outline-none focus:ring"
+            className="w-full md:w-1/3 p-2 border rounded-md focus:outline-none focus:ring text-black placeholder-gray-500"
           />
         </div>
 
