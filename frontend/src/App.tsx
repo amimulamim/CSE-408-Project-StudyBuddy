@@ -42,6 +42,7 @@ const App = () => {
             <Route path="/collections/:collectionName" element={<DocumentsPage />} />
             <Route path="/content/flashcards/:contentId" element={<FlashcardsView />} />
             <Route path="/content/slides/:contentId" element={<SlidesView />} />
+            <Route path="/content/document/:collectionName/:documentId" element={<SlidesView contentType="document" />} />
             <Route path="/chatbot" element={<Chatbot />} />
             <Route path="*" element={<NotFound />} />
             <Route path="/quiz/take/:quizId" element={<QuizTakePage />} />
