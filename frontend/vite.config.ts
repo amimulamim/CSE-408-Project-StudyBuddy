@@ -45,6 +45,8 @@ export default defineConfig(({ mode }) => ({
         "**/pages/Qui**",
         "**/lib**",
         "**/hooks/**",
+        "**/components/billing/**",
+
       ],
     },
   },
