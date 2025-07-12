@@ -33,18 +33,28 @@ class TestAdminContentQuizService:
         mock_content.image_preview = "https://example.com/preview.png"
         mock_content.topic = "Test Topic"
         mock_content.content_type = "summary"
+        mock_content.raw_source = None
         mock_content.created_at = datetime.now(timezone.utc)
+        
+        mock_user = Mock()
+        mock_user.name = "Test User"
+        mock_user.email = "test@example.com"
+        
+        # Mock the joined query result (content_item, user)
+        mock_result = (mock_content, mock_user)
         
         mock_query = Mock()
         mock_db.query.return_value = mock_query
+        mock_query.join.return_value = mock_query
         mock_query.count.return_value = 1
         mock_query.order_by.return_value = mock_query
         mock_query.offset.return_value = mock_query
         mock_query.limit.return_value = mock_query
-        mock_query.all.return_value = [mock_content]
+        mock_query.all.return_value = [mock_result]
 
-        # Mock the ContentItem class
-        with patch('app.content_generator.models.ContentItem') as mock_content_item:
+        # Mock the ContentItem and User classes
+        with patch('app.content_generator.models.ContentItem') as mock_content_item, \
+             patch('app.admin.service.User'):
             mock_content_item.created_at = Mock()
             mock_content_item.created_at.desc.return_value = Mock()
             
@@ -56,8 +66,11 @@ class TestAdminContentQuizService:
         assert len(content) == 1
         assert content[0]["id"] == str(mock_content.id)
         assert content[0]["user_id"] == "user123"
+        assert content[0]["user_name"] == "Test User"
+        assert content[0]["user_email"] == "test@example.com"
         assert content[0]["content_url"] == "https://example.com/content"
         assert content[0]["topic"] == "Test Topic"
+        assert content[0]["title"] == "Test Topic"
 
     def test_moderate_content_delete_success(self, mock_db):
         """Test moderating content by deletion successfully"""
