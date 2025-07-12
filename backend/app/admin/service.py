@@ -291,10 +291,15 @@ def get_all_quiz_results_paginated(
     db: Session,
     pagination: PaginationQuery
 ) -> Tuple[List[Dict[str, Any]], int]:
-    """Get paginated list of all quiz results"""
-    from app.quiz_generator.models import QuizResult, Quiz
+    """Get paginated list of all quiz results with user and quiz information"""
+    from app.quiz_generator.models import QuizResult, Quiz, QuizQuestion
     
-    query = db.query(QuizResult).join(Quiz, QuizResult.quiz_id == Quiz.quiz_id)
+    # Join QuizResult with Quiz and User to get all information
+    query = db.query(QuizResult, Quiz, User).join(
+        Quiz, QuizResult.quiz_id == Quiz.quiz_id
+    ).join(
+        User, QuizResult.user_id == User.uid
+    )
     total = query.count()
     
     quiz_results = query.order_by(QuizResult.created_at.desc())\
@@ -303,18 +308,71 @@ def get_all_quiz_results_paginated(
                         .all()
     
     results_list = []
-    for result in quiz_results:
+    for result, quiz, user in quiz_results:
+        # Generate a title from quiz topic or use default
+        quiz_title = quiz.topic if quiz.topic else UNTITLED_CONTENT
+        if quiz_title == UNTITLED_CONTENT:
+            quiz_title = f"Quiz {str(result.quiz_id)[:8]}"
+        
+        # Calculate actual time taken (difference between quiz creation and result creation)
+        time_taken_seconds = 0
+        if quiz.created_at and result.created_at:
+            time_diff = result.created_at - quiz.created_at
+            time_taken_seconds = max(int(time_diff.total_seconds()), 0)
+        
+        # Format time taken as MM:SS
+        minutes = time_taken_seconds // 60
+        seconds = time_taken_seconds % 60
+        time_taken_formatted = f"{minutes:02d}:{seconds:02d}"
+        
+        # Determine quiz type by looking at the questions
+        quiz_questions = db.query(QuizQuestion).filter(QuizQuestion.quiz_id == quiz.quiz_id).all()
+        quiz_types = set()
+        for question in quiz_questions:
+            if question.type:
+                quiz_types.add(question.type.value)
+        
+        # Format quiz type
+        if len(quiz_types) == 1:
+            quiz_type = list(quiz_types)[0]
+        elif len(quiz_types) > 1:
+            quiz_type = "Mixed"
+        else:
+            quiz_type = "Unknown"
+        
+        # Map technical names to user-friendly names
+        quiz_type_mapping = {
+            "MultipleChoice": "MCQ",
+            "ShortAnswer": "Short Answer",
+            "TrueFalse": "True/False",
+            "Mixed": "Mixed",
+            "Unknown": "Unknown"
+        }
+        quiz_type_display = quiz_type_mapping.get(quiz_type, quiz_type)
+            
         results_list.append({
             "id": str(result.id),
+            "quiz_title": quiz_title,
+            "quiz_type": quiz_type_display,
             "user_id": result.user_id,
+            "user_name": user.name,
+            "user_email": user.email,
+            "user_display": f"{user.name} ({user.email})",  # Combined display for frontend
             "quiz_id": str(result.quiz_id),
-            "score": result.score,
-            "total": result.total,
+            "score": int(result.score),
+            "total": int(result.total),
+            "total_questions": len(quiz_questions),  # Actual number of questions
             "percentage": round((result.score / result.total * 100), 2) if result.total > 0 else 0,
             "feedback": result.feedback,
-            "topic": result.topic,
-            "domain": result.domain,
-            "created_at": result.created_at.isoformat() if result.created_at else None
+            "topic": quiz.topic or "No Topic",
+            "domain": quiz.domain or "No Domain",
+            "difficulty": quiz.difficulty.value if quiz.difficulty else "Easy",
+            "duration": quiz.duration or 0,
+            "time_taken": time_taken_seconds,  # Time in seconds
+            "time_taken_formatted": time_taken_formatted,  # Formatted as MM:SS
+            "created_at": result.created_at.isoformat() if result.created_at else None,
+            "completed_at": result.created_at.isoformat() if result.created_at else None,
+            "answers": []  # Placeholder for quiz answers - can be populated later if needed
         })
     
     return results_list, total
@@ -521,10 +579,10 @@ def get_usage_statistics(
 # LLM/Parser Functions (Placeholders)
 def invoke_llm_service(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Invoke LLM service (PLACEHOLDER)"""
-    # TODO: Implement LLM invocation
-    return {"status": "success", "message": "LLM invocation placeholder"}
+    # TODO: Implement LLM invocation - this will be implemented when LLM service is ready
+    return {"status": "success", "message": "LLM invocation placeholder", "payload_received": bool(payload)}
 
 def invoke_parser_service(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Invoke parser service (PLACEHOLDER)"""
-    # TODO: Implement parser invocation
-    return {"status": "success", "message": "Parser invocation placeholder"}
+    # TODO: Implement parser invocation - this will be implemented when parser service is ready
+    return {"status": "success", "message": "Parser invocation placeholder", "payload_received": bool(payload)}
