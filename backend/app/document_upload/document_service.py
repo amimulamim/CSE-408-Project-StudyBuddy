@@ -38,8 +38,12 @@ class DocumentService:
         """Creates or updates a Qdrant collection and stores metadata in PostgreSQL."""
         full_collection_name = f"{user_id}_{collection_name}"
         try:
-            if not collection_name or len(collection_name) > 50 or not collection_name.isalnum():
-                raise ValueError("Invalid collection name. Use alphanumeric characters, max 50.")
+            if not collection_name or len(collection_name) > 50:
+                raise ValueError("Invalid collection name. Max 50 characters allowed.")
+            # Allow alphanumeric, underscore, and hyphen characters
+            import re
+            if not re.match(r'^[a-zA-Z0-9_-]+$', collection_name):
+                raise ValueError("Invalid collection name. Use alphanumeric characters, underscores, and hyphens only.")
             existing = db.query(UserCollection).filter(
                 UserCollection.user_id == user_id,
                 UserCollection.collection_name == collection_name
@@ -118,7 +122,7 @@ class DocumentService:
                 raise ValueError("No chunks generated from document text")
             document_id = str(uuid.uuid4())
             embeddings = [self.embedding_generator.get_embedding(chunk) for chunk in chunks]
-            vector_db.upsert_vectors(document_id, chunks, embeddings)
+            vector_db.upsert_vectors(document_id, chunks, embeddings, file.filename, storage_path)
             logger.debug(f"Stored {len(chunks)} embeddings for document {document_id} in {full_collection_name}")
             return {
                 "document_id": document_id,
@@ -156,3 +160,155 @@ class DocumentService:
         except Exception as e:
             logger.error(f"Error searching documents: {str(e)}")
             raise Exception(f"Error searching documents: {str(e)}")
+
+    def list_documents_in_collection(self, user_id: str, collection_name: str, db: Session) -> List[Dict[str, Any]]:
+        """Lists all documents in a user's collection."""
+        try:
+            # Verify collection exists
+            collection = db.query(UserCollection).filter(
+                UserCollection.user_id == user_id,
+                UserCollection.collection_name == collection_name
+            ).first()
+            
+            if not collection:
+                raise ValueError(f"Collection {collection_name} not found")
+            
+            full_collection_name = f"{user_id}_{collection_name}"
+            vector_db = VectorDatabaseManager(
+                qdrant_url=settings.QDRANT_HOST,
+                qdrant_api_key=settings.QDRANT_API_KEY,
+                collection_name=full_collection_name
+            )
+            
+            documents = vector_db.list_documents()
+            logger.debug(f"Listed {len(documents)} documents in collection {full_collection_name}")
+            return documents
+            
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error(f"Error listing documents in collection: {str(e)}")
+            raise RuntimeError(f"Error listing documents in collection: {str(e)}")
+
+    def rename_document(self, user_id: str, collection_name: str, document_id: str, new_name: str, db: Session) -> bool:
+        """Rename a document in a user's collection."""
+        try:
+            # Verify collection exists
+            collection = db.query(UserCollection).filter(
+                UserCollection.user_id == user_id,
+                UserCollection.collection_name == collection_name
+            ).first()
+            
+            if not collection:
+                raise ValueError(f"Collection {collection_name} not found")
+            
+            full_collection_name = f"{user_id}_{collection_name}"
+            vector_db = VectorDatabaseManager(
+                qdrant_url=settings.QDRANT_HOST,
+                qdrant_api_key=settings.QDRANT_API_KEY,
+                collection_name=full_collection_name
+            )
+            
+            success = vector_db.update_document_name(document_id, new_name)
+            if success:
+                logger.debug(f"Renamed document {document_id} to {new_name} in collection {full_collection_name}")
+            return success
+            
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error(f"Error renaming document: {str(e)}")
+            raise RuntimeError(f"Error renaming document: {str(e)}")
+
+    def get_document_content_url(self, user_id: str, collection_name: str, document_id: str, db: Session) -> str:
+        """Get the Firebase download URL for a document."""
+        try:
+            # Verify collection exists
+            collection = db.query(UserCollection).filter(
+                UserCollection.user_id == user_id,
+                UserCollection.collection_name == collection_name
+            ).first()
+            
+            if not collection:
+                raise ValueError(f"Collection {collection_name} not found")
+            
+            full_collection_name = f"{user_id}_{collection_name}"
+            vector_db = VectorDatabaseManager(
+                qdrant_url=settings.QDRANT_HOST,
+                qdrant_api_key=settings.QDRANT_API_KEY,
+                collection_name=full_collection_name
+            )
+            
+            # Get document info to find storage path
+            documents = vector_db.list_documents()
+            document = next((doc for doc in documents if doc["document_id"] == document_id), None)
+            
+            if not document or not document.get("storage_path"):
+                raise ValueError(f"Document {document_id} not found or has no storage path")
+            
+            # Generate download URL from Firebase Storage
+            blob = self.bucket.blob(document["storage_path"])
+            download_url = blob.generate_signed_url(
+                version="v4",
+                expiration=3600,  # 1 hour
+                method="GET"
+            )
+            
+            logger.debug(f"Generated download URL for document {document_id}")
+            return download_url
+            
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error(f"Error getting document content URL: {str(e)}")
+            raise RuntimeError(f"Error getting document content URL: {str(e)}")
+
+    def rename_collection_with_migration(self, user_id: str, old_collection_name: str, new_collection_name: str, db: Session) -> bool:
+        """Rename a collection including both database and Qdrant migration."""
+        try:
+            # Verify old collection exists
+            collection = db.query(UserCollection).filter(
+                UserCollection.user_id == user_id,
+                UserCollection.collection_name == old_collection_name
+            ).first()
+            
+            if not collection:
+                raise ValueError(f"Collection {old_collection_name} not found")
+            
+            # Check if new name already exists
+            existing = db.query(UserCollection).filter(
+                UserCollection.user_id == user_id,
+                UserCollection.collection_name == new_collection_name
+            ).first()
+            
+            if existing:
+                raise ValueError(f"Collection with name {new_collection_name} already exists")
+            
+            old_full_name = f"{user_id}_{old_collection_name}"
+            new_full_name = f"{user_id}_{new_collection_name}"
+            
+            # Rename the Qdrant collection
+            vector_db = VectorDatabaseManager(
+                qdrant_url=settings.QDRANT_HOST,
+                qdrant_api_key=settings.QDRANT_API_KEY,
+                collection_name=old_full_name  # This doesn't matter for rename operation
+            )
+            
+            success = vector_db.rename_collection(old_full_name, new_full_name)
+            if not success:
+                raise RuntimeError("Failed to rename Qdrant collection")
+            
+            # Update database metadata
+            collection.collection_name = new_collection_name
+            collection.full_collection_name = new_full_name
+            db.commit()
+            
+            logger.debug(f"Successfully renamed collection from {old_collection_name} to {new_collection_name}")
+            return True
+            
+        except ValueError:
+            raise
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error renaming collection with migration: {str(e)}")
+            raise RuntimeError(f"Error renaming collection: {str(e)}")

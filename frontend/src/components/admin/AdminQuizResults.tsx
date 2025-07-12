@@ -13,13 +13,23 @@ import { toast } from 'sonner';
 interface QuizResult {
   id: string;
   user_id: string;
+  user_name?: string;
+  user_email?: string;
+  user_display?: string;
   quiz_id: string;
   quiz_title: string;
+  quiz_type?: string;
   score: number;
+  total: number;
   total_questions: number;
   time_taken: number;
+  time_taken_formatted?: string;
   completed_at: string;
   answers: any[];
+  percentage?: number;
+  topic?: string;
+  domain?: string;
+  difficulty?: string;
 }
 
 export function AdminQuizResults() {
@@ -66,7 +76,9 @@ export function AdminQuizResults() {
 
   const filteredResults = quizResults.filter(result =>
     result.quiz_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    result.user_id?.toLowerCase().includes(searchTerm.toLowerCase())
+    result.quiz_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    result.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    result.user_email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getScoreColor = (score: number, total: number) => {
@@ -108,9 +120,9 @@ export function AdminQuizResults() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Quiz Title</TableHead>
-                  <TableHead>User ID</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>User</TableHead>
                   <TableHead>Score</TableHead>
-                  <TableHead>Time</TableHead>
                   <TableHead>Completed</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -134,23 +146,27 @@ export function AdminQuizResults() {
                       <TableCell className="font-medium">
                         {result.quiz_title || 'Untitled Quiz'}
                       </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {result.user_id.substring(0, 8)}...
-                      </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Badge className={`text-white ${getScoreColor(result.score, result.total_questions)}`}>
-                            {result.score}/{result.total_questions}
-                          </Badge>
-                          <span className="text-sm text-muted-foreground">
-                            ({Math.round((result.score / result.total_questions) * 100)}%)
+                        <Badge variant="outline">
+                          {result.quiz_type || 'Unknown'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        <div className="flex flex-col">
+                          <span className="font-medium">{result.user_name || 'Unknown User'}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {result.user_email || result.user_id.substring(0, 8) + '...'}
                           </span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {formatTime(result.time_taken)}
+                        <div className="flex items-center gap-2">
+                          <Badge className={`text-white ${getScoreColor(result.score, result.total)}`}>
+                            {result.score}/{result.total}
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">
+                            ({Math.round((result.score / result.total) * 100)}%)
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -219,26 +235,33 @@ export function AdminQuizResults() {
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium">User ID</label>
-                    <p className="text-sm text-muted-foreground font-mono">
-                      {selectedResult.user_id}
+                    <label className="text-sm font-medium">Quiz Type</label>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedResult.quiz_type || 'Unknown'}
                     </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">User</label>
+                    <div className="text-sm text-muted-foreground">
+                      <p className="font-medium">{selectedResult.user_name || 'Unknown User'}</p>
+                      <p className="text-xs">{selectedResult.user_email || selectedResult.user_id}</p>
+                    </div>
                   </div>
                   <div>
                     <label className="text-sm font-medium">Score</label>
                     <div className="flex items-center gap-2">
-                      <Badge className={`text-white ${getScoreColor(selectedResult.score, selectedResult.total_questions)}`}>
-                        {selectedResult.score}/{selectedResult.total_questions}
+                      <Badge className={`text-white ${getScoreColor(selectedResult.score, selectedResult.total)}`}>
+                        {selectedResult.score}/{selectedResult.total}
                       </Badge>
                       <span className="text-sm text-muted-foreground">
-                        ({Math.round((selectedResult.score / selectedResult.total_questions) * 100)}%)
+                        ({Math.round((selectedResult.score / selectedResult.total) * 100)}%)
                       </span>
                     </div>
                   </div>
                   <div>
                     <label className="text-sm font-medium">Time Taken</label>
                     <p className="text-sm text-muted-foreground">
-                      {formatTime(selectedResult.time_taken)}
+                      {selectedResult.time_taken_formatted || formatTime(selectedResult.time_taken)}
                     </p>
                   </div>
                   <div>

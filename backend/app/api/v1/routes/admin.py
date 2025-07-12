@@ -170,6 +170,49 @@ def get_all_content(
         size=size
     )
 
+@router.get("/content/search")
+def search_content(
+    query: str = Query(..., description="Search term for content topic, type, or user name"),
+    offset: int = 0,
+    size: int = 20,
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Search content by topic, content type, or user name (Admin only)"""
+    require_admin_access(db, user_info)
+    
+    try:
+        pagination = PaginationQuery(offset=offset, size=size)
+        content, total = admin_service.search_content_by_query(db, query, pagination)
+        
+        return ContentListResponse(
+            content=content,
+            total=total,
+            offset=offset,
+            size=size
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Search failed: {str(e)}"
+        )
+
+@router.get("/content/{content_id}")
+def get_content_details(
+    content_id: str,
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get detailed information about a specific content item (Admin only)"""
+    require_admin_access(db, user_info)
+    
+    content_details = admin_service.get_content_details(db, content_id)
+    if not content_details:
+        raise HTTPException(status_code=404, detail="Content not found")
+    
+    return content_details
+
 @router.delete("/content/{content_id}")
 def moderate_content(
     content_id: str,

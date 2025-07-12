@@ -3,6 +3,7 @@ from typing import List, Dict, Any
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 import logging
+from datetime import datetime, timezone
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -60,17 +61,22 @@ class VectorDatabaseManager:
             logger.error(f"Error listing collections: {str(e)}")
             raise Exception(f"Error listing collections: {str(e)}")
     
-    def upsert_vectors(self, document_id: str, chunks: List[str], embeddings: List[List[float]]):
+    def upsert_vectors(self, document_id: str, chunks: List[str], embeddings: List[List[float]], document_name: str = None, storage_path: str = None):
         """Upserts text chunks and their embeddings to Qdrant."""
         try:
+            upload_timestamp = datetime.now(timezone.utc).isoformat()
+            
             points = [
                 models.PointStruct(
                     id=str(uuid.uuid4()),
                     vector=embedding,
                     payload={
                         "document_id": document_id,
+                        "document_name": document_name,
+                        "storage_path": storage_path,
                         "chunk_index": idx,
-                        "text": chunk
+                        "text": chunk,
+                        "upload_timestamp": upload_timestamp
                     }
                 )
                 for idx, (chunk, embedding) in enumerate(zip(chunks, embeddings))
@@ -83,7 +89,7 @@ class VectorDatabaseManager:
             return {"message": f"Upserted {len(points)} points for document {document_id}"}
         except Exception as e:
             logger.error(f"Error upserting vectors for document {document_id}: {str(e)}")
-            raise Exception(f"Error upserting vectors: {str(e)}")
+            raise RuntimeError(f"Error upserting vectors: {str(e)}")
     
     def search_vectors(self, query_embedding: List[float], limit: int = 5) -> List[Dict[str, Any]]:
         """Performs similarity search in Qdrant."""
@@ -110,3 +116,160 @@ class VectorDatabaseManager:
         except Exception as e:
             logger.error(f"Error searching vectors: {str(e)}")
             raise Exception(f"Error searching vectors: {str(e)}")
+
+    def list_documents(self, limit: int = 1000) -> List[Dict[str, Any]]:
+        """Lists all documents in the collection by retrieving unique document IDs."""
+        try:
+            scroll_result = self.client.scroll(
+                collection_name=self.collection_name,
+                limit=limit,
+                with_payload=True,
+                with_vectors=False
+            )
+            
+            documents = self._process_document_points(scroll_result[0])
+            result = list(documents.values())
+            
+            # Sort by upload timestamp (recent to old), handling None timestamps
+            result.sort(key=lambda doc: doc.get("upload_timestamp") or "1900-01-01T00:00:00+00:00", reverse=True)
+            
+            logger.info(f"Found {len(result)} documents in collection {self.collection_name}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error listing documents: {str(e)}")
+            raise RuntimeError(f"Error listing documents: {str(e)}")
+    
+    def _process_document_points(self, points) -> Dict[str, Dict[str, Any]]:
+        """Helper method to process points and extract document information."""
+        documents = {}
+        for point in points:
+            if not (point.payload and "document_id" in point.payload):
+                continue
+                
+            doc_id = point.payload["document_id"]
+            if doc_id not in documents:
+                documents[doc_id] = {
+                    "document_id": doc_id,
+                    "document_name": point.payload.get("document_name", "Unknown Document"),
+                    "storage_path": point.payload.get("storage_path"),
+                    "upload_timestamp": point.payload.get("upload_timestamp"),
+                    "chunks_count": 0,
+                    "first_chunk": None
+                }
+            
+            documents[doc_id]["chunks_count"] += 1
+            if documents[doc_id]["first_chunk"] is None and "text" in point.payload:
+                text = point.payload["text"]
+                documents[doc_id]["first_chunk"] = text[:200] + "..." if len(text) > 200 else text
+        
+        return documents
+
+    def update_document_name(self, document_id: str, new_name: str) -> bool:
+        """Update the document name for all chunks of a specific document."""
+        try:
+            # Scroll through all points to find those with the specific document_id
+            scroll_result = self.client.scroll(
+                collection_name=self.collection_name,
+                scroll_filter=models.Filter(
+                    must=[
+                        models.FieldCondition(
+                            key="document_id",
+                            match=models.MatchValue(value=document_id)
+                        )
+                    ]
+                ),
+                limit=1000,
+                with_payload=True,
+                with_vectors=True
+            )
+            
+            if not scroll_result[0]:
+                logger.warning(f"No points found for document {document_id}")
+                return False
+            
+            # Update all points with the new document name
+            points_to_update = []
+            for point in scroll_result[0]:
+                if point.payload:
+                    point.payload["document_name"] = new_name
+                    points_to_update.append(models.PointStruct(
+                        id=point.id,
+                        vector=point.vector,
+                        payload=point.payload
+                    ))
+            
+            if points_to_update:
+                self.client.upsert(
+                    collection_name=self.collection_name,
+                    points=points_to_update
+                )
+                logger.info(f"Updated document name for {len(points_to_update)} points")
+                return True
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error updating document name: {str(e)}")
+            raise RuntimeError(f"Error updating document name: {str(e)}")
+
+    def rename_collection(self, old_name: str, new_name: str) -> bool:
+        """Rename a collection by creating a new one and moving all points."""
+        try:
+            # Check if old collection exists
+            collections = self.client.get_collections()
+            if old_name not in [c.name for c in collections.collections]:
+                logger.warning(f"Source collection {old_name} not found")
+                return False
+            
+            # Check if new collection already exists
+            if new_name in [c.name for c in collections.collections]:
+                logger.warning(f"Target collection {new_name} already exists")
+                return False
+            
+            # Create new collection with same configuration
+            self.client.create_collection(
+                collection_name=new_name,
+                vectors_config=models.VectorParams(size=768, distance=models.Distance.COSINE)
+            )
+            
+            # Get all points from old collection
+            scroll_result = self.client.scroll(
+                collection_name=old_name,
+                limit=10000,  # Large limit to get all points
+                with_payload=True,
+                with_vectors=True
+            )
+            
+            if scroll_result[0]:  # If there are points to migrate
+                # Prepare points for the new collection
+                points_to_migrate = []
+                for point in scroll_result[0]:
+                    points_to_migrate.append(models.PointStruct(
+                        id=point.id,
+                        vector=point.vector,
+                        payload=point.payload
+                    ))
+                
+                # Upsert all points to new collection
+                self.client.upsert(
+                    collection_name=new_name,
+                    points=points_to_migrate
+                )
+                
+                logger.info(f"Migrated {len(points_to_migrate)} points from {old_name} to {new_name}")
+            
+            # Delete old collection
+            self.client.delete_collection(collection_name=old_name)
+            
+            logger.info(f"Successfully renamed collection from {old_name} to {new_name}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error renaming collection: {str(e)}")
+            # Clean up new collection if it was created
+            try:
+                self.client.delete_collection(collection_name=new_name)
+            except Exception:
+                pass
+            raise RuntimeError(f"Error renaming collection: {str(e)}")

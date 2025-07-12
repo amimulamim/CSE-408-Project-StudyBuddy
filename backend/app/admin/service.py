@@ -13,6 +13,9 @@ from datetime import datetime, timezone
 import uuid
 import json
 
+# Constants
+UNTITLED_CONTENT = "Untitled Content"
+
 # Admin Logging Functions
 def create_admin_log(
     db: Session,
@@ -117,10 +120,11 @@ def get_all_content_paginated(
     db: Session,
     pagination: PaginationQuery
 ) -> Tuple[List[Dict[str, Any]], int]:
-    """Get paginated list of all generated content"""
+    """Get paginated list of all generated content with user information"""
     from app.content_generator.models import ContentItem
     
-    query = db.query(ContentItem)
+    # Join with users table to get user information
+    query = db.query(ContentItem, User).join(User, ContentItem.user_id == User.uid)
     total = query.count()
     
     content_items = query.order_by(ContentItem.created_at.desc())\
@@ -129,18 +133,121 @@ def get_all_content_paginated(
                          .all()
     
     content_list = []
-    for item in content_items:
+    for content_item, user in content_items:
+        # Generate a proper title from topic or use a default
+        title = content_item.topic if content_item.topic else UNTITLED_CONTENT
+        if len(title) > 50:
+            title = title[:47] + "..."
+            
         content_list.append({
-            "id": str(item.id),
-            "user_id": item.user_id,
-            "content_url": item.content_url,
-            "image_preview": item.image_preview,
-            "topic": item.topic,
-            "content_type": item.content_type,
-            "created_at": item.created_at.isoformat() if item.created_at else None
+            "id": str(content_item.id),
+            "title": title,
+            "user_id": content_item.user_id,
+            "user_name": user.name,
+            "user_email": user.email,
+            "content_url": content_item.content_url,
+            "image_preview": content_item.image_preview,
+            "topic": content_item.topic,
+            "content_type": content_item.content_type or "Unknown",
+            "raw_source": content_item.raw_source,
+            "created_at": content_item.created_at.isoformat() if content_item.created_at else None
         })
     
     return content_list, total
+
+def search_content_by_query(
+    db: Session, 
+    query: str, 
+    pagination: PaginationQuery
+) -> Tuple[List[Dict[str, Any]], int]:
+    """Search content by topic, content type, or user name"""
+    from app.content_generator.models import ContentItem
+    from sqlalchemy import or_, and_
+    
+    # Join with users table to get user information and enable search
+    base_query = db.query(ContentItem, User).join(User, ContentItem.user_id == User.uid)
+    
+    # Apply search filters
+    search_query = base_query.filter(
+        or_(
+            ContentItem.topic.ilike(f"%{query}%"),
+            ContentItem.content_type.ilike(f"%{query}%"),
+            User.name.ilike(f"%{query}%"),
+            User.email.ilike(f"%{query}%")
+        )
+    )
+    
+    total = search_query.count()
+    
+    content_items = search_query.order_by(ContentItem.created_at.desc())\
+                                .offset(pagination.offset)\
+                                .limit(pagination.size)\
+                                .all()
+    
+    content_list = []
+    for content_item, user in content_items:
+        # Generate a proper title from topic or use a default
+        title = content_item.topic if content_item.topic else UNTITLED_CONTENT
+        if len(title) > 50:
+            title = title[:47] + "..."
+            
+        content_list.append({
+            "id": str(content_item.id),
+            "title": title,
+            "user_id": content_item.user_id,
+            "user_name": user.name,
+            "user_email": user.email,
+            "content_url": content_item.content_url,
+            "image_preview": content_item.image_preview,
+            "topic": content_item.topic,
+            "content_type": content_item.content_type or "Unknown",
+            "raw_source": content_item.raw_source,
+            "created_at": content_item.created_at.isoformat() if content_item.created_at else None
+        })
+    
+    return content_list, total
+
+def get_content_details(
+    db: Session,
+    content_id: str
+) -> Optional[Dict[str, Any]]:
+    """Get detailed information about a specific content item"""
+    from app.content_generator.models import ContentItem
+    
+    # Join with users table to get user information
+    result = db.query(ContentItem, User).join(User, ContentItem.user_id == User.uid)\
+               .filter(ContentItem.id == content_id).first()
+    
+    if not result:
+        return None
+    
+    content_item, user = result
+    
+    return {
+        "id": str(content_item.id),
+        "title": content_item.topic if content_item.topic else UNTITLED_CONTENT,
+        "user_id": content_item.user_id,
+        "user_name": user.name,
+        "user_email": user.email,
+        "user_institution": user.institution,
+        "content_url": content_item.content_url,
+        "image_preview": content_item.image_preview,
+        "topic": content_item.topic,
+        "content_type": content_item.content_type,
+        "raw_source": content_item.raw_source,
+        "created_at": content_item.created_at.isoformat() if content_item.created_at else None,
+        "user_profile": {
+            "uid": user.uid,
+            "name": user.name,
+            "email": user.email,
+            "institution": user.institution,
+            "role": user.role,
+            "study_domain": user.study_domain,
+            "current_plan": user.current_plan,
+            "is_admin": user.is_admin,
+            "is_moderator": user.is_moderator
+        }
+    }
 
 def moderate_content(
     db: Session,
@@ -184,10 +291,15 @@ def get_all_quiz_results_paginated(
     db: Session,
     pagination: PaginationQuery
 ) -> Tuple[List[Dict[str, Any]], int]:
-    """Get paginated list of all quiz results"""
-    from app.quiz_generator.models import QuizResult, Quiz
+    """Get paginated list of all quiz results with user and quiz information"""
+    from app.quiz_generator.models import QuizResult, Quiz, QuizQuestion
     
-    query = db.query(QuizResult).join(Quiz, QuizResult.quiz_id == Quiz.quiz_id)
+    # Join QuizResult with Quiz and User to get all information
+    query = db.query(QuizResult, Quiz, User).join(
+        Quiz, QuizResult.quiz_id == Quiz.quiz_id
+    ).join(
+        User, QuizResult.user_id == User.uid
+    )
     total = query.count()
     
     quiz_results = query.order_by(QuizResult.created_at.desc())\
@@ -196,18 +308,71 @@ def get_all_quiz_results_paginated(
                         .all()
     
     results_list = []
-    for result in quiz_results:
+    for result, quiz, user in quiz_results:
+        # Generate a title from quiz topic or use default
+        quiz_title = quiz.topic if quiz.topic else UNTITLED_CONTENT
+        if quiz_title == UNTITLED_CONTENT:
+            quiz_title = f"Quiz {str(result.quiz_id)[:8]}"
+        
+        # Calculate actual time taken (difference between quiz creation and result creation)
+        time_taken_seconds = 0
+        if quiz.created_at and result.created_at:
+            time_diff = result.created_at - quiz.created_at
+            time_taken_seconds = max(int(time_diff.total_seconds()), 0)
+        
+        # Format time taken as MM:SS
+        minutes = time_taken_seconds // 60
+        seconds = time_taken_seconds % 60
+        time_taken_formatted = f"{minutes:02d}:{seconds:02d}"
+        
+        # Determine quiz type by looking at the questions
+        quiz_questions = db.query(QuizQuestion).filter(QuizQuestion.quiz_id == quiz.quiz_id).all()
+        quiz_types = set()
+        for question in quiz_questions:
+            if question.type:
+                quiz_types.add(question.type.value)
+        
+        # Format quiz type
+        if len(quiz_types) == 1:
+            quiz_type = list(quiz_types)[0]
+        elif len(quiz_types) > 1:
+            quiz_type = "Mixed"
+        else:
+            quiz_type = "Unknown"
+        
+        # Map technical names to user-friendly names
+        quiz_type_mapping = {
+            "MultipleChoice": "MCQ",
+            "ShortAnswer": "Short Answer",
+            "TrueFalse": "True/False",
+            "Mixed": "Mixed",
+            "Unknown": "Unknown"
+        }
+        quiz_type_display = quiz_type_mapping.get(quiz_type, quiz_type)
+            
         results_list.append({
             "id": str(result.id),
+            "quiz_title": quiz_title,
+            "quiz_type": quiz_type_display,
             "user_id": result.user_id,
+            "user_name": user.name,
+            "user_email": user.email,
+            "user_display": f"{user.name} ({user.email})",  # Combined display for frontend
             "quiz_id": str(result.quiz_id),
-            "score": result.score,
-            "total": result.total,
+            "score": int(result.score),
+            "total": int(result.total),
+            "total_questions": len(quiz_questions),  # Actual number of questions
             "percentage": round((result.score / result.total * 100), 2) if result.total > 0 else 0,
             "feedback": result.feedback,
-            "topic": result.topic,
-            "domain": result.domain,
-            "created_at": result.created_at.isoformat() if result.created_at else None
+            "topic": quiz.topic or "No Topic",
+            "domain": quiz.domain or "No Domain",
+            "difficulty": quiz.difficulty.value if quiz.difficulty else "Easy",
+            "duration": quiz.duration or 0,
+            "time_taken": time_taken_seconds,  # Time in seconds
+            "time_taken_formatted": time_taken_formatted,  # Formatted as MM:SS
+            "created_at": result.created_at.isoformat() if result.created_at else None,
+            "completed_at": result.created_at.isoformat() if result.created_at else None,
+            "answers": []  # Placeholder for quiz answers - can be populated later if needed
         })
     
     return results_list, total
@@ -414,10 +579,10 @@ def get_usage_statistics(
 # LLM/Parser Functions (Placeholders)
 def invoke_llm_service(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Invoke LLM service (PLACEHOLDER)"""
-    # TODO: Implement LLM invocation
-    return {"status": "success", "message": "LLM invocation placeholder"}
+    # TODO: Implement LLM invocation - this will be implemented when LLM service is ready
+    return {"status": "success", "message": "LLM invocation placeholder", "payload_received": bool(payload)}
 
 def invoke_parser_service(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Invoke parser service (PLACEHOLDER)"""
-    # TODO: Implement parser invocation
-    return {"status": "success", "message": "Parser invocation placeholder"}
+    # TODO: Implement parser invocation - this will be implemented when parser service is ready
+    return {"status": "success", "message": "Parser invocation placeholder", "payload_received": bool(payload)}

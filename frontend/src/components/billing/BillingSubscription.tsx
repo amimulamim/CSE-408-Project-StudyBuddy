@@ -2,7 +2,8 @@ import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Crown, Check, X } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Loader2, Crown, Check, X, AlertTriangle } from "lucide-react";
 import { 
   getSubscriptionStatus, 
   cancelSubscription, 
@@ -53,6 +54,7 @@ export const BillingSubscription = forwardRef<{ refreshSubscriptionStatus: () =>
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
 
 
   useEffect(() => {
@@ -112,10 +114,6 @@ export const BillingSubscription = forwardRef<{ refreshSubscriptionStatus: () =>
   };
 
   const handleCancelSubscription = async () => {
-    if (!confirm("Are you sure you want to cancel your subscription? This action cannot be undone.")) {
-      return;
-    }
-
     try {
       setProcessing(true);
       await cancelSubscription();
@@ -133,7 +131,12 @@ export const BillingSubscription = forwardRef<{ refreshSubscriptionStatus: () =>
       });
     } finally {
       setProcessing(false);
+      setShowCancelDialog(false);
     }
+  };
+
+  const handleCancelClick = () => {
+    setShowCancelDialog(true);
   };
 
   if (loading) {
@@ -193,7 +196,7 @@ export const BillingSubscription = forwardRef<{ refreshSubscriptionStatus: () =>
             <CardFooter>
               <Button 
                 variant="destructive" 
-                onClick={handleCancelSubscription}
+                onClick={handleCancelClick}
                 disabled={processing}
               >
                 {processing ? (
@@ -305,6 +308,45 @@ export const BillingSubscription = forwardRef<{ refreshSubscriptionStatus: () =>
           </CardContent>
         </Card>
       )}
+
+      {/* Cancel Subscription Confirmation Dialog */}
+      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Cancel Subscription
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel your subscription? This action cannot be undone.
+              You will not be charged again, but you will lose access to premium features.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowCancelDialog(false)}
+              disabled={processing}
+            >
+              Keep Subscription
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleCancelSubscription}
+              disabled={processing}
+            >
+              {processing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                "Yes, Cancel"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 });

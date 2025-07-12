@@ -195,27 +195,29 @@ class TestVectorDatabaseManager:
         assert result == {"message": f"Upserted 2 points for document {document_id}"}
         assert mock_point_struct.call_count == 2
         
-        # Verify first point creation
-        mock_point_struct.assert_any_call(
-            id="uuid1",
-            vector=[1.0, 2.0, 3.0],
-            payload={
-                "document_id": document_id,
-                "chunk_index": 0,
-                "text": "chunk1"
-            }
-        )
+        # Verify first point creation - check key parts of payload, ignoring timestamp
+        _, first_call_kwargs = mock_point_struct.call_args_list[0]
+        assert first_call_kwargs["id"] == "uuid1"
+        assert first_call_kwargs["vector"] == [1.0, 2.0, 3.0]
+        payload = first_call_kwargs["payload"]
+        assert payload["document_id"] == document_id
+        assert payload["document_name"] is None
+        assert payload["storage_path"] is None
+        assert payload["chunk_index"] == 0
+        assert payload["text"] == "chunk1"
+        assert "upload_timestamp" in payload  # Just verify the field exists
         
-        # Verify second point creation
-        mock_point_struct.assert_any_call(
-            id="uuid2",
-            vector=[4.0, 5.0, 6.0],
-            payload={
-                "document_id": document_id,
-                "chunk_index": 1,
-                "text": "chunk2"
-            }
-        )
+        # Verify second point creation - check key parts of payload, ignoring timestamp
+        _, second_call_kwargs = mock_point_struct.call_args_list[1]
+        assert second_call_kwargs["id"] == "uuid2"
+        assert second_call_kwargs["vector"] == [4.0, 5.0, 6.0]
+        payload2 = second_call_kwargs["payload"]
+        assert payload2["document_id"] == document_id
+        assert payload2["document_name"] is None
+        assert payload2["storage_path"] is None
+        assert payload2["chunk_index"] == 1
+        assert payload2["text"] == "chunk2"
+        assert "upload_timestamp" in payload2  # Just verify the field exists
         
         self.mock_client.upsert.assert_called_once_with(
             collection_name=self.collection_name,

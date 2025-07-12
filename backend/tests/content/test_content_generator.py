@@ -23,6 +23,15 @@ class TestContentGenerator:
     def sample_documents(self):
         """Sample documents for testing"""
         return [
+            {"content": "Python is a high-level, interpreted programming language with dynamic semantics. Its high-level built in data structures, combined with dynamic typing and dynamic binding, make it very attractive for Rapid Application Development, as well as for use as a scripting or glue language to connect existing components together. Python's simple, easy to learn syntax emphasizes readability and therefore reduces the cost of program maintenance. Python supports modules and packages, which encourages program modularity and code reuse."},
+            {"content": "Variables in Python are used to store data values. Unlike other programming languages, Python has no command for declaring a variable. A variable is created the moment you first assign a value to it. Variables do not need to be declared with any particular type, and can even change type after they have been set. Python variables are case-sensitive, meaning that age, Age and AGE are three different variables."},
+            {"content": "Functions are reusable blocks of code that perform specific tasks. In Python, functions are defined using the def keyword, followed by the function name and parentheses containing any parameters. Functions help break our program into smaller and modular chunks, making it organized and manageable. Functions also help in code reusability and reduce redundancy. A function can return a value using the return statement."}
+        ]
+
+    @pytest.fixture
+    def insufficient_documents(self):
+        """Sample documents with insufficient content for testing"""
+        return [
             {"content": "Python is a programming language used for web development."},
             {"content": "Variables in Python store data values."},
             {"content": "Functions are reusable blocks of code."}
@@ -218,6 +227,40 @@ class TestContentGenerator:
 
         # Act & Assert
         with pytest.raises(ValueError, match="No relevant documents found"):
+            await generator.generate_and_store_content(
+                content_id="test-id",
+                user_id="test-user",
+                content_type="flashcards",
+                topic="Python Programming",
+                difficulty="beginner",
+                length="short",
+                tone="educational",
+                collection_name="test-collection",
+                full_collection_name="test-collection",
+                db=mock_db
+            )
+
+        mock_db.rollback.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch('app.content_generator.content_generator.genai.configure')
+    @patch('app.content_generator.content_generator.genai.GenerativeModel')
+    @patch('app.content_generator.content_generator.DocumentService')
+    async def test_generate_and_store_content_insufficient_content(
+        self, mock_doc_service, mock_gen_model, mock_configure, mock_db, insufficient_documents
+    ):
+        """Test handling when insufficient content is available"""
+        # Arrange
+        mock_model_instance = Mock()
+        mock_gen_model.return_value = mock_model_instance
+        mock_doc_service_instance = Mock()
+        mock_doc_service.return_value = mock_doc_service_instance
+        mock_doc_service_instance.search_documents = AsyncMock(return_value=insufficient_documents)
+
+        generator = ContentGenerator()
+
+        # Act & Assert
+        with pytest.raises(ValueError, match="Insufficient content available for meaningful slide generation"):
             await generator.generate_and_store_content(
                 content_id="test-id",
                 user_id="test-user",
