@@ -290,6 +290,9 @@ class ContentGenerator:
                 - Start directly with the first \\begin{{frame}} command
                 - Use LaTeX Beamer syntax only: \\begin{{frame}}...\\end{{frame}}
                 - Each slide must be created with: \\begin{{frame}}...\\end{{frame}}
+                - If the slide contains code or uses \\verb, \\texttt (with special characters), or \\begin{{verbatim}}, use \\begin{{frame}}[fragile]
+                - NEVER use \\texttt for multi-line code or anything containing quotes, slashes, or backslashes
+                - Use only \\begin{{verbatim}} or \\begin{{lstlisting}} for multi-line code blocks, and always inside a [fragile] frame
 
                 CRITICAL CHARACTER ENCODING RULES:
                 - NEVER use special Unicode characters like ×, ∇, ⊙, •, –, —, ", ", ', '
