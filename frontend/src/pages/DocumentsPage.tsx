@@ -32,14 +32,17 @@ export default function DocumentsPage() {
     navigate(`/content/document/${collectionName}/${documentId}`);
   };
 
-  const handleDeleteDocument = async (documentId: string) => {
+  const handleDeleteDocument = async (documentId: string, event: React.MouseEvent) => {
+    // Stop event propagation to prevent card click
+    event.stopPropagation();
+    
     if (!window.confirm('Are you sure you want to delete this document?')) return;
     
     try {
       setLoading(true);
       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
       const response: ApiResponse = await makeRequest(
-        `${API_BASE_URL}/api/v1/collections/${collectionName}/document/${documentId}`, 
+        `${API_BASE_URL}/api/v1/document/collections/${collectionName}/documents/${documentId}`, 
         'DELETE'
       );
 
@@ -47,7 +50,7 @@ export default function DocumentsPage() {
         toast.success('Document deleted successfully');
         setDocuments(documents.filter(doc => doc.document_id !== documentId));
       } else {
-        throw new Error(response?.message || 'Failed to delete document');
+        throw new Error('Failed to delete document');
       }
     } catch (error) {
       console.error('Error deleting document:', error);
@@ -165,8 +168,7 @@ export default function DocumentsPage() {
                       <Button 
                         size="sm"
                         variant="outline"
-                        onClick={() => handleDeleteDocument(document.document_id)}
-
+                        onClick={(e) => handleDeleteDocument(document.document_id, e)}
                         className="button-light"
                       >
                         <FileText className="h-4 w-4 mr-1" />
