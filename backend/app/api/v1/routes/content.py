@@ -153,7 +153,8 @@ async def get_user_content(
                     "contentId": c.id,
                     "topic": c.topic,
                     "type": c.content_type,
-                    "createdAt": c.created_at
+                    "createdAt": c.created_at,
+                    "collection_name": c.collection_name
                 }
                 for c in contents
             ]
@@ -193,7 +194,8 @@ async def get_content(
                     "metadata": {
                         "type": content.content_type,
                         "topic": content.topic,
-                        "createdAt": content.created_at
+                        "createdAt": content.created_at,
+                        "collection_name": content.collection_name
                     }
                 }
             except requests.RequestException as e:
@@ -210,7 +212,8 @@ async def get_content(
             "metadata": {
                 "type": content.content_type,
                 "topic": content.topic,
-                "createdAt": content.created_at
+                "createdAt": content.created_at,
+                "collection_name": content.collection_name
             }
         }
         

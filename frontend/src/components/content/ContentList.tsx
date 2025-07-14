@@ -28,6 +28,7 @@ interface ContentItem {
   topic: string;
   type: 'flashcards' | 'slides';
   createdAt: string;
+  collection_name?: string; // Optional, if content is associated with a collection
 }
 
 interface ContentListProps {
@@ -202,6 +203,9 @@ export function ContentList({ contents, loading, onContentUpdate, setContents }:
                       <Calendar className="h-3 w-3" />
                       <span className="text-xs">
                         {new Date(item.createdAt).toLocaleDateString()}
+                      </span>
+                      <span className="text-xs">
+                        {item.collection_name ? `Collection: ${item.collection_name}` : 'No Collection'}
                       </span>
                     </div>
                     <DropdownMenu>
