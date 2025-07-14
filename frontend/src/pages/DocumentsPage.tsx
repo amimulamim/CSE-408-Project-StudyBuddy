@@ -39,7 +39,7 @@ export default function DocumentsPage() {
       setLoading(true);
       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
       const response: ApiResponse = await makeRequest(
-        `${API_BASE_URL}/api/v1/document/${documentId}`, 
+        `${API_BASE_URL}/api/v1/collections/${collectionName}/document/${documentId}`, 
         'DELETE'
       );
 
