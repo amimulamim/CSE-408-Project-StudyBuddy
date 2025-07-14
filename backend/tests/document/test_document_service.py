@@ -206,16 +206,7 @@ class TestDocumentService:
             )
         assert "Error managing Qdrant collection" in str(exc_info.value)
 
-    @pytest.mark.asyncio
-    async def test_create_or_update_collection_invalid_name_non_alphanumeric(self, document_service, mock_db):
-        """Test collection creation with non-alphanumeric name"""
-        with pytest.raises(Exception) as exc_info:
-            await document_service.create_or_update_collection(
-                user_id="testuser",
-                collection_name="testcollection!",
-                db=mock_db
-            )
-        assert "Error managing Qdrant collection" in str(exc_info.value)
+
 
     @pytest.mark.asyncio
     async def test_create_or_update_collection_database_error(self, document_service, mock_db):

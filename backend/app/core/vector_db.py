@@ -32,8 +32,30 @@ class VectorDatabaseManager:
                     collection_name=self.collection_name,
                     vectors_config=models.VectorParams(size=768, distance=models.Distance.COSINE)
                 )
-                logger.info(f"Created collection: {self.collection_name}")
+                
+                # Create index for document_id field to enable filtering
+                self.client.create_payload_index(
+                    collection_name=self.collection_name,
+                    field_name="document_id",
+                    field_schema=models.PayloadSchemaType.KEYWORD
+                )
+                
+                logger.info(f"Created collection: {self.collection_name} with document_id index")
             else:
+                # Check if index exists for existing collections
+                try:
+                    collection_info = self.client.get_collection(self.collection_name)
+                    if "document_id" not in collection_info.payload_schema:
+                        # Create the missing index
+                        self.client.create_payload_index(
+                            collection_name=self.collection_name,
+                            field_name="document_id",
+                            field_schema=models.PayloadSchemaType.KEYWORD
+                        )
+                        logger.info(f"Created missing document_id index for collection: {self.collection_name}")
+                except Exception as e:
+                    logger.warning(f"Could not check/create index for existing collection: {str(e)}")
+                
                 logger.info(f"Collection {self.collection_name} already exists")
             return {"message": f"Collection {self.collection_name} created or already exists"}
         except Exception as e:
@@ -60,6 +82,25 @@ class VectorDatabaseManager:
         except Exception as e:
             logger.error(f"Error listing collections: {str(e)}")
             raise Exception(f"Error listing collections: {str(e)}")
+
+    def ensure_document_id_index(self):
+        """Ensure document_id index exists for the collection."""
+        try:
+            collection_info = self.client.get_collection(self.collection_name)
+            if "document_id" not in collection_info.payload_schema:
+                self.client.create_payload_index(
+                    collection_name=self.collection_name,
+                    field_name="document_id",
+                    field_schema=models.PayloadSchemaType.KEYWORD
+                )
+                logger.info(f"Created document_id index for collection: {self.collection_name}")
+                return True
+            else:
+                logger.debug(f"document_id index already exists for collection: {self.collection_name}")
+                return True
+        except Exception as e:
+            logger.error(f"Error ensuring document_id index: {str(e)}")
+            return False
     
     def upsert_vectors(self, document_id: str, chunks: List[str], embeddings: List[List[float]], document_name: str = None, storage_path: str = None):
         """Upserts text chunks and their embeddings to Qdrant."""
@@ -212,6 +253,55 @@ class VectorDatabaseManager:
         except Exception as e:
             logger.error(f"Error updating document name: {str(e)}")
             raise RuntimeError(f"Error updating document name: {str(e)}")
+
+    def delete_document(self, document_id: str) -> bool:
+        """Delete all vectors/chunks for a specific document from the collection."""
+        try:
+            logger.debug(f"Attempting to delete document: {document_id}")
+            
+            # Ensure document_id index exists before filtering
+            index_created = self.ensure_document_id_index()
+            if not index_created:
+                logger.error("Failed to ensure document_id index exists")
+                return False
+            
+            # Scroll through all points and collect those matching the document_id
+            scroll_result = self.client.scroll(
+                collection_name=self.collection_name,
+                scroll_filter=models.Filter(
+                    must=[
+                        models.FieldCondition(
+                            key="document_id",
+                            match=models.MatchValue(value=document_id)
+                        )
+                    ]
+                ),
+                limit=10000,  # Large limit to get all chunks of the document
+                with_payload=True
+            )
+            
+            if not scroll_result[0]:
+                logger.warning(f"No vectors found for document {document_id}")
+                return False
+            
+            # Collect all point IDs to delete
+            point_ids = [point.id for point in scroll_result[0]]
+            logger.debug(f"Found {len(point_ids)} vectors to delete for document {document_id}")
+            
+            if point_ids:
+                # Delete all points for this document
+                self.client.delete(
+                    collection_name=self.collection_name,
+                    points_selector=models.PointIdsList(points=point_ids)
+                )
+                logger.info(f"Deleted {len(point_ids)} vectors for document {document_id}")
+                return True
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error deleting document {document_id}: {str(e)}")
+            raise RuntimeError(f"Error deleting document: {str(e)}")
 
     def rename_collection(self, old_name: str, new_name: str) -> bool:
         """Rename a collection by creating a new one and moving all points."""

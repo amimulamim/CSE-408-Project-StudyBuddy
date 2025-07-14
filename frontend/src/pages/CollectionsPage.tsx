@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { 
@@ -22,8 +21,7 @@ import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { ApiResponse } from '@/lib/api';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { set } from 'date-fns';
+import { DocumentUploadDialog } from '@/components/collections/DocumentUploadDialog';
 
 interface Collection {
   collection_name: string;
@@ -41,16 +39,12 @@ export default function CollectionsPage() {
   
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   
   // Form states
   const [newCollectionName, setNewCollectionName] = useState('');
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
   const [newName, setNewName] = useState('');
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [nameSelected, setNameSelected] = useState(false);
-  const [uploadCollectionName, setUploadCollectionName] = useState('');
 
   useEffect(() => {
     fetchCollections();
@@ -120,35 +114,6 @@ export default function CollectionsPage() {
     navigate(`/collections/${encodeURIComponent(collectionName)}`);
   };
 
-  const handleUploadDocument = async () => {
-    if (!uploadFile || !uploadCollectionName) {
-      toast.error('Please select a file and collection');
-      return;
-    }
-
-    try {
-      setActionLoading(true);
-      setUploadDialogOpen(false);
-      const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-      const formData = new FormData();
-      formData.append('file', uploadFile);
-      formData.append('collection_name', uploadCollectionName);
-
-      await makeRequest(`${API_BASE_URL}/api/v1/document/documents`, 'POST', formData);
-      
-      toast.success('Document uploaded successfully');
-      setUploadFile(null);
-      setUploadCollectionName('');
-      setNameSelected(false);
-      await fetchCollections();
-    } catch (error) {
-      console.error('Error uploading document:', error);
-      toast.error('Failed to upload document');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   const openRenameDialog = (collection: Collection) => {
     setSelectedCollection(collection);
     setNewName(collection.collection_name);
@@ -208,60 +173,11 @@ export default function CollectionsPage() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-                  <DialogTrigger asChild onClick={()=>setNameSelected(false)}>
-                    <Button className="button-light">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload Document
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="glass-card">
-                    <DialogHeader>
-                      <DialogTitle className="glass-text-title">Upload Document</DialogTitle>
-                      <DialogDescription className="glass-text-description">
-                        Upload a document to an existing collection
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 mt-4">
-                      <div>
-                        <Label htmlFor="file" className="glass-text">Select File</Label>
-                        <Input
-                          id="file"
-                          type="file"
-                          accept=".pdf,.doc,.docx,.txt"
-                          onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                          className="glass-input mt-1"
-                        />
-                      </div>
-                      <div>
-                        { !nameSelected && (<Label htmlFor="collection" className="glass-text">Collection</Label>) }
-                        { !nameSelected ? (<Select value={uploadCollectionName} onValueChange={setUploadCollectionName}>
-                          <SelectTrigger className="glass-input mt-1">
-                            <SelectValue placeholder="Select a collection" />
-                          </SelectTrigger>
-                          <SelectContent className="glass-card">
-                            {collections.map((collection) => (
-                              <SelectItem key={collection.collection_name} value={collection.collection_name}>
-                                {collection.collection_name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>):
-                        (
-                            <Label>{uploadCollectionName}</Label>
-                        )}
-                      </div>
-                      <div className="flex justify-end gap-2 pt-4">
-                        <Button variant="outline" onClick={() => setUploadDialogOpen(false)}>
-                          Cancel
-                        </Button>
-                        <Button onClick={handleUploadDocument} className="bg-emerald-600 hover:bg-emerald-700">
-                          Upload
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <DocumentUploadDialog 
+                  collections={collections}
+                  onUploadSuccess={fetchCollections}
+                  buttonClassName="button-light"
+                />
 
                 <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
                   <DialogTrigger asChild>
@@ -397,18 +313,21 @@ export default function CollectionsPage() {
                         View
                       </Button>
 
-                      <Button 
-                        size="sm"
-                        onClick={() => {
-                          setUploadCollectionName(collection.collection_name);
-                          setNameSelected(true);
-                          setUploadDialogOpen(true);
-                        }}
-                        className="button-light"
+                      <DocumentUploadDialog 
+                        preSelectedCollection={collection.collection_name}
+                        onUploadSuccess={fetchCollections}
+                        buttonVariant="outline"
+                        buttonClassName="button-light"
                       >
-                        <Upload className="h-4 w-4 mr-1" />
-                        Upload
-                      </Button>
+                        <Button 
+                          size="sm"
+                          variant="outline"
+                          className="button-light"
+                        >
+                          <Upload className="h-4 w-4 mr-1" />
+                          Upload
+                        </Button>
+                      </DocumentUploadDialog>
                     </div>
                   </CardContent>
                 </Card>
