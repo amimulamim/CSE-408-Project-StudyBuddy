@@ -293,8 +293,17 @@ class ContentGenerator:
                 - If the slide contains code or uses \\verb, \\texttt (with special characters), or \\begin{{verbatim}}, use \\begin{{frame}}[fragile]
                 - NEVER use \\texttt for multi-line code or anything containing quotes, slashes, or backslashes
                 - Use only \\begin{{verbatim}} or \\begin{{lstlisting}} for multi-line code blocks, and always inside a [fragile] frame
-                - Do not forget to escape special characters(for example: $ ) in LaTeX 
-                
+                - CRITICAL: Use \\begin{{frame}}[fragile] for ANY frame containing:
+                  * \\verb commands
+                  * \\texttt with special characters ($, %, &, #, \\, {{, }}, etc.)
+                  * \\begin{{verbatim}} blocks
+                  * Code examples or programming syntax
+                  * Any backslashes, dollar signs, or special LaTeX characters in text
+                - For multi-line code, ALWAYS use \\begin{{verbatim}}...\\end{{verbatim}} inside [fragile] frames
+                - NEVER use \\texttt for anything containing special characters - use \\begin{{verbatim}} instead
+                - Do not forget to escape special characters ($ % & # \\ {{ }}) in LaTeX text mode
+                - For inline code with special characters, use \\begin{{verbatim}} on separate lines instead of \\texttt 
+
                 CRITICAL CHARACTER ENCODING RULES:
                 - NEVER use special Unicode characters like ×, ∇, ⊙, •, –, —, ", ", ', '
                 - Use proper LaTeX math mode for mathematical symbols: $\\times$, $\\nabla$, $\\odot$
@@ -387,10 +396,10 @@ class ContentGenerator:
                     '•': r'',  # Remove bullets, itemize handles them
                     '–': r'-',
                     '—': r'--',
-                    '"': r'"',  # Left double quote
-                    '"': r'"',  # Right double quote
-                    ''': r"'",  # Left single quote
-                    ''': r"'",  # Right single quote
+                    '"': r'"',  # Left smart quote
+                    '"': r'"',  # Right smart quote
+                    ''': r"'",  # Left smart quote
+                    ''': r"'",  # Right smart quote
                     '…': r'...',
                     '≤': r'$\leq$',
                     '≥': r'$\geq$',
@@ -518,6 +527,7 @@ class ContentGenerator:
                         # If this is not the last attempt, provide feedback to improve the LaTeX
                         if attempt < max_retries:
                             # Add specific error feedback to the prompt for the next iteration
+                            # Common LaTeX compilation errors and their fixes
                             common_errors = {
                                 "Undefined control sequence": "avoiding undefined LaTeX commands and using only standard LaTeX commands",
                                 "Missing $": "ensuring proper math mode syntax - put all mathematical expressions in $...$",
@@ -529,7 +539,10 @@ class ContentGenerator:
                                 "Unicode": "using only ASCII characters - replace × with $\\times$, ∇ with $\\nabla$, • with standard bullets",
                                 "Package inputenc Error": "avoiding Unicode characters and using proper LaTeX encoding",
                                 "Unknown character": "using only standard ASCII characters and proper LaTeX math symbols",
-                                "Invalid UTF-8": "replacing all special characters with proper LaTeX equivalents"
+                                "Invalid UTF-8": "replacing all special characters with proper LaTeX equivalents",
+                                "verb": "using [fragile] frames for all \\verb commands and \\texttt with special characters",
+                                "fragile": "marking frames as [fragile] when using \\verb, \\texttt with special chars, or \\begin{verbatim}",
+                                "verbatim": "using [fragile] frames for all verbatim environments and code blocks"
                             }
                             
                             error_feedback = ""
