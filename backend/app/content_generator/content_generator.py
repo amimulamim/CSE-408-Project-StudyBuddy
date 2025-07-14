@@ -123,6 +123,7 @@ class ContentGenerator:
             content_item = ContentItem(
                 id=content_id,
                 user_id=user_id,
+                collection_name=collection_name,  # Store the collection name
                 content_url=content_url,
                 topic=topic,
                 content_type=content_type,
@@ -583,4 +584,67 @@ class ContentGenerator:
             return None
             
         raise Exception(f"Failed to generate valid slides after {max_retries} retries. Please try again with a different topic or check your collection documents.")
+
+    def update_content_collection_names(
+        self,
+        user_id: str,
+        old_collection_name: str,
+        new_collection_name: str,
+        db: Session
+    ) -> bool:
+        """Updates all content items when a collection is renamed."""
+        try:
+            # Update all content items that belong to the renamed collection
+            updated_count = db.query(ContentItem).filter(
+                ContentItem.user_id == user_id,
+                ContentItem.collection_name == old_collection_name
+            ).update({
+                ContentItem.collection_name: new_collection_name
+            })
+            
+            db.commit()
+            logger.info(f"Updated {updated_count} content items from collection '{old_collection_name}' to '{new_collection_name}' for user {user_id}")
+            return True
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error updating content collection names: {str(e)}")
+            return False
+
+    def get_content_by_collection(
+        self,
+        user_id: str,
+        collection_name: str,
+        db: Session
+    ) -> List[ContentItem]:
+        """Retrieves all content items for a specific collection."""
+        try:
+            content_items = db.query(ContentItem).filter(
+                ContentItem.user_id == user_id,
+                ContentItem.collection_name == collection_name
+            ).all()
+            return content_items
+        except Exception as e:
+            logger.error(f"Error retrieving content for collection {collection_name}: {str(e)}")
+            return []
+
+    def delete_content_by_collection(
+        self,
+        user_id: str,
+        collection_name: str,
+        db: Session
+    ) -> bool:
+        """Deletes all content items when a collection is deleted."""
+        try:
+            deleted_count = db.query(ContentItem).filter(
+                ContentItem.user_id == user_id,
+                ContentItem.collection_name == collection_name
+            ).delete()
+            
+            db.commit()
+            logger.info(f"Deleted {deleted_count} content items from collection '{collection_name}' for user {user_id}")
+            return True
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error deleting content for collection {collection_name}: {str(e)}")
+            return False
 
