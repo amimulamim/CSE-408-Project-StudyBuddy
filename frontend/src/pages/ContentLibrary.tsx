@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, BookOpen, CreditCard, Plus } from 'lucide-react';
 import { ContentList } from '@/components/content/ContentList';
 import { ContentGenerator } from '@/components/content/ContentGenerator';
@@ -23,20 +24,31 @@ export default function ContentLibrary() {
   const [loading, setLoading] = useState(true);
   const [showGenerator, setShowGenerator] = useState(false);
   const [filterTopic, setFilterTopic] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'created_at' | 'topic'>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     fetchUserContent();
-  }, [filterTopic]);
+  }, [filterTopic, sortBy, sortOrder]);
 
   const fetchUserContent = async () => {
     try {
       setLoading(true);
       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
       let url = `${API_BASE_URL}/api/v1/content/user`;
+      
+      const params = new URLSearchParams();
       if (filterTopic?.trim()) {
-        url += `?filter_topic=${encodeURIComponent(filterTopic.trim())}`;
+        params.append('filter_topic', filterTopic.trim());
       }
-      const response = await makeRequest(url, 'GET');
+      params.append('sort_by', sortBy);
+      params.append('sort_order', sortOrder);
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
+      const response = await makeRequest(url, 'GET') as any;
       
       if (response?.status === 'success') {
         setContents(response.data?.contents || []);
@@ -92,15 +104,37 @@ export default function ContentLibrary() {
             </Button>
           </div>
         </div>
-        {/* Filter Input */}
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="Search by topic…"
-            value={filterTopic}
-            onChange={e => setFilterTopic(e.target.value)}
-            className="w-full md:w-1/3 p-2 border rounded-md focus:outline-none focus:ring text-black placeholder-gray-500"
-          />
+        {/* Filter and Sort Controls */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-4">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Search by topic…"
+              value={filterTopic}
+              onChange={e => setFilterTopic(e.target.value)}
+              className="w-full p-2 border rounded-md focus:outline-none focus:ring text-black placeholder-gray-500"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Select value={sortBy} onValueChange={(value: 'created_at' | 'topic') => setSortBy(value)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="created_at">Created Date</SelectItem>
+                <SelectItem value="topic">Topic</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Order" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">Descending</SelectItem>
+                <SelectItem value="asc">Ascending</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Stats Cards */}
