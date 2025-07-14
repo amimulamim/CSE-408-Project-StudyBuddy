@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import Dict, Any, List
+from app.chat.service import get_latest_chats 
 
 from app.auth.firebase_auth import get_current_user
 from app.core.database import get_db
@@ -21,6 +22,8 @@ from app.users.service import (
     update_user_profile_secure, validate_and_upload_avatar,
     update_user_avatar, delete_user_avatar
 )
+
+from app.chat.schema import ChatListResponse, ChatSummary
 
 # Constants
 USER_NOT_FOUND = "User not found"
@@ -308,3 +311,16 @@ def get_unread_notifications_count(
     return {
         "unread_count": unread_count
     }
+
+@router.get('/activities', response_model=ChatListResponse)
+def get_user_activities(
+    db: Session = Depends(get_db),
+    user_info: Dict[str, any] = Depends(get_current_user)
+):
+    """
+    Dummy activity endpoint for future implementation
+    """
+    chats = get_latest_chats(db, user_info["uid"])
+    return ChatListResponse(
+        chats = [ChatSummary(id=chat.id, name=chat.name) for chat in chats]
+    )
