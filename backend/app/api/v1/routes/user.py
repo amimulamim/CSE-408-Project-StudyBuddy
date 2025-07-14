@@ -339,34 +339,6 @@ def get_user_activities(
         order_by(qr.created_at.desc()).
         limit(10)
     )
-    # activities = [
-    #     {
-    #         "activity_type" : "chat",
-    #         "details" : dict(c._mapping),
-    #         "created_at": c.created_at
-    #     }
-    #     for c in chats
-    # ]
-    # activities.extend(
-    #     [
-    #         {
-    #             "activity_type" : "content",
-    #             "details" : dict(c._mapping),
-    #             "created_at": c.created_at
-    #         }
-    #         for c in contents
-    #     ]
-    # )
-    # activities.extend(
-    #     [
-    #         {
-    #             "activity_type" : "quiz_taken",
-    #             "details" : dict(q._mapping),
-    #             "created_at": q.created_at
-    #         }
-    #         for q in quiz_results
-    #     ]
-    # )
     activities = (
         build_activities(chats, "chat") +
         build_activities(contents, "content") +
