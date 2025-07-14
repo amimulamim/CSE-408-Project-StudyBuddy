@@ -204,9 +204,6 @@ export function ContentList({ contents, loading, onContentUpdate, setContents }:
                       <span className="text-xs">
                         {new Date(item.createdAt).toLocaleDateString()}
                       </span>
-                      <span className="text-xs">
-                        {item.collection_name ? `Collection: ${item.collection_name}` : 'No Collection'}
-                      </span>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -249,9 +246,16 @@ export function ContentList({ contents, loading, onContentUpdate, setContents }:
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <CardDescription className="flex-1">
-                  {item.type === 'flashcards' ? 'Interactive flashcards' : 'PDF presentation'}
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <CardDescription className="flex-1">
+                    {item.type === 'flashcards' ? 'Interactive flashcards' : 'PDF presentation'}
+                  </CardDescription>
+                  {item.collection_name && (
+                    <Badge variant="outline" className="text-xs text-muted-foreground border-muted-foreground/30">
+                      {item.collection_name}
+                    </Badge>
+                  )}
+                </div>
               </CardContent>
             </Card>
           );
