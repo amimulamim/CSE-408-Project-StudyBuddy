@@ -32,6 +32,31 @@ export default function DocumentsPage() {
     navigate(`/content/document/${collectionName}/${documentId}`);
   };
 
+  const handleDeleteDocument = async (documentId: string) => {
+    if (!window.confirm('Are you sure you want to delete this document?')) return;
+    
+    try {
+      setLoading(true);
+      const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+      const response: ApiResponse = await makeRequest(
+        `${API_BASE_URL}/api/v1/document/${documentId}`, 
+        'DELETE'
+      );
+
+      if (response?.status === 'success') {
+        toast.success('Document deleted successfully');
+        setDocuments(documents.filter(doc => doc.document_id !== documentId));
+      } else {
+        throw new Error(response?.message || 'Failed to delete document');
+      }
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      toast.error('Failed to delete document');
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
 
   const fetchDocuments = async (collection: string) => {
@@ -129,7 +154,6 @@ export default function DocumentsPage() {
                         <CardTitle className="glass-text-title text-xl mb-2">
                           {document.document_name}
                         </CardTitle>
-                        
                         {/* Document Metadata */}
                         <div className="flex flex-wrap items-center gap-4 mb-3">
 
@@ -138,6 +162,16 @@ export default function DocumentsPage() {
                           </Badge>
 
                         </div>
+                      <Button 
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDeleteDocument(document.document_id)}
+
+                        className="button-light"
+                      >
+                        <FileText className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
 
                         {/* Document Preview */}
                         {document.first_chunk && (
