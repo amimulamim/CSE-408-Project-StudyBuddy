@@ -109,21 +109,30 @@ export function DocumentUploadDialog({
       formData.append('file', uploadFile);
       formData.append('collection_name', selectedCollection);
 
-      await makeRequest(`${API_BASE_URL}/api/v1/document/documents`, 'POST', formData);
+      const response = await makeRequest(`${API_BASE_URL}/api/v1/document/documents`, 'POST', formData) as any;
       
-      toast.success('Document uploaded successfully');
-      
-      // Reset form
-      setUploadFile(null);
-      if (!preSelectedCollection) {
-        setSelectedCollection('');
+      // Check if the response indicates success
+      if (response?.status === 'success') {
+        toast.success('Document uploaded successfully');
+        
+        // Reset form
+        setUploadFile(null);
+        if (!preSelectedCollection) {
+          setSelectedCollection('');
+        }
+        
+        // Close dialog
+        setIsOpen(false);
+        
+        // Call success callback
+        onUploadSuccess?.();
+      } else {
+        // Handle API error response
+        const errorMessage = response?.data?.detail || response?.msg || 'Failed to upload document';
+        console.error('Upload failed:', response);
+        toast.error(errorMessage);
+        onUploadError?.(new Error(errorMessage));
       }
-      
-      // Close dialog
-      setIsOpen(false);
-      
-      // Call success callback
-      onUploadSuccess?.();
     } catch (error) {
       console.error('Error uploading document:', error);
       toast.error('Failed to upload document');

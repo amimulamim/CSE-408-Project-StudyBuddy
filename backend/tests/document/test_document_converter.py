@@ -220,3 +220,92 @@ class TestDocumentConverter:
         with pytest.raises(Exception) as exc_info:
             document_converter.extract_text(text_content, "Application/PDF")
         assert "Error extracting text: Unsupported file type: Application/PDF" in str(exc_info.value)
+
+    def test_extract_text_pdf_minimal_content(self, document_converter):
+        """Test PDF with minimal extractable text (image-based PDF scenario)"""
+        # Arrange
+        mock_pdf_content = b"dummy pdf content"
+        mock_page = Mock()
+        mock_page.extract_text.return_value = "  \n  "  # Only whitespace
+        
+        with patch('app.document_upload.document_converter.PdfReader') as mock_pdf_reader:
+            mock_reader_instance = Mock()
+            mock_reader_instance.pages = [mock_page]
+            mock_pdf_reader.return_value = mock_reader_instance
+            
+            # Act & Assert
+            with pytest.raises(ValueError) as exc_info:
+                document_converter.extract_text(mock_pdf_content, "application/pdf")
+            
+            assert "image-based or contains no extractable text" in str(exc_info.value)
+
+    def test_extract_text_pdf_empty_pages(self, document_converter):
+        """Test PDF with no pages"""
+        # Arrange
+        mock_pdf_content = b"dummy pdf content"
+        
+        with patch('app.document_upload.document_converter.PdfReader') as mock_pdf_reader:
+            mock_reader_instance = Mock()
+            mock_reader_instance.pages = []  # No pages
+            mock_pdf_reader.return_value = mock_reader_instance
+            
+            # Act & Assert
+            with pytest.raises(ValueError) as exc_info:
+                document_converter.extract_text(mock_pdf_content, "application/pdf")
+            
+            assert "empty or corrupted" in str(exc_info.value)
+
+    def test_extract_text_unicode_cleaning(self, document_converter):
+        """Test Unicode character cleaning and surrogate handling"""
+        # Arrange - text with Unicode surrogate characters
+        text_with_surrogates = "Hello 😀 World"  # Contains emoji
+        content = text_with_surrogates.encode("utf-8")
+        
+        # Act
+        result = document_converter.extract_text(content, "text/plain")
+        
+        # Assert - should handle Unicode properly
+        assert result is not None
+        assert len(result) > 0
+        # Text should be cleaned but readable
+        assert "Hello" in result
+        assert "World" in result
+
+    def test_extract_text_empty_after_cleaning(self, document_converter):
+        """Test text file that becomes empty after cleaning"""
+        # Arrange - content that becomes empty after cleaning
+        content = b"\ufffd\ufffd"  # Only replacement characters
+        
+        # Act & Assert
+        with pytest.raises(ValueError) as exc_info:
+            document_converter.extract_text(content, "text/plain")
+        
+        assert "empty or contains no readable content" in str(exc_info.value)
+
+    def test_clean_text_with_surrogates(self, document_converter):
+        """Test the _clean_text method with surrogate characters"""
+        # Arrange
+        text_with_issues = "Hello\ud83d\ude00World\ufffd"  # Emoji surrogate + replacement char
+        
+        # Act
+        result = document_converter._clean_text(text_with_issues)
+        
+        # Assert
+        assert result is not None
+        assert "\ufffd" not in result  # Replacement character should be removed
+        assert "Hello" in result
+        assert "World" in result
+
+    def test_extract_text_alternative_encodings(self, document_converter):
+        """Test text extraction with alternative encodings"""
+        # Arrange - content with latin1 encoding
+        text = "Café résumé naïve"
+        content = text.encode("latin1")
+        
+        # Act
+        result = document_converter.extract_text(content, "text/plain")
+        
+        # Assert
+        assert result is not None
+        assert len(result) > 0
+        # Should contain readable text even if not perfect encoding

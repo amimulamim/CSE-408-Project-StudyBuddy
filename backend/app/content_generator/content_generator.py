@@ -293,7 +293,8 @@ class ContentGenerator:
                 - If the slide contains code or uses \\verb, \\texttt (with special characters), or \\begin{{verbatim}}, use \\begin{{frame}}[fragile]
                 - NEVER use \\texttt for multi-line code or anything containing quotes, slashes, or backslashes
                 - Use only \\begin{{verbatim}} or \\begin{{lstlisting}} for multi-line code blocks, and always inside a [fragile] frame
-
+                - Do not forget to escape special characters(for example: $ ) in LaTeX 
+                
                 CRITICAL CHARACTER ENCODING RULES:
                 - NEVER use special Unicode characters like ×, ∇, ⊙, •, –, —, ", ", ', '
                 - Use proper LaTeX math mode for mathematical symbols: $\\times$, $\\nabla$, $\\odot$
