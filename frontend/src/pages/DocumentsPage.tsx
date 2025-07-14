@@ -9,6 +9,7 @@ import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { ApiResponse } from '@/lib/api';
+import { DocumentUploadDialog } from '@/components/collections/DocumentUploadDialog';
 
 interface Document {
   document_id: string;
@@ -126,7 +127,7 @@ export default function DocumentsPage() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Collections
             </Button>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-1">
               <FolderOpen className="h-8 w-8 text-purple-400" />
               <div>
                 <h1 className="text-3xl font-bold gradient-text">
@@ -137,6 +138,11 @@ export default function DocumentsPage() {
                 </p>
               </div>
             </div>
+            <DocumentUploadDialog 
+              preSelectedCollection={collectionName || ''}
+              onUploadSuccess={() => fetchDocuments(collectionName || '')}
+              buttonClassName="button-gradient text-white"
+            />
           </div>
         </div>
 
