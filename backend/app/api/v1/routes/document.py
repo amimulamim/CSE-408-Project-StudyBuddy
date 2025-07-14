@@ -46,6 +46,10 @@ async def upload_document(
         user_id = user_info["uid"]
         await document_service.upload_document(file, user_id, collection_name, db)
         return {"message": "Document uploaded successfully"}
+    except ValueError as e:
+        # Handle specific validation errors with 400 status
+        logger.warning(f"Document upload validation error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error uploading document: {str(e)}")
         raise HTTPException(status_code=500, detail=INTERNAL_SERVER_ERROR_MSG)

@@ -120,16 +120,50 @@ class DocumentService:
                 qdrant_api_key=settings.QDRANT_API_KEY,
                 collection_name=full_collection_name
             )
-            text = self.converter.extract_text(content, file.content_type)
-            if not text:
-                raise ValueError("No text extracted from document")
-            chunks = self.chunker.chunk_text(text)
-            if not chunks:
-                raise ValueError("No chunks generated from document text")
+            
+            # Extract and clean text
+            try:
+                text = self.converter.extract_text(content, file.content_type)
+                if not text:
+                    raise ValueError("No text extracted from document")
+            except Exception as e:
+                logger.error(f"Text extraction failed for {file.filename}: {str(e)}")
+                raise ValueError(f"Failed to extract text from document: {str(e)}")
+            
+            # Generate chunks
+            try:
+                chunks = self.chunker.chunk_text(text)
+                if not chunks:
+                    raise ValueError("No chunks generated from document text")
+            except Exception as e:
+                logger.error(f"Text chunking failed for {file.filename}: {str(e)}")
+                raise ValueError(f"Failed to process document text: {str(e)}")
+            
             document_id = str(uuid.uuid4())
-            embeddings = [self.embedding_generator.get_embedding(chunk) for chunk in chunks]
-            vector_db.upsert_vectors(document_id, chunks, embeddings, file.filename, storage_path)
-            logger.debug(f"Stored {len(chunks)} embeddings for document {document_id} in {full_collection_name}")
+            
+            # Generate embeddings with better error handling
+            try:
+                embeddings = []
+                for i, chunk in enumerate(chunks):
+                    try:
+                        embedding = self.embedding_generator.get_embedding(chunk)
+                        embeddings.append(embedding)
+                    except Exception as e:
+                        logger.error(f"Embedding generation failed for chunk {i} of {file.filename}: {str(e)}")
+                        raise ValueError(f"Failed to generate embeddings for document content: {str(e)}")
+                        
+            except Exception as e:
+                logger.error(f"Embedding process failed for {file.filename}: {str(e)}")
+                raise ValueError(f"Failed to process document for search indexing: {str(e)}")
+            
+            # Store in vector database
+            try:
+                vector_db.upsert_vectors(document_id, chunks, embeddings, file.filename, storage_path)
+                logger.debug(f"Stored {len(chunks)} embeddings for document {document_id} in {full_collection_name}")
+            except Exception as e:
+                logger.error(f"Vector storage failed for {file.filename}: {str(e)}")
+                raise ValueError(f"Failed to store document in search index: {str(e)}")
+            
             return {
                 "document_id": document_id,
                 "file_name": file.filename,
@@ -137,10 +171,13 @@ class DocumentService:
                 "storage_path": storage_path,
                 "collection_name": collection_name
             }
+        except ValueError:
+            # Re-raise ValueError with specific error messages
+            raise
         except Exception as e:
             db.rollback()
             logger.error(f"Error uploading document: {str(e)}")
-            raise Exception(f"Error uploading document: {str(e)}")
+            raise RuntimeError(f"Error uploading document: {str(e)}")
 
     async def search_documents(self, query: str, user_id: str, collection_name: str, limit: int = 5) -> List[Dict[str, Any]]:
         """Searches for relevant documents in a user's Qdrant collection."""
@@ -165,7 +202,7 @@ class DocumentService:
             return documents
         except Exception as e:
             logger.error(f"Error searching documents: {str(e)}")
-            raise Exception(f"Error searching documents: {str(e)}")
+            raise RuntimeError(f"Error searching documents: {str(e)}")
 
     def list_documents_in_collection(self, user_id: str, collection_name: str, db: Session) -> List[Dict[str, Any]]:
         """Lists all documents in a user's collection."""
