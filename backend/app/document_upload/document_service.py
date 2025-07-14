@@ -77,7 +77,7 @@ class DocumentService:
             raise Exception(f"Error managing Qdrant collection: {str(e)}")
 
     async def delete_collection(self, user_id: str, collection_name: str, db: Session) -> None:
-        """Deletes a Qdrant collection and its metadata from PostgreSQL."""
+        """Deletes a Qdrant collection and its metadata from PostgreSQL, and cleans up related content."""
         full_collection_name = f"{user_id}_{collection_name}"
         try:
             collection = db.query(UserCollection).filter(
@@ -86,6 +86,22 @@ class DocumentService:
             ).first()
             if not collection:
                 raise HTTPException(status_code=404, detail=f"Collection {collection_name} not found")
+            
+            # Delete related content items first
+            try:
+                from app.content_generator.content_generator import ContentGenerator
+                content_generator = ContentGenerator()
+                content_deleted = content_generator.delete_content_by_collection(
+                    user_id, collection_name, db
+                )
+                if not content_deleted:
+                    logger.warning(f"Failed to delete content items for collection: {collection_name}")
+            except ImportError as ie:
+                logger.warning(f"Could not import ContentGenerator for content cleanup: {ie}")
+            except Exception as ce:
+                logger.warning(f"Failed to delete content items during collection deletion: {ce}")
+                # Don't fail the entire operation if content cleanup fails
+            
             vector_db = VectorDatabaseManager(
                 qdrant_url=settings.QDRANT_HOST,
                 qdrant_api_key=settings.QDRANT_API_KEY,
@@ -307,7 +323,7 @@ class DocumentService:
             raise RuntimeError(f"Error getting document content URL: {str(e)}")
 
     def rename_collection_with_migration(self, user_id: str, old_collection_name: str, new_collection_name: str, db: Session) -> bool:
-        """Rename a collection including both database and Qdrant migration."""
+        """Rename a collection including both database and Qdrant migration, and update related content items."""
         try:
             # Verify old collection exists
             collection = db.query(UserCollection).filter(
@@ -344,6 +360,22 @@ class DocumentService:
             # Update database metadata
             collection.collection_name = new_collection_name
             collection.full_collection_name = new_full_name
+            
+            # Update all related content items - avoid circular import by importing here
+            try:
+                from app.content_generator.content_generator import ContentGenerator
+                content_generator = ContentGenerator()
+                content_updated = content_generator.update_content_collection_names(
+                    user_id, old_collection_name, new_collection_name, db
+                )
+                if not content_updated:
+                    logger.warning(f"Failed to update content items for collection rename: {old_collection_name} -> {new_collection_name}")
+            except ImportError as ie:
+                logger.warning(f"Could not import ContentGenerator for content update: {ie}")
+            except Exception as ce:
+                logger.warning(f"Failed to update content items during collection rename: {ce}")
+                # Don't fail the entire operation if content update fails
+            
             db.commit()
             
             logger.debug(f"Successfully renamed collection from {old_collection_name} to {new_collection_name}")

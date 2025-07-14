@@ -336,3 +336,51 @@ async def update_content_topic(
         db.rollback()
         logger.error(f"Error updating topic for content {contentId} for user {user['uid']}: {str(e)}")
         raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
+
+@router.get("/collections/{collection_name}/content")
+async def get_content_by_collection(
+    collection_name: str,
+    user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """Retrieves all content items for a specific collection."""
+    try:
+        # Validate collection exists
+        collection = db.query(UserCollection).filter(
+            UserCollection.user_id == user["uid"],
+            UserCollection.collection_name == collection_name
+        ).first()
+        if not collection:
+            raise HTTPException(status_code=404, detail=f"Collection '{collection_name}' not found")
+
+        # Get content items for this collection
+        content_generator = ContentGenerator()
+        content_items = content_generator.get_content_by_collection(
+            user_id=user["uid"],
+            collection_name=collection_name,
+            db=db
+        )
+        
+        # Format response
+        formatted_content = []
+        for item in content_items:
+            formatted_content.append({
+                "id": str(item.id),
+                "content_url": item.content_url,
+                "raw_source": item.raw_source,
+                "topic": item.topic,
+                "content_type": item.content_type,
+                "created_at": item.created_at.isoformat() if item.created_at else None
+            })
+        
+        return {
+            "collection_name": collection_name,
+            "content_count": len(formatted_content),
+            "content_items": formatted_content
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving content for collection {collection_name}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error retrieving content")

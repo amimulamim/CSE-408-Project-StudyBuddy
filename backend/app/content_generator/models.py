@@ -10,6 +10,7 @@ class ContentItem(Base):
     __tablename__ = "content_items"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(String, ForeignKey("users.uid"), nullable=False)
+    collection_name = Column(String, nullable=False)  # Store the collection name this content belongs to
     content_url = Column(Text, nullable=False)
     image_preview = Column(Text, nullable=True)
     topic = Column(Text, nullable=True)
