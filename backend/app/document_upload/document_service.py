@@ -40,14 +40,20 @@ class DocumentService:
         try:
             if not collection_name or len(collection_name) > 50:
                 raise ValueError("Invalid collection name. Max 50 characters allowed.")
-            # Allow alphanumeric, underscore, and hyphen characters
-            import re
-            if not re.match(r'^[a-zA-Z0-9_-]+$', collection_name):
-                raise ValueError("Invalid collection name. Use alphanumeric characters, underscores, and hyphens only.")
+            
+            # Check if collection already exists first
             existing = db.query(UserCollection).filter(
                 UserCollection.user_id == user_id,
                 UserCollection.collection_name == collection_name
             ).first()
+            
+            # Only apply strict validation for new collections
+            if not existing:
+                # Allow alphanumeric, underscore, hyphen, and space characters for new collections
+                import re
+                if not re.match(r'^[a-zA-Z0-9_\- ]+$', collection_name):
+                    raise ValueError("Invalid collection name. Use alphanumeric characters, spaces, underscores, and hyphens only.")
+            
             if not existing:
                 vector_db = VectorDatabaseManager(
                     qdrant_url=settings.QDRANT_HOST,
@@ -312,3 +318,71 @@ class DocumentService:
             db.rollback()
             logger.error(f"Error renaming collection with migration: {str(e)}")
             raise RuntimeError(f"Error renaming collection: {str(e)}")
+
+    def delete_document(self, user_id: str, collection_name: str, document_id: str, db: Session) -> bool:
+        """Delete a document from a collection."""
+        try:
+            logger.info(f"Starting delete_document: user_id={user_id}, collection={collection_name}, doc_id={document_id}")
+            
+            # Verify collection exists
+            collection = db.query(UserCollection).filter(
+                UserCollection.user_id == user_id,
+                UserCollection.collection_name == collection_name
+            ).first()
+            
+            if not collection:
+                logger.error(f"Collection {collection_name} not found for user {user_id}")
+                raise ValueError(f"Collection {collection_name} not found")
+            
+            full_collection_name = f"{user_id}_{collection_name}"
+            logger.debug(f"Full collection name: {full_collection_name}")
+            
+            vector_db = VectorDatabaseManager(
+                qdrant_url=settings.QDRANT_HOST,
+                qdrant_api_key=settings.QDRANT_API_KEY,
+                collection_name=full_collection_name
+            )
+            
+            # Get document info to find storage path before deletion
+            documents = vector_db.list_documents()
+            logger.info(f"Available documents in collection: {[{'id': doc.get('document_id', 'NO_ID'), 'name': doc.get('document_name', 'NO_NAME')} for doc in documents]}")
+            logger.info(f"Looking for document ID: '{document_id}' (type: {type(document_id)})")
+            
+            # Check for exact match and also try string conversion
+            document = None
+            for doc in documents:
+                doc_id = doc.get("document_id")
+                logger.debug(f"Comparing '{doc_id}' (type: {type(doc_id)}) with '{document_id}' (type: {type(document_id)})")
+                if str(doc_id) == str(document_id):
+                    document = doc
+                    break
+            
+            # Try to delete from vector database regardless of whether we found it in list_documents
+            # This handles cases where list_documents might not return all documents
+            logger.info(f"Attempting to delete document {document_id} from vector database")
+            success = vector_db.delete_document(document_id)
+            
+            if not success:
+                available_ids = [doc.get('document_id', 'NO_ID') for doc in documents]
+                error_msg = f"Document {document_id} not found in collection {collection_name}. Available documents: {available_ids}"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+            
+            # Delete from Firebase Storage if we found the document and it has storage path
+            if document and document.get("storage_path"):
+                try:
+                    blob = self.bucket.blob(document["storage_path"])
+                    blob.delete()
+                    logger.debug(f"Deleted document from Firebase Storage: {document['storage_path']}")
+                except Exception as e:
+                    logger.warning(f"Could not delete from Firebase Storage: {str(e)}")
+                    # Continue even if Firebase deletion fails
+            
+            logger.debug(f"Successfully deleted document {document_id} from collection {collection_name}")
+            return True
+            
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error(f"Error deleting document: {str(e)}")
+            raise RuntimeError(f"Error deleting document: {str(e)}")

@@ -185,3 +185,26 @@ async def get_document_content_url(
     except Exception as e:
         logger.error(f"Error getting document content URL: {str(e)}")
         raise HTTPException(status_code=500, detail=INTERNAL_SERVER_ERROR_MSG)
+
+@router.delete("/collections/{collection_name}/documents/{document_id}")
+async def delete_document(
+    collection_name: str,
+    document_id: str,
+    db: Session = Depends(get_db),
+    user_info: Dict[str, Any] = Depends(get_current_user)
+):
+    try:
+        user_id = user_info["uid"]
+        logger.info(f"Attempting to delete document {document_id} from collection {collection_name} for user {user_id}")
+        success = document_service.delete_document(user_id, collection_name, document_id, db)
+        if success:
+            return {"message": "Document deleted successfully"}
+        else:
+            logger.warning(f"Delete operation returned False for document {document_id}")
+            raise HTTPException(status_code=404, detail="Document not found")
+    except ValueError as e:
+        logger.warning(f"ValueError in delete_document: {str(e)}")
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Exception in delete_document: {str(e)}")
+        raise HTTPException(status_code=500, detail=INTERNAL_SERVER_ERROR_MSG)
