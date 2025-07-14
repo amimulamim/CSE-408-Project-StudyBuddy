@@ -3,11 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, ArrowLeft, Calendar, FolderOpen } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { FileText, ArrowLeft, FolderOpen, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { ApiResponse } from '@/lib/api';
+import { DocumentUploadDialog } from '@/components/collections/DocumentUploadDialog';
 
 interface Document {
   document_id: string;
@@ -22,6 +24,9 @@ export default function DocumentsPage() {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (collectionName) {
@@ -30,6 +35,51 @@ export default function DocumentsPage() {
   }, [collectionName]);
   const handleDocumentClick = (documentId: string) => {
     navigate(`/content/document/${collectionName}/${documentId}`);
+  };
+
+  const handleDeleteDocument = async (documentId: string, event: React.MouseEvent) => {
+    // Stop event propagation to prevent card click
+    event.stopPropagation();
+    
+    // Find the document to get its name for the dialog
+    const document = documents.find(doc => doc.document_id === documentId);
+    if (!document) return;
+    
+    // Set up dialog state
+    setDocumentToDelete({ id: documentId, name: document.document_name });
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDeleteDocument = async () => {
+    if (!documentToDelete) return;
+    
+    try {
+      setDeleting(true);
+      const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+      const response: ApiResponse = await makeRequest(
+        `${API_BASE_URL}/api/v1/document/collections/${collectionName}/documents/${documentToDelete.id}`, 
+        'DELETE'
+      );
+
+      if (response?.status === 'success') {
+        toast.success('Document deleted successfully');
+        setDocuments(documents.filter(doc => doc.document_id !== documentToDelete.id));
+      } else {
+        throw new Error('Failed to delete document');
+      }
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      toast.error('Failed to delete document');
+    } finally {
+      setDeleting(false);
+      setShowDeleteDialog(false);
+      setDocumentToDelete(null);
+    }
+  };
+
+  const cancelDeleteDocument = () => {
+    setShowDeleteDialog(false);
+    setDocumentToDelete(null);
   };
 
 
@@ -45,13 +95,11 @@ export default function DocumentsPage() {
 
       if (response?.status === 'success' && Array.isArray(response.data)) {
         setDocuments(response.data);
-      } else {
+      } else if (Array.isArray(response)) {
         // Handle case where response.data is directly an array
-        if (Array.isArray(response)) {
-          setDocuments(response);
-        } else {
-          throw new Error('Invalid response format');
-        }
+        setDocuments(response);
+      } else {
+        throw new Error('Invalid response format');
       }
     } catch (error) {
       console.error('Error fetching documents:', error);
@@ -79,7 +127,7 @@ export default function DocumentsPage() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Collections
             </Button>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-1">
               <FolderOpen className="h-8 w-8 text-purple-400" />
               <div>
                 <h1 className="text-3xl font-bold gradient-text">
@@ -90,6 +138,11 @@ export default function DocumentsPage() {
                 </p>
               </div>
             </div>
+            <DocumentUploadDialog 
+              preSelectedCollection={collectionName || ''}
+              onUploadSuccess={() => fetchDocuments(collectionName || '')}
+              buttonClassName="button-gradient text-white"
+            />
           </div>
         </div>
 
@@ -129,7 +182,6 @@ export default function DocumentsPage() {
                         <CardTitle className="glass-text-title text-xl mb-2">
                           {document.document_name}
                         </CardTitle>
-                        
                         {/* Document Metadata */}
                         <div className="flex flex-wrap items-center gap-4 mb-3">
 
@@ -138,6 +190,15 @@ export default function DocumentsPage() {
                           </Badge>
 
                         </div>
+                      <Button 
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => handleDeleteDocument(document.document_id, e)}
+                        className="button-light"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
 
                         {/* Document Preview */}
                         {document.first_chunk && (
@@ -162,6 +223,48 @@ export default function DocumentsPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Delete Document
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{documentToDelete?.name}"? This action cannot be undone.
+              All content and associated data will be permanently removed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={cancelDeleteDocument}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeleteDocument}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Document
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
