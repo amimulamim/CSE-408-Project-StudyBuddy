@@ -15,15 +15,17 @@ from app.utils.notification_helpers import (
 )
 from app.users.schema import (
     UserBase, UserProfile, 
-    SecureProfileEdit
+    SecureProfileEdit, Activity
 )
 from app.users.service import (
     get_or_create_user, get_user_by_uid,
     update_user_profile_secure, validate_and_upload_avatar,
-    update_user_avatar, delete_user_avatar
+    update_user_avatar, delete_user_avatar, build_activities
 )
+from app.quiz_generator.models import QuizResult, Quiz
 
 from app.chat.schema import ChatListResponse, ChatSummary
+from app.content_generator.models import ContentItem
 
 # Constants
 USER_NOT_FOUND = "User not found"
@@ -312,7 +314,7 @@ def get_unread_notifications_count(
         "unread_count": unread_count
     }
 
-@router.get('/activities', response_model=ChatListResponse)
+@router.get('/activities')
 def get_user_activities(
     db: Session = Depends(get_db),
     user_info: Dict[str, any] = Depends(get_current_user)
@@ -321,6 +323,55 @@ def get_user_activities(
     Dummy activity endpoint for future implementation
     """
     chats = get_latest_chats(db, user_info["uid"])
-    return ChatListResponse(
-        chats = [ChatSummary(id=chat.id, name=chat.name) for chat in chats]
+    ci = ContentItem
+    contents = (
+        db.query(ci.id,ci.topic,ci.content_type,ci.created_at).
+        where(ci.user_id == user_info["uid"]).
+        order_by(ci.created_at.desc()).
+        limit(10)
     )
+    qr = QuizResult
+    q = Quiz
+    quiz_results = (
+        db.query(qr.created_at, qr.id, q.topic).
+        join(q, q.quiz_id == qr.quiz_id).
+        where(q.user_id == user_info["uid"]).
+        order_by(qr.created_at.desc()).
+        limit(10)
+    )
+    # activities = [
+    #     {
+    #         "activity_type" : "chat",
+    #         "details" : dict(c._mapping),
+    #         "created_at": c.created_at
+    #     }
+    #     for c in chats
+    # ]
+    # activities.extend(
+    #     [
+    #         {
+    #             "activity_type" : "content",
+    #             "details" : dict(c._mapping),
+    #             "created_at": c.created_at
+    #         }
+    #         for c in contents
+    #     ]
+    # )
+    # activities.extend(
+    #     [
+    #         {
+    #             "activity_type" : "quiz_taken",
+    #             "details" : dict(q._mapping),
+    #             "created_at": q.created_at
+    #         }
+    #         for q in quiz_results
+    #     ]
+    # )
+    activities = (
+        build_activities(chats, "chat") +
+        build_activities(contents, "content") +
+        build_activities(quiz_results, "quiz_taken")
+    )
+
+    return sorted(activities, key=lambda x:x.created_at, reverse=True)[:10]
+               

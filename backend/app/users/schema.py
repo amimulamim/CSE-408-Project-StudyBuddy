@@ -1,8 +1,10 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
+from typing import Dict, Any
 from typing import Optional, List, Union
 from enum import Enum
 import re
 import html
+from datetime import datetime
 
 class UserRole(str, Enum):
     """Predefined user roles"""
@@ -151,3 +153,9 @@ class AuditLogEntry(BaseModel):
     timestamp: str
     ip_address: Optional[str] = None
     user_agent: Optional[str] = None
+
+class Activity(BaseModel):
+    """Schema for user activity"""
+    activity_type: str
+    details: Dict[str, Any]
+    created_at: datetime

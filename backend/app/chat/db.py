@@ -100,7 +100,7 @@ def get_latest_chats(db: Session, user_id: str):
     Getting max 10 latest chats for a user
     """
     return (
-        db.query(model.Chat.id, model.Chat.name).
+        db.query(model.Chat.id, model.Chat.name, model.Chat.created_at).
            where(model.Chat.user_id == user_id).
            order_by(model.Chat.created_at.desc()).
            limit(10)
