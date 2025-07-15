@@ -10,6 +10,8 @@ import { BarChart3, Search, Eye, Trophy, Clock } from 'lucide-react';
 import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
 import { QuizResults } from '@/components/quiz/QuizResults';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 
 interface QuizResult {
   id: string;
@@ -43,14 +45,23 @@ export function AdminQuizResults() {
   const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalResults, setTotalResults] = useState(0);
+  const [sortBy, setSortBy] = useState('created_at'); // Default sort by completed date
+  const [sortOrder, setSortOrder] = useState('desc'); // Default sort order descending
   const pageSize = 20;
 
   const fetchQuizResults = async (page = 0) => {
     try {
       setLoading(true);
       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+
+      const params = new URLSearchParams({
+        offset: String(page * pageSize),
+        size: String(pageSize),
+        sort_by: sortBy,
+        sort_order: sortOrder,
+      });
       const response = await makeRequest(
-        `${API_BASE_URL}/api/v1/admin/quiz-results?offset=${page * pageSize}&size=${pageSize}`,
+        `${API_BASE_URL}/api/v1/admin/quiz-results?${params.toString()}`,
         'GET'
       );
 
@@ -71,7 +82,7 @@ export function AdminQuizResults() {
 
   useEffect(() => {
     fetchQuizResults(currentPage);
-  }, [currentPage]);
+  }, [currentPage, sortBy, sortOrder]);
 
   const handleViewResult = (result: QuizResult) => {
     setSelectedResult(result);
@@ -123,6 +134,26 @@ export function AdminQuizResults() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-sm"
             />
+          </div>
+          <div className="flex gap-2">
+            <Select value={sortBy} onValueChange={(value: 'created_at' | 'percentage') => setSortBy(value)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="created_at">Created Date</SelectItem>
+                <SelectItem value="percentage">Score Percentage</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Order" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">Descending</SelectItem>
+                <SelectItem value="asc">Ascending</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="border rounded-lg overflow-hidden">
