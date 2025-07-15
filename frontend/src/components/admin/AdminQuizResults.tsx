@@ -6,14 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { BarChart3, Search, Eye, Trophy, Calendar as CalendarIcon, X } from 'lucide-react';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { BarChart3, Search, Eye, Trophy, X } from 'lucide-react';
 import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
 import { QuizResults } from '@/components/quiz/QuizResults';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
 
@@ -64,7 +62,6 @@ export function AdminQuizResults() {
     from: undefined,
     to: undefined,
   });
-  const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
 
   const pageSize = 20;
 
@@ -205,65 +202,14 @@ export function AdminQuizResults() {
             </Select>
 
             {/* Date Range Picker */}
-            <Popover open={isDateRangeOpen} onOpenChange={setIsDateRangeOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-[300px] justify-start text-left font-normal",
-                    !dateRange.from && !dateRange.to && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange.from ? (
-                    dateRange.to ? (
-                      <>
-                        {format(dateRange.from, "LLL dd, y")} -{" "}
-                        {format(dateRange.to, "LLL dd, y")}
-                      </>
-                    ) : (
-                      format(dateRange.from, "LLL dd, y")
-                    )
-                  ) : (
-                    <span>Pick a date range</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateRange.from}
-                  selected={{
-                    from: dateRange.from,
-                    to: dateRange.to,
-                  }}
-                  onSelect={(range) => {
-                    setDateRange({
-                      from: range?.from,
-                      to: range?.to,
-                    });
-                    setCurrentPage(0); // Reset to first page when date range changes
-                  }}
-                  numberOfMonths={2}
-                />
-                <div className="p-3 border-t">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => {
-                      setDateRange({ from: undefined, to: undefined });
-                      setCurrentPage(0);
-                      setIsDateRangeOpen(false);
-                    }}
-                  >
-                    <X className="mr-2 h-4 w-4" />
-                    Clear Date Range
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
+            <DateRangePicker
+              dateRange={dateRange}
+              onDateRangeChange={(range) => {
+                setDateRange(range);
+                setCurrentPage(0); // Reset to first page when date range changes
+              }}
+              placeholder="Pick a date range"
+            />
           </div>
 
           {/* Active Filters Display */}
