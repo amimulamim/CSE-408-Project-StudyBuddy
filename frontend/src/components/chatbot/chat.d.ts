@@ -16,7 +16,7 @@ export interface FileAttachment {
 }
 
 export interface Chat {
-  id: string;
+  id: string | null;
   title: string;
   messages: ChatMessage[];
   createdAt: Date;
@@ -24,6 +24,6 @@ export interface Chat {
 }
 
 export interface ChatIdentifier {
-    id: string;
+    id: string | null;
     title: string;
 }
