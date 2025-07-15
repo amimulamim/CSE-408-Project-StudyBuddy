@@ -129,7 +129,9 @@ def search_users_by_query(db: Session, query: str, limit: int = 50):
 def get_all_content_paginated(
     db: Session,
     pagination: PaginationQuery,
-    filter_type: Optional[str] = None
+    filter_type: Optional[str] = None,
+    sort_by: Optional[str] = "created_at",
+    sort_order: Optional[str] = "desc"
 ) -> Tuple[List[Dict[str, Any]], int]:
     """Get paginated list of all generated content with user information"""
     from app.content_generator.models import ContentItem
@@ -141,8 +143,14 @@ def get_all_content_paginated(
         query=query.filter(ContentItem.content_type == filter_type)
 
     total = query.count()
+
+    sort_column = getattr(ContentItem, sort_by, ContentItem.created_at)
+    if sort_order == "asc":
+        order_expr= sort_column.asc()
+    else:
+        order_expr= sort_column.desc()
     
-    content_items = query.order_by(ContentItem.created_at.desc())\
+    content_items = query.order_by(order_expr)\
                          .offset(pagination.offset)\
                          .limit(pagination.size)\
                          .all()
