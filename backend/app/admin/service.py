@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, func, and_, or_
+from sqlalchemy import desc, func, and_, or_, case, cast, Float
 from app.admin.model import AdminLog, Notification
 from app.admin.schema import (
     AdminLogCreate, NotificationCreate, NotificationUpdate,
@@ -313,26 +313,51 @@ def moderate_content(
 # Quiz Management Functions
 def get_all_quiz_results_paginated(
     db: Session,
-    pagination: PaginationQuery
+    pagination: PaginationQuery,
+    sort_by: Optional[str] = "created_at",
+    sort_order: Optional[str] = "desc"
 ) -> Tuple[List[Dict[str, Any]], int]:
     """Get paginated list of all quiz results with user and quiz information"""
     from app.quiz_generator.models import QuizResult, Quiz, QuizQuestion
     
-    # Join QuizResult with Quiz and User to get all information
-    query = db.query(QuizResult, Quiz, User).join(
-        Quiz, QuizResult.quiz_id == Quiz.quiz_id
-    ).join(
-        User, QuizResult.user_id == User.uid
+    percentage_expr = case(
+        (QuizResult.total > 0,
+          cast(QuizResult.score, Float) / cast(QuizResult.total, Float) * 100),
+        else_=0.0
+    ).label("percentage")
+
+    # 2) Base query: QuizResult + joins + inject the percentage column
+    query = (
+        db.query(QuizResult, Quiz, User, percentage_expr)
+          .join(Quiz,   QuizResult.quiz_id == Quiz.quiz_id)
+          .join(User,   QuizResult.user_id == User.uid)
     )
+
     total = query.count()
-    
-    quiz_results = query.order_by(QuizResult.created_at.desc())\
-                        .offset(pagination.offset)\
-                        .limit(pagination.size)\
-                        .all()
+
+    # 3) Whitelist sorting fields
+    if sort_by not in ("created_at", "percentage"):
+        sort_by = "created_at"
+
+    # 4) Pick the SQL expression to sort on
+    if sort_by == "percentage":
+        sort_col = percentage_expr
+    else:  # created_at
+        sort_col = QuizResult.created_at
+
+    order_expr = sort_col.asc() if sort_order.lower() == "asc" else sort_col.desc()
+
+    # 5) Apply ORDER / OFFSET / LIMIT
+    quiz_results = (
+        query
+        .order_by(order_expr)
+        .offset(pagination.offset)
+        .limit(pagination.size)
+        .all()
+    )
     
     results_list = []
-    for result, quiz, user in quiz_results:
+    for result, quiz, user, percentage in quiz_results:
         # Generate a title from quiz topic or use default
         quiz_title = quiz.topic if quiz.topic else UNTITLED_CONTENT
         if quiz_title == UNTITLED_CONTENT:
@@ -386,7 +411,7 @@ def get_all_quiz_results_paginated(
             "score": int(result.score),
             "total": int(result.total),
             "total_questions": len(quiz_questions),  # Actual number of questions
-            "percentage": round((result.score / result.total * 100), 2) if result.total > 0 else 0,
+            "percentage": round(float(percentage), 2),  # Use the calculated percentage from query
             "feedback": result.feedback,
             "topic": quiz.topic or "No Topic",
             "domain": quiz.domain or "No Domain",
