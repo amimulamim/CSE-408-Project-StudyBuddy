@@ -594,29 +594,13 @@ class ContentGenerator:
     ) -> bool:
         """Updates all content items when a collection is renamed."""
         try:
-            # Trim whitespace from input parameters only
+            from sqlalchemy import func
+            
+            # Trim input parameters
             old_collection_name = old_collection_name.strip()
             new_collection_name = new_collection_name.strip()
             
-            # First, let's check what content items exist for this user
-            all_content = db.query(ContentItem).filter(
-                ContentItem.user_id == user_id
-            ).all()
-            
-            logger.info(f"Found {len(all_content)} total content items for user {user_id}")
-            for content in all_content:
-                logger.info(f"  Content ID: {content.id}, Topic: {content.topic}, Collection: '{content.collection_name}'")
-            
-            # Count matches first for debugging (exact match with trimmed collection names)
-            from sqlalchemy import func
-            matching_count = db.query(ContentItem).filter(
-                ContentItem.user_id == user_id,
-                func.trim(ContentItem.collection_name) == old_collection_name
-            ).count()
-            
-            logger.info(f"Found {matching_count} content items with exact collection_name = '{old_collection_name}'")
-            
-            # Update all content items that belong to the renamed collection (exact match)
+            # Update all content items that belong to the renamed collection
             updated_count = db.query(ContentItem).filter(
                 ContentItem.user_id == user_id,
                 func.trim(ContentItem.collection_name) == old_collection_name
@@ -640,13 +624,15 @@ class ContentGenerator:
     ) -> List[ContentItem]:
         """Retrieves all content items for a specific collection."""
         try:
-            # Trim the input collection name only
+            from sqlalchemy import func
+            
+            # Trim input parameter
             collection_name = collection_name.strip()
             
-            # Use exact match after trimming input
+            # Use database trimming for consistent matching
             content_items = db.query(ContentItem).filter(
                 ContentItem.user_id == user_id,
-                ContentItem.collection_name == collection_name
+                func.trim(ContentItem.collection_name) == collection_name
             ).all()
             return content_items
         except Exception as e:
@@ -661,11 +647,12 @@ class ContentGenerator:
     ) -> bool:
         """Deletes all content items when a collection is deleted."""
         try:
-            # Trim the input collection name only
+            from sqlalchemy import func
+            
+            # Trim input parameter
             collection_name = collection_name.strip()
             
-            # Use exact match with database trimming for consistency
-            from sqlalchemy import func
+            # Delete all content items for the collection
             deleted_count = db.query(ContentItem).filter(
                 ContentItem.user_id == user_id,
                 func.trim(ContentItem.collection_name) == collection_name
