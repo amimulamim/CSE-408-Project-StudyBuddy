@@ -355,18 +355,28 @@ def get_all_quiz_results_paginated(
     
     # Apply quiz type filtering if specified
     if filter_type:
-        # Create a subquery to find quizzes that have questions of the specified type
-        quiz_type_subquery = (
-            db.query(QuizQuestion.quiz_id)
-            .filter(QuizQuestion.type == filter_type)
-            .distinct()
-            .subquery()
-        )
-        
-        # Filter the main query to only include quizzes with the specified type
-        query = query.filter(QuizResult.quiz_id.in_(
-            db.query(quiz_type_subquery.c.quiz_id)
-        ))
+        try:
+            # Validate that the filter_type is a valid QuestionType enum value
+            from app.quiz_generator.models import QuestionType
+            # This will raise ValueError if filter_type is not a valid enum value
+            question_type_enum = QuestionType(filter_type)
+            
+            # Create a subquery to find quizzes that have questions of the specified type
+            quiz_type_subquery = (
+                db.query(QuizQuestion.quiz_id)
+                .filter(QuizQuestion.type == question_type_enum)
+                .distinct()
+                .subquery()
+            )
+            
+            # Filter the main query to only include quizzes with the specified type
+            query = query.filter(QuizResult.quiz_id.in_(
+                db.query(quiz_type_subquery.c.quiz_id)
+            ))
+        except ValueError:
+            # If filter_type is not a valid enum value, return empty results
+            # This prevents SQL errors and provides graceful handling
+            return [], 0
 
 
     total = query.count()

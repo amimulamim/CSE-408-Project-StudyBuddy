@@ -301,15 +301,37 @@ def get_all_quiz_results(
     """Get paginated list of all quiz results (Admin only)"""
     require_admin_access(db, user_info)
     
-    pagination = PaginationQuery(offset=offset, size=size)
-    quiz_results, total = admin_service.get_all_quiz_results_paginated(db, pagination,sort_by=sort_by, sort_order=sort_order,filter_type=filter_type)
+    # Validate filter_type if provided
+    from app.quiz_generator.models import QuestionType
+    valid_question_types = [qt.value for qt in QuestionType]
+    if filter_type and filter_type not in valid_question_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid filter_type '{filter_type}'. Valid types are: {', '.join(valid_question_types)}"
+        )
     
-    return QuizResultsResponse(
-        quiz_results=quiz_results,
-        total=total,
-        offset=offset,
-        size=size
-    )
+    try:
+        pagination = PaginationQuery(offset=offset, size=size)
+        quiz_results, total = admin_service.get_all_quiz_results_paginated(
+            db, pagination, sort_by=sort_by, sort_order=sort_order, filter_type=filter_type
+        )
+        
+        return QuizResultsResponse(
+            quiz_results=quiz_results,
+            total=total,
+            offset=offset,
+            size=size
+        )
+    except Exception as e:
+        # Log the error for debugging
+        import logging
+        logging.error(f"Error in get_all_quiz_results: {str(e)}")
+        
+        # Return a more user-friendly error
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve quiz results. Please check your filter parameters."
+        )
 
 @router.get("/quiz/{quiz_id}")
 def get_quiz_details(
