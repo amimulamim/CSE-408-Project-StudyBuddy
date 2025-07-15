@@ -163,6 +163,7 @@ def get_all_content_paginated(
             "content_url": content_item.content_url,
             "image_preview": content_item.image_preview,
             "topic": content_item.topic,
+            "collection": content_item.collection_name,
             "content_type": content_item.content_type or "Unknown",
             "raw_source": content_item.raw_source,
             "created_at": content_item.created_at.isoformat() if content_item.created_at else None

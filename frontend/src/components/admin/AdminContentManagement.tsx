@@ -3,9 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { FileText, Search, Eye, Trash2 } from 'lucide-react';
+import { FileText, Search, Eye, Trash2 ,Users,Edit,UserPlus,Filter} from 'lucide-react';
 import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
 
@@ -33,14 +36,26 @@ export function AdminContentManagement() {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalContent, setTotalContent] = useState(0);
+  const [selectedType, setSelectedType] = useState<string>('');
+
   const pageSize = 20;
 
   const fetchContent = async (page = 0) => {
     try {
       setLoading(true);
       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+
+      const params= new URLSearchParams({
+        offset: String(page * pageSize),
+        size: String(pageSize),
+      });
+
+      if (selectedType) {
+        params.append('filter_type', selectedType);
+      }
+
       const response = await makeRequest(
-        `${API_BASE_URL}/api/v1/admin/content?offset=${page * pageSize}&size=${pageSize}`,
+        `${API_BASE_URL}/api/v1/admin/content?${params.toString()}`,
         'GET'
       );
 
@@ -60,7 +75,7 @@ export function AdminContentManagement() {
 
   useEffect(() => {
     fetchContent(currentPage);
-  }, [currentPage]);
+  }, [currentPage,selectedType]);
 
   const fetchContentDetails = async (contentId: string) => {
     try {
@@ -187,6 +202,44 @@ export function AdminContentManagement() {
             />
           </div>
 
+          <div className="flex items-center space-x-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="role-filter" className="text-sm font-medium whitespace-nowrap">
+                Filter by Type:
+              </Label>
+              <Select
+                value={selectedType}
+                onValueChange={(value) => {
+                  setSelectedType(value === 'all' ? '' : value);
+                  setCurrentPage(0); // Reset to first page when filtering
+                }}
+              >
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="All " />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All </SelectItem>
+                  <SelectItem value="slides">Slides</SelectItem>
+                  <SelectItem value="flashcards">Flashcards</SelectItem>
+
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedType &&             (
+                <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedType('');
+                  setCurrentPage(0);
+                }}
+                className="flex items-center gap-2"
+              >
+                Clear Filters
+              </Button>
+            )}
+          
+
           <div className="border rounded-lg overflow-hidden">
             <Table className="enhanced-table">
               <TableHeader>
@@ -194,6 +247,7 @@ export function AdminContentManagement() {
                   <TableHead>Title</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>User</TableHead>
+                  <TableHead>Collection</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -230,6 +284,11 @@ export function AdminContentManagement() {
                           </div>
                         </div>
                       </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-muted-foreground">
+                          {item.collection || 'No collection'}
+                        </div>
+                        </TableCell>
                       <TableCell>
                         {new Date(item.created_at).toLocaleDateString()}
                       </TableCell>
