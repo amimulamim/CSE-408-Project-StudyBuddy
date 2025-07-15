@@ -317,8 +317,19 @@ def get_all_quiz_results_paginated(
     sort_by: Optional[str] = "created_at",
     sort_order: Optional[str] = "desc"
 ) -> Tuple[List[Dict[str, Any]], int]:
-    """Get paginated list of all quiz results with user and quiz information"""
+    """Get paginated list of all quiz results with user and quiz information (latest attempt only)"""
     from app.quiz_generator.models import QuizResult, Quiz, QuizQuestion
+    
+    # Get the latest created_at timestamp for each quiz-user combination, then find the corresponding records
+    latest_timestamps = (
+        db.query(
+            QuizResult.quiz_id,
+            QuizResult.user_id,
+            func.max(QuizResult.created_at).label('max_created_at')
+        )
+        .group_by(QuizResult.quiz_id, QuizResult.user_id)
+        .subquery()
+    )
     
     percentage_expr = case(
         (QuizResult.total > 0,
@@ -326,11 +337,19 @@ def get_all_quiz_results_paginated(
         else_=0.0
     ).label("percentage")
 
-    # 2) Base query: QuizResult + joins + inject the percentage column
+    # Base query: Only latest QuizResults + joins + inject the percentage column
     query = (
         db.query(QuizResult, Quiz, User, percentage_expr)
-          .join(Quiz,   QuizResult.quiz_id == Quiz.quiz_id)
-          .join(User,   QuizResult.user_id == User.uid)
+        .join(Quiz, QuizResult.quiz_id == Quiz.quiz_id)
+        .join(User, QuizResult.user_id == User.uid)
+        .join(
+            latest_timestamps,
+            and_(
+                QuizResult.quiz_id == latest_timestamps.c.quiz_id,
+                QuizResult.user_id == latest_timestamps.c.user_id,
+                QuizResult.created_at == latest_timestamps.c.max_created_at
+            )
+        )
     )
 
     total = query.count()
@@ -339,7 +358,7 @@ def get_all_quiz_results_paginated(
     if sort_by not in ("created_at", "percentage"):
         sort_by = "created_at"
 
-    # 4) Pick the SQL expression to sort on
+    # Pick the SQL expression to sort on
     if sort_by == "percentage":
         sort_col = percentage_expr
     else:  # created_at

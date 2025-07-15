@@ -768,11 +768,11 @@ def get_user_quiz_result(
     
     from app.quiz_generator.models import Quiz, QuizQuestion, QuizResult, QuestionResult
     
-    # Get the quiz result for the specific user
+    # Get the latest quiz result for the specific user (in case of retakes)
     quiz_result = db.query(QuizResult).filter(
         QuizResult.quiz_id == quiz_id,
         QuizResult.user_id == user_id
-    ).first()
+    ).order_by(QuizResult.created_at.desc()).first()
     
     if not quiz_result:
         raise HTTPException(status_code=404, detail="Quiz result not found")
@@ -782,11 +782,27 @@ def get_user_quiz_result(
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
     
-    # Get question results for detailed answers
-    question_results = db.query(QuestionResult).filter(
-        QuestionResult.quiz_id == quiz_id,
-        QuestionResult.user_id == user_id
-    ).all()
+    # Get question results for detailed answers (matching the same attempt timeframe)
+    if quiz_result.created_at:
+        # Get question results created around the same time as the quiz result
+        # Allow a 10-minute window to account for any timing differences
+        from datetime import timedelta
+        time_window = timedelta(minutes=10)
+        start_time = quiz_result.created_at - time_window
+        end_time = quiz_result.created_at + time_window
+        
+        question_results = db.query(QuestionResult).filter(
+            QuestionResult.quiz_id == quiz_id,
+            QuestionResult.user_id == user_id,
+            QuestionResult.created_at >= start_time,
+            QuestionResult.created_at <= end_time
+        ).order_by(QuestionResult.created_at.desc()).all()
+    else:
+        # Fallback to getting the most recent question results
+        question_results = db.query(QuestionResult).filter(
+            QuestionResult.quiz_id == quiz_id,
+            QuestionResult.user_id == user_id
+        ).order_by(QuestionResult.created_at.desc()).all()
     
     # Get quiz questions for additional context
     questions = db.query(QuizQuestion).filter(QuizQuestion.quiz_id == quiz_id).all()
