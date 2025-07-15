@@ -297,6 +297,16 @@ def get_all_quiz_results(
         title="Filter by type",
         description="Only return quiz results of this type (e.g., MultipleChoice,ShortAnswer,TrueFalse, etc.)"
     ),
+    start_date: Optional[str] = Query(
+        None,
+        title="Start date",
+        description="Filter results from this date (ISO format)"
+    ),
+    end_date: Optional[str] = Query(
+        None,
+        title="End date", 
+        description="Filter results until this date (ISO format)"
+    ),
 ):
     """Get paginated list of all quiz results (Admin only)"""
     require_admin_access(db, user_info)
@@ -310,10 +320,28 @@ def get_all_quiz_results(
             detail=f"Invalid filter_type '{filter_type}'. Valid types are: {', '.join(valid_question_types)}"
         )
     
+    # Parse date strings to datetime objects
+    parsed_start_date = None
+    parsed_end_date = None
+    
+    try:
+        if start_date:
+            from datetime import datetime
+            parsed_start_date = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        if end_date:
+            from datetime import datetime
+            parsed_end_date = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid date format: {str(e)}. Use ISO format (YYYY-MM-DDTHH:MM:SS)"
+        )
+    
     try:
         pagination = PaginationQuery(offset=offset, size=size)
         quiz_results, total = admin_service.get_all_quiz_results_paginated(
-            db, pagination, sort_by=sort_by, sort_order=sort_order, filter_type=filter_type
+            db, pagination, sort_by=sort_by, sort_order=sort_order, 
+            filter_type=filter_type, start_date=parsed_start_date, end_date=parsed_end_date
         )
         
         return QuizResultsResponse(

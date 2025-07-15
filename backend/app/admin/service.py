@@ -316,7 +316,9 @@ def get_all_quiz_results_paginated(
     pagination: PaginationQuery,
     sort_by: Optional[str] = "created_at",
     sort_order: Optional[str] = "desc",
-    filter_type: Optional[str] = None
+    filter_type: Optional[str] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None
 ) -> Tuple[List[Dict[str, Any]], int]:
     """Get paginated list of all quiz results with user and quiz information (latest attempt only)"""
     from app.quiz_generator.models import QuizResult, Quiz, QuizQuestion
@@ -377,6 +379,13 @@ def get_all_quiz_results_paginated(
             # If filter_type is not a valid enum value, return empty results
             # This prevents SQL errors and provides graceful handling
             return [], 0
+    
+    # Apply date range filtering if specified
+    if start_date or end_date:
+        if start_date:
+            query = query.filter(QuizResult.created_at >= start_date)
+        if end_date:
+            query = query.filter(QuizResult.created_at <= end_date)
 
 
     total = query.count()
