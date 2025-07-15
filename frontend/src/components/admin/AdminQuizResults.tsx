@@ -362,11 +362,11 @@ export function AdminQuizResults() {
 
         {/* Full Quiz Results Dialog */}
         <Dialog open={isViewQuizResultsOpen} onOpenChange={setIsViewQuizResultsOpen}>
-          <DialogContent className="max-w-7xl max-h-[90vh] flex flex-col p-0">
+          <DialogContent className="max-w-7xl max-h-[95vh] flex flex-col p-0">
             <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
               <DialogTitle>Full Quiz Results</DialogTitle>
             </DialogHeader>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto min-h-0">
               {selectedQuizId && selectedResult && (
                 <QuizResults 
                   quizId={selectedQuizId} 

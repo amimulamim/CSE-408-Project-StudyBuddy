@@ -70,20 +70,20 @@ export function QuizResults({ quizId, isAdminMode = false, onClose, userId }: Qu
 
   useEffect(() => {
     fetchResults();
-  }, [quizId]);
+  }, [quizId, userId]);
 
   const fetchResults = async () => {
     try {
       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
       
-      // For admin mode, try to use the quiz result endpoint first
-      // If that fails, fall back to the regular user endpoint
       let endpoint: string;
       
-      if (isAdminMode) {
-        // For admin viewing specific user's result, we'll use the regular result endpoint
-        // The backend should allow admins to access any user's quiz results
-        endpoint = `${API_BASE_URL}/api/v1/quiz/quizzes/${quizId}/result`;
+      if (isAdminMode && userId) {
+        // For admin viewing specific user's result, use the new admin endpoint
+        endpoint = `${API_BASE_URL}/api/v1/admin/quiz/${quizId}/user/${userId}/result`;
+      } else if (isAdminMode) {
+        // Fallback to quiz details if no userId provided
+        endpoint = `${API_BASE_URL}/api/v1/admin/quiz/${quizId}`;
       } else {
         // Regular user viewing their own result
         endpoint = `${API_BASE_URL}/api/v1/quiz/quizzes/${quizId}?take=false`;
@@ -94,7 +94,13 @@ export function QuizResults({ quizId, isAdminMode = false, onClose, userId }: Qu
       if (response && typeof response === 'object' && 'status' in response) {
         if (response.status === 'success' && 'data' in response && response.data) {
           const data = response.data as any;
-          setResults(data);
+          if (isAdminMode && !userId) {
+            // Transform admin quiz details response
+            setResults(transformAdminResponse(data));
+          } else {
+            // Use the data directly for user results or admin user-specific results
+            setResults(data);
+          }
         }
       }
     } catch (error) {
@@ -146,8 +152,9 @@ export function QuizResults({ quizId, isAdminMode = false, onClose, userId }: Qu
   };
 
   return (
-    <div className={isAdminMode ? "p-6" : "min-h-screen dashboard-bg-animated"}>
-      <div className={isAdminMode ? "max-w-6xl mx-auto" : "container mx-auto py-6 max-w-6xl"}>
+    <div className={isAdminMode ? "h-full flex flex-col" : "min-h-screen dashboard-bg-animated"}>
+      <div className={isAdminMode ? "flex-1 overflow-y-auto p-6" : "container mx-auto py-6 max-w-6xl"}>
+        <div className={isAdminMode ? "max-w-6xl mx-auto space-y-6" : ""}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -443,6 +450,7 @@ export function QuizResults({ quizId, isAdminMode = false, onClose, userId }: Qu
             </Card>
           </TabsContent>
         </Tabs>
+        </div>
       </div>
     </div>
   );
