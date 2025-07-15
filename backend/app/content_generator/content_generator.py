@@ -123,7 +123,7 @@ class ContentGenerator:
             content_item = ContentItem(
                 id=content_id,
                 user_id=user_id,
-                collection_name=collection_name,  # Store the collection name
+                collection_name=collection_name.strip(),  # Store the collection name (trimmed)
                 content_url=content_url,
                 topic=topic,
                 content_type=content_type,
@@ -594,13 +594,35 @@ class ContentGenerator:
     ) -> bool:
         """Updates all content items when a collection is renamed."""
         try:
-            # Update all content items that belong to the renamed collection
+            # Trim whitespace from input parameters only
+            old_collection_name = old_collection_name.strip()
+            new_collection_name = new_collection_name.strip()
+            
+            # First, let's check what content items exist for this user
+            all_content = db.query(ContentItem).filter(
+                ContentItem.user_id == user_id
+            ).all()
+            
+            logger.info(f"Found {len(all_content)} total content items for user {user_id}")
+            for content in all_content:
+                logger.info(f"  Content ID: {content.id}, Topic: {content.topic}, Collection: '{content.collection_name}'")
+            
+            # Count matches first for debugging (exact match with trimmed collection names)
+            from sqlalchemy import func
+            matching_count = db.query(ContentItem).filter(
+                ContentItem.user_id == user_id,
+                func.trim(ContentItem.collection_name) == old_collection_name
+            ).count()
+            
+            logger.info(f"Found {matching_count} content items with exact collection_name = '{old_collection_name}'")
+            
+            # Update all content items that belong to the renamed collection (exact match)
             updated_count = db.query(ContentItem).filter(
                 ContentItem.user_id == user_id,
-                ContentItem.collection_name == old_collection_name
+                func.trim(ContentItem.collection_name) == old_collection_name
             ).update({
                 ContentItem.collection_name: new_collection_name
-            })
+            }, synchronize_session=False)
             
             db.commit()
             logger.info(f"Updated {updated_count} content items from collection '{old_collection_name}' to '{new_collection_name}' for user {user_id}")
@@ -618,6 +640,10 @@ class ContentGenerator:
     ) -> List[ContentItem]:
         """Retrieves all content items for a specific collection."""
         try:
+            # Trim the input collection name only
+            collection_name = collection_name.strip()
+            
+            # Use exact match after trimming input
             content_items = db.query(ContentItem).filter(
                 ContentItem.user_id == user_id,
                 ContentItem.collection_name == collection_name
@@ -635,10 +661,15 @@ class ContentGenerator:
     ) -> bool:
         """Deletes all content items when a collection is deleted."""
         try:
+            # Trim the input collection name only
+            collection_name = collection_name.strip()
+            
+            # Use exact match with database trimming for consistency
+            from sqlalchemy import func
             deleted_count = db.query(ContentItem).filter(
                 ContentItem.user_id == user_id,
-                ContentItem.collection_name == collection_name
-            ).delete()
+                func.trim(ContentItem.collection_name) == collection_name
+            ).delete(synchronize_session=False)
             
             db.commit()
             logger.info(f"Deleted {deleted_count} content items from collection '{collection_name}' for user {user_id}")
@@ -646,5 +677,32 @@ class ContentGenerator:
         except Exception as e:
             db.rollback()
             logger.error(f"Error deleting content for collection {collection_name}: {str(e)}")
+            return False
+
+    def trim_all_collection_names(
+        self,
+        user_id: str,
+        db: Session
+    ) -> bool:
+        """Trims whitespace from all collection_name fields for a user's content items."""
+        try:
+            from sqlalchemy import text
+            
+            # Update all content items to trim their collection_name
+            result = db.execute(text("""
+                UPDATE content_items 
+                SET collection_name = TRIM(collection_name) 
+                WHERE user_id = :user_id 
+                AND collection_name != TRIM(collection_name)
+            """), {'user_id': user_id})
+            
+            updated_count = result.rowcount
+            db.commit()
+            
+            logger.info(f"Trimmed whitespace from {updated_count} content items for user {user_id}")
+            return True
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error trimming collection names: {str(e)}")
             return False
 

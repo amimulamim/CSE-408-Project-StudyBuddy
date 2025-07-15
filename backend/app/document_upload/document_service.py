@@ -365,6 +365,11 @@ class DocumentService:
             try:
                 from app.content_generator.content_generator import ContentGenerator
                 content_generator = ContentGenerator()
+                
+                # First, trim whitespace from all collection names to ensure consistency
+                content_generator.trim_all_collection_names(user_id, db)
+                
+                # Then update the collection names
                 content_updated = content_generator.update_content_collection_names(
                     user_id, old_collection_name, new_collection_name, db
                 )
