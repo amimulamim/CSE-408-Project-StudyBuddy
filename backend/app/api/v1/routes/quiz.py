@@ -211,7 +211,7 @@ async def get_quiz(
             quiz_result = db.query(QuizResult).filter(
                 QuizResult.quiz_id == quiz_id,
                 QuizResult.user_id == user_id
-            ).first()
+            ).order_by(QuizResult.created_at.desc()).first()
             if not quiz_result:
                 raise HTTPException(status_code=404, detail="Quiz result not found. You have not taken this quiz yet.")
             question_results = db.query(QuestionResult).filter(
@@ -292,7 +292,7 @@ async def get_quiz_result(
         quiz_result = db.query(QuizResult).filter(
             QuizResult.quiz_id == quiz_id,
             QuizResult.user_id == user_info["uid"]
-        ).first()
+        ).order_by(QuizResult.created_at.desc()).first()
         if not quiz_result:
             raise HTTPException(status_code=404, detail="Quiz result not found or not accessible")
         quiz_record = db.query(Quiz).filter(Quiz.quiz_id == quiz_id).first()
@@ -454,16 +454,39 @@ async def get_quiz_marks(
     db: Session = Depends(get_db)
 ):
     """
-    Returns all quiz marks for the user, with quiz details. If 'collection' is provided, filters by collection_name.
+    Returns all quiz marks for the user (latest attempts only), with quiz details. If 'collection' is provided, filters by collection_name.
     """
     try:
         user_id = user_info["uid"]
-        # Join quiz_results and quizzes
-        query = db.query(
-            QuizResult,
-            Quiz
-        ).join(Quiz, QuizResult.quiz_id == Quiz.quiz_id)
-        query = query.filter(QuizResult.user_id == user_id)
+        
+        # Get the latest created_at timestamp for each quiz-user combination
+        from sqlalchemy import func, and_
+        latest_timestamps = (
+            db.query(
+                QuizResult.quiz_id,
+                QuizResult.user_id,
+                func.max(QuizResult.created_at).label('max_created_at')
+            )
+            .filter(QuizResult.user_id == user_id)
+            .group_by(QuizResult.quiz_id, QuizResult.user_id)
+            .subquery()
+        )
+        
+        # Join quiz_results and quizzes, but only get latest results
+        query = (
+            db.query(QuizResult, Quiz)
+            .join(Quiz, QuizResult.quiz_id == Quiz.quiz_id)
+            .join(
+                latest_timestamps,
+                and_(
+                    QuizResult.quiz_id == latest_timestamps.c.quiz_id,
+                    QuizResult.user_id == latest_timestamps.c.user_id,
+                    QuizResult.created_at == latest_timestamps.c.max_created_at
+                )
+            )
+            .filter(QuizResult.user_id == user_id)
+        )
+        
         if collection:
             query = query.filter(Quiz.collection_name == collection)
         results = query.all()
