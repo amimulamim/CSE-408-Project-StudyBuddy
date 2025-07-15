@@ -28,6 +28,7 @@ export function AdminUserManagement() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('');
+  const [filterPlan, setFilterPlan] = useState<string>('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isPromoteDialogOpen, setIsPromoteDialogOpen] = useState(false);
@@ -50,7 +51,9 @@ export function AdminUserManagement() {
       if (selectedRole) {
         params.append('filter_role', selectedRole);
       }
-      
+      if (filterPlan) {
+        params.append('filter_plan', filterPlan);
+      }
       const response = await makeRequest(
         `${API_BASE_URL}/api/v1/admin/users?${params.toString()}`,
         'GET'
@@ -73,7 +76,7 @@ export function AdminUserManagement() {
 
   useEffect(() => {
     fetchUsers(currentPage);
-  }, [currentPage, selectedRole]);
+  }, [currentPage, selectedRole , filterPlan]);
 
   const handleEditUser = async (userData: Partial<User>) => {
     if (!selectedUser) return;
@@ -240,14 +243,39 @@ export function AdminUserManagement() {
                 </SelectContent>
               </Select>
             </div>
+                  <div className="flex items-center space-x-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="filter-plan" className="text-sm font-medium whitespace-nowrap">
+                Filter by Plan:
+              </Label>
+              <Select
+                value={filterPlan}
+                onValueChange={(value) => {
+                  setFilterPlan(value === 'all' ? '' : value);
+                  setCurrentPage(0); // Reset to first page when filtering
+                }}
+              >
+              
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="All Plans" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Plans</SelectItem>
+                  <SelectItem value="free">Free</SelectItem>
+                  <SelectItem value="premium">Premium</SelectItem>   
+                </SelectContent>
+
+              </Select>
+            </div>
             
-            {(searchTerm || selectedRole) && (
+            {(searchTerm || selectedRole || filterPlan) && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
                   setSearchTerm('');
                   setSelectedRole('');
+                  setFilterPlan('');
                   setCurrentPage(0);
                 }}
                 className="flex items-center gap-2"
@@ -339,11 +367,12 @@ export function AdminUserManagement() {
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
               <p>Showing {filteredUsers.length} of {totalUsers} users</p>
-              {(selectedRole || searchTerm) && (
+              {(selectedRole || searchTerm || filterPlan) && (
                 <p className="text-xs mt-1">
                   Filters active: 
                   {selectedRole && <span className="ml-1 text-blue-600">Role: {selectedRole}</span>}
                   {searchTerm && <span className="ml-1 text-blue-600">Search: "{searchTerm}"</span>}
+                  {filterPlan && <span className="ml-1 text-blue-600">Plan: {filterPlan}</span>}
                 </p>
               )}
             </div>
