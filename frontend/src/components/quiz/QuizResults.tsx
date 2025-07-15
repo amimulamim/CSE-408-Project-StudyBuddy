@@ -29,9 +29,41 @@ interface QuestionResult {
 
 interface QuizResultsProps {
   quizId: string;
+  isAdminMode?: boolean;
+  onClose?: () => void;
+  userId?: string; // Add userId for admin mode to view specific user's result
 }
 
-export function QuizResults({ quizId }: QuizResultsProps) {
+// Transform admin quiz response to match user quiz result format
+const transformAdminResponse = (adminData: any) => {
+  if (!adminData?.quiz) {
+    return null;
+  }
+
+  // Calculate total score from results
+  const totalScore = adminData.results?.reduce((sum: number, result: any) => sum + result.score, 0) || 0;
+  const totalPossible = adminData.results?.reduce((sum: number, result: any) => sum + result.total, 0) || 0;
+
+  // If no results found, calculate from questions
+  const questionsTotal = adminData.questions?.reduce((sum: number, question: any) => sum + (question.marks || 1), 0) || 0;
+
+  return {
+    quiz_id: adminData.quiz.quiz_id,
+    score: totalScore,
+    total: totalPossible || questionsTotal,
+    topic: 'Quiz', // Default topic since admin response doesn't have it
+    domain: 'General', // Default domain
+    feedback: '',
+    question_results: adminData.results?.map((result: any) => ({
+      question_id: result.id,
+      score: result.score,
+      is_correct: result.percentage === 100,
+      student_answer: 'Answer data not available in admin view' // Admin endpoint doesn't include detailed answers
+    })) || []
+  };
+};
+
+export function QuizResults({ quizId, isAdminMode = false, onClose, userId }: QuizResultsProps) {
   const navigate = useNavigate();
   const [results, setResults] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -43,18 +75,36 @@ export function QuizResults({ quizId }: QuizResultsProps) {
   const fetchResults = async () => {
     try {
       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-      const response = await makeRequest(
-        `${API_BASE_URL}/api/v1/quiz/quizzes/${quizId}?take=false`,
-        'GET'
-      );
       
-      if (response?.status === 'success') {
-        setResults(response.data);
+      // For admin mode, try to use the quiz result endpoint first
+      // If that fails, fall back to the regular user endpoint
+      let endpoint: string;
+      
+      if (isAdminMode) {
+        // For admin viewing specific user's result, we'll use the regular result endpoint
+        // The backend should allow admins to access any user's quiz results
+        endpoint = `${API_BASE_URL}/api/v1/quiz/quizzes/${quizId}/result`;
+      } else {
+        // Regular user viewing their own result
+        endpoint = `${API_BASE_URL}/api/v1/quiz/quizzes/${quizId}?take=false`;
+      }
+        
+      const response = await makeRequest(endpoint, 'GET');
+      
+      if (response && typeof response === 'object' && 'status' in response) {
+        if (response.status === 'success' && 'data' in response && response.data) {
+          const data = response.data as any;
+          setResults(data);
+        }
       }
     } catch (error) {
       console.error('Error fetching quiz results:', error);
       toast.error('Failed to load quiz results');
-      navigate('/dashboard/quiz');
+      if (!isAdminMode) {
+        navigate('/dashboard/quiz');
+      } else if (onClose) {
+        onClose();
+      }
     } finally {
       setLoading(false);
     }
@@ -62,7 +112,7 @@ export function QuizResults({ quizId }: QuizResultsProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className={isAdminMode ? "flex items-center justify-center py-12" : "flex items-center justify-center min-h-screen"}>
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
           <p className="glass-text-description">Loading quiz results...</p>
@@ -73,7 +123,7 @@ export function QuizResults({ quizId }: QuizResultsProps) {
 
   if (!results) {
     return (
-      <div className="text-center py-12">
+      <div className={isAdminMode ? "text-center py-8" : "text-center py-12"}>
         <p className="glass-text-description">Quiz results not found.</p>
       </div>
     );
@@ -96,8 +146,8 @@ export function QuizResults({ quizId }: QuizResultsProps) {
   };
 
   return (
-    <div className="min-h-screen dashboard-bg-animated">
-      <div className="container mx-auto py-6 max-w-6xl">
+    <div className={isAdminMode ? "p-6" : "min-h-screen dashboard-bg-animated"}>
+      <div className={isAdminMode ? "max-w-6xl mx-auto" : "container mx-auto py-6 max-w-6xl"}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -106,11 +156,17 @@ export function QuizResults({ quizId }: QuizResultsProps) {
           </div>
           <Button 
             variant="outline" 
-            onClick={() => navigate('/dashboard/quiz')}
+            onClick={() => {
+              if (isAdminMode && onClose) {
+                onClose();
+              } else {
+                navigate('/dashboard/quiz');
+              }
+            }}
             className="glass-card hover:bg-white/10"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Quizzes
+            {isAdminMode ? 'Close' : 'Back to Quizzes'}
           </Button>
         </div>
 
