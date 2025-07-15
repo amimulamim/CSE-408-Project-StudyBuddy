@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { BarChart3, Search, Eye, Trophy, Clock } from 'lucide-react';
 import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
+import { QuizResults } from '@/components/quiz/QuizResults';
 
 interface QuizResult {
   id: string;
@@ -38,6 +39,8 @@ export function AdminQuizResults() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedResult, setSelectedResult] = useState<QuizResult | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isViewQuizResultsOpen, setIsViewQuizResultsOpen] = useState(false);
+  const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalResults, setTotalResults] = useState(0);
   const pageSize = 20;
@@ -52,9 +55,10 @@ export function AdminQuizResults() {
       );
 
       if (response && typeof response === 'object' && 'status' in response) {
-        if (response.status === 'success' && response.data) {
-          setQuizResults(response.data.quiz_results || []);
-          setTotalResults(response.data.total || 0);
+        if (response.status === 'success' && 'data' in response && response.data) {
+          const data = response.data as any;
+          setQuizResults(data.quiz_results || []);
+          setTotalResults(data.total || 0);
         }
       }
     } catch (error) {
@@ -72,6 +76,12 @@ export function AdminQuizResults() {
   const handleViewResult = (result: QuizResult) => {
     setSelectedResult(result);
     setIsViewDialogOpen(true);
+  };
+
+  const handleViewQuizResults = (result: QuizResult) => {
+    setSelectedQuizId(result.quiz_id);
+    setSelectedResult(result); // Store the full result for user context
+    setIsViewQuizResultsOpen(true);
   };
 
   const filteredResults = quizResults.filter(result =>
@@ -173,13 +183,24 @@ export function AdminQuizResults() {
                         {new Date(result.completed_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewResult(result)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewResult(result)}
+                            title="View metadata"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewQuizResults(result)}
+                            title="View full quiz results"
+                          >
+                            <Trophy className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -305,6 +326,25 @@ export function AdminQuizResults() {
                 Close
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Full Quiz Results Dialog */}
+        <Dialog open={isViewQuizResultsOpen} onOpenChange={setIsViewQuizResultsOpen}>
+          <DialogContent className="max-w-7xl max-h-[90vh] flex flex-col p-0">
+            <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
+              <DialogTitle>Full Quiz Results</DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto">
+              {selectedQuizId && selectedResult && (
+                <QuizResults 
+                  quizId={selectedQuizId} 
+                  isAdminMode={true}
+                  userId={selectedResult.user_id}
+                  onClose={() => setIsViewQuizResultsOpen(false)}
+                />
+              )}
+            </div>
           </DialogContent>
         </Dialog>
       </CardContent>
