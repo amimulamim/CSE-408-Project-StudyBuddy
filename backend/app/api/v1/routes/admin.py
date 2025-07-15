@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.orm import Session
-from typing import Dict, Any, List
+from typing import Dict, Any, List,Optional
 
 from app.auth.firebase_auth import get_current_user
 from app.core.database import get_db
@@ -64,13 +64,19 @@ def get_all_users(
     offset: int = 0,
     size: int = 20,
     user_info: Dict[str, Any] = Depends(get_current_user),
-    db: Session = Depends(get_db)
+
+    db: Session = Depends(get_db),
+    filter_role: Optional[str] = Query(
+        None,
+        title="Filter by role",
+        description="Only return users whose role is this value (student,researcher, etc.)"
+    ),
 ):
     """Get paginated list of all users (Admin only)"""
     require_admin_access(db, user_info)
     
     pagination = PaginationQuery(offset=offset, size=size)
-    users, total = admin_service.get_all_users_paginated(db, pagination)
+    users, total = admin_service.get_all_users_paginated(db, pagination,filter_role=filter_role)
     
     # Convert users to dict format
     user_list = []
