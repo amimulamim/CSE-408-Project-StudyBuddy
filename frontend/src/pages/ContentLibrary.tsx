@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, BookOpen, CreditCard, Plus } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ArrowLeft, BookOpen, CreditCard, Plus, Filter, X } from 'lucide-react';
 import { ContentList } from '@/components/content/ContentList';
 import { ContentGenerator } from '@/components/content/ContentGenerator';
 import { makeRequest } from '@/lib/apiCall';
@@ -16,6 +18,7 @@ interface ContentItem {
   topic: string;
   type: 'flashcards' | 'slides';
   createdAt: string;
+  collection_name: string;
 }
 
 export default function ContentLibrary() {
@@ -26,10 +29,13 @@ export default function ContentLibrary() {
   const [filterTopic, setFilterTopic] = useState<string>('');
   const [sortBy, setSortBy] = useState<'created_at' | 'topic'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [selectedCollections, setSelectedCollections] = useState<string[]>([]);
+  const [tempSelectedCollections, setTempSelectedCollections] = useState<string[]>([]);
+  const [availableCollections, setAvailableCollections] = useState<string[]>([]);
 
   useEffect(() => {
     fetchUserContent();
-  }, [filterTopic, sortBy, sortOrder]);
+  }, [filterTopic, sortBy, sortOrder, selectedCollections]);
 
   const fetchUserContent = async () => {
     try {
@@ -41,6 +47,11 @@ export default function ContentLibrary() {
       if (filterTopic?.trim()) {
         params.append('filter_topic', filterTopic.trim());
       }
+      if (selectedCollections.length > 0) {
+        selectedCollections.forEach(collection => {
+          params.append('filter_collection', collection);
+        });
+      }
       params.append('sort_by', sortBy);
       params.append('sort_order', sortOrder);
       
@@ -51,7 +62,12 @@ export default function ContentLibrary() {
       const response = await makeRequest(url, 'GET') as any;
       
       if (response?.status === 'success') {
-        setContents(response.data?.contents || []);
+        const contentData = response.data?.contents || [];
+        setContents(contentData);
+        
+        // Extract unique collection names for the filter
+        const collections = [...new Set(contentData.map((item: ContentItem) => item.collection_name))].filter(Boolean);
+        setAvailableCollections(collections as string[]);
       }
     } catch (error) {
       console.error('Error fetching content:', error);
@@ -59,6 +75,27 @@ export default function ContentLibrary() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCollectionToggle = (collection: string) => {
+    setTempSelectedCollections(prev => 
+      prev.includes(collection) 
+        ? prev.filter(c => c !== collection)
+        : [...prev, collection]
+    );
+  };
+
+  const applyCollectionFilters = () => {
+    setSelectedCollections(tempSelectedCollections);
+  };
+
+  const clearCollectionFilters = () => {
+    setSelectedCollections([]);
+    setTempSelectedCollections([]);
+  };
+
+  const openCollectionFilter = () => {
+    setTempSelectedCollections(selectedCollections);
   };
 
   const flashcards = contents.filter(item => item.type === 'flashcards');
@@ -116,6 +153,77 @@ export default function ContentLibrary() {
             />
           </div>
           <div className="flex gap-2">
+            {/* Collection Filter */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  className="flex items-center gap-2"
+                  onClick={openCollectionFilter}
+                >
+                  <Filter className="h-4 w-4" />
+                  Collections
+                  {selectedCollections.length > 0 && (
+                    <Badge variant="secondary" className="ml-1">
+                      {selectedCollections.length}
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64" align="end">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">Filter by Collections</h4>
+                    {(selectedCollections.length > 0 || tempSelectedCollections.length > 0) && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={clearCollectionFilters}
+                        className="h-auto p-1"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {availableCollections.map((collection) => (
+                      <div key={collection} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={collection}
+                          checked={tempSelectedCollections.includes(collection)}
+                          onCheckedChange={() => handleCollectionToggle(collection)}
+                        />
+                        <label
+                          htmlFor={collection}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                        >
+                          {collection}
+                        </label>
+                      </div>
+                    ))}
+                    {availableCollections.length === 0 && (
+                      <p className="text-sm text-muted-foreground">No collections found</p>
+                    )}
+                  </div>
+                  {availableCollections.length > 0 && (
+                    <div className="flex gap-2 pt-2 border-t">
+                      <Button 
+                        size="sm" 
+                        onClick={applyCollectionFilters}
+                        className="flex-1"
+                        disabled={
+                          JSON.stringify([...tempSelectedCollections].sort((a, b) => a.localeCompare(b))) === 
+                          JSON.stringify([...selectedCollections].sort((a, b) => a.localeCompare(b)))
+                        }
+                      >
+                        Apply Filters
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+            
             <Select value={sortBy} onValueChange={(value: 'created_at' | 'topic') => setSortBy(value)}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Sort by" />
@@ -136,6 +244,30 @@ export default function ContentLibrary() {
             </Select>
           </div>
         </div>
+
+        {/* Active Filters Display */}
+        {selectedCollections.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            <span className="text-sm text-muted-foreground">Filtered by collections:</span>
+            {selectedCollections.map((collection) => (
+              <Badge key={collection} variant="secondary" className="flex items-center gap-1">
+                {collection}
+                <X 
+                  className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                  onClick={() => handleCollectionToggle(collection)}
+                />
+              </Badge>
+            ))}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={clearCollectionFilters}
+              className="h-6 px-2 text-xs"
+            >
+              Clear all
+            </Button>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
