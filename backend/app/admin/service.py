@@ -315,7 +315,8 @@ def get_all_quiz_results_paginated(
     db: Session,
     pagination: PaginationQuery,
     sort_by: Optional[str] = "created_at",
-    sort_order: Optional[str] = "desc"
+    sort_order: Optional[str] = "desc",
+    filter_type: Optional[str] = None
 ) -> Tuple[List[Dict[str, Any]], int]:
     """Get paginated list of all quiz results with user and quiz information (latest attempt only)"""
     from app.quiz_generator.models import QuizResult, Quiz, QuizQuestion
@@ -351,6 +352,22 @@ def get_all_quiz_results_paginated(
             )
         )
     )
+    
+    # Apply quiz type filtering if specified
+    if filter_type:
+        # Create a subquery to find quizzes that have questions of the specified type
+        quiz_type_subquery = (
+            db.query(QuizQuestion.quiz_id)
+            .filter(QuizQuestion.type == filter_type)
+            .distinct()
+            .subquery()
+        )
+        
+        # Filter the main query to only include quizzes with the specified type
+        query = query.filter(QuizResult.quiz_id.in_(
+            db.query(quiz_type_subquery.c.quiz_id)
+        ))
+
 
     total = query.count()
 

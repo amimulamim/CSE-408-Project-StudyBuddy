@@ -291,13 +291,18 @@ def get_all_quiz_results(
     user_info: Dict[str, Any] = Depends(get_current_user),
     db: Session = Depends(get_db),
     sort_by: Optional[str] = Query("created_at", description="Field to sort quiz results by"),
-    sort_order: Optional[str] = Query("desc", description="Order of sorting (asc or desc)")
+    sort_order: Optional[str] = Query("desc", description="Order of sorting (asc or desc)"),
+    filter_type: Optional[str] = Query(
+        None,
+        title="Filter by type",
+        description="Only return quiz results of this type (e.g., MultipleChoice,ShortAnswer,TrueFalse, etc.)"
+    ),
 ):
     """Get paginated list of all quiz results (Admin only)"""
     require_admin_access(db, user_info)
     
     pagination = PaginationQuery(offset=offset, size=size)
-    quiz_results, total = admin_service.get_all_quiz_results_paginated(db, pagination,sort_by=sort_by, sort_order=sort_order)
+    quiz_results, total = admin_service.get_all_quiz_results_paginated(db, pagination,sort_by=sort_by, sort_order=sort_order,filter_type=filter_type)
     
     return QuizResultsResponse(
         quiz_results=quiz_results,
