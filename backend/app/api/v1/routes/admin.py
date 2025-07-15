@@ -168,13 +168,18 @@ def get_all_content(
     offset: int = 0,
     size: int = 20,
     user_info: Dict[str, Any] = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    filter_type: Optional[str] = Query(
+        None,
+        title="Filter by type",
+        description="Only return users whose type matches"
+    ),
 ):
     """Get paginated list of all generated content (Admin only)"""
     require_admin_access(db, user_info)
     
     pagination = PaginationQuery(offset=offset, size=size)
-    content, total = admin_service.get_all_content_paginated(db, pagination)
+    content, total = admin_service.get_all_content_paginated(db, pagination,filter_type)
     
     return ContentListResponse(
         content=content,
