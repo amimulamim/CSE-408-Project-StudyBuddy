@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks,Query
 
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from app.content_generator.content_generator import ContentGenerator
 from app.auth.firebase_auth import get_current_user
 from app.content_generator.models import ContentItem
@@ -110,6 +110,11 @@ async def get_user_content(
         title="Filter by topic",
         description="Only return items whose topic contains this substring (case-insensitive)"
     ),
+    filter_collection: Optional[List[str]] = Query(
+        None,
+        title="Filter by collection",
+        description="Only return items from these collections (can specify multiple)"
+    ),
     sort_by: Optional[str] = Query(
         "created_at",
         title="Sort by field",
@@ -131,6 +136,15 @@ async def get_user_content(
         if filter_topic and filter_topic.strip():
             pattern = f"%{filter_topic.strip()}%"
             query = query.filter(ContentItem.topic.ilike(pattern))
+
+        # Apply collection filter if provided
+        if filter_collection:
+            # Remove empty/whitespace-only collection names
+            valid_collections = [c.strip() for c in filter_collection if c and c.strip()]
+            if valid_collections:
+                from sqlalchemy import func
+                # Use trimmed comparison for consistent matching
+                query = query.filter(func.trim(ContentItem.collection_name).in_(valid_collections))
 
         # Apply sorting
         if sort_by == "topic":
