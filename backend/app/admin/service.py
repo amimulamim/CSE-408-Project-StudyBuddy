@@ -61,11 +61,13 @@ def get_admin_logs(
 # User Management Functions
 def get_all_users_paginated(
     db: Session,
-    pagination: PaginationQuery
+    pagination: PaginationQuery,
+    filter_role: Optional[str] = None,
 ) -> Tuple[List[User], int]:
     """Get paginated list of all users"""
     total = db.query(User).count()
     users = db.query(User)\
+              .filter(User.role == filter_role) if filter_role else db.query(User)\
               .order_by(desc(User.created_at))\
               .offset(pagination.offset)\
               .limit(pagination.size)\
