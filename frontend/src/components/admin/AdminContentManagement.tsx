@@ -38,6 +38,8 @@ export function AdminContentManagement() {
   const [currentPage, setCurrentPage] = useState(0);
   const [totalContent, setTotalContent] = useState(0);
   const [selectedType, setSelectedType] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'created_at' | 'topic'>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const pageSize = 20;
 
@@ -53,6 +55,12 @@ export function AdminContentManagement() {
 
       if (selectedType) {
         params.append('filter_type', selectedType);
+      }
+      if (sortBy) {
+        params.append('sort_by', sortBy);
+      }
+      if (sortOrder) {
+        params.append('sort_order', sortOrder);
       }
 
       const response = await makeRequest(
@@ -76,7 +84,7 @@ export function AdminContentManagement() {
 
   useEffect(() => {
     fetchContent(currentPage);
-  }, [currentPage,selectedType]);
+  }, [currentPage,selectedType, sortBy, sortOrder]);
 
   const fetchContentDetails = async (contentId: string) => {
     try {
@@ -226,6 +234,27 @@ export function AdminContentManagement() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex gap-2">
+            <Select value={sortBy} onValueChange={(value: 'created_at' | 'topic') => setSortBy(value)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="created_at">Created Date</SelectItem>
+                <SelectItem value="topic">Topic</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Order" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">Descending</SelectItem>
+                <SelectItem value="asc">Ascending</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
             {selectedType &&             (
                 <Button
                 variant="outline"
@@ -239,6 +268,7 @@ export function AdminContentManagement() {
                 Clear Filters
               </Button>
             )}
+
           
 
           <div className="border rounded-lg overflow-hidden">
