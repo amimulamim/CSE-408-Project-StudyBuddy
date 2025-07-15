@@ -45,8 +45,14 @@ export function AdminQuizResults() {
   const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalResults, setTotalResults] = useState(0);
+  // at the top of your component
+  type FilterType = 'all' | 'MultipleChoice' | 'ShortAnswer' | 'TrueFalse';
+  const [filterType, setFilterType] = useState<FilterType>('all');
+
+  // const [filterType, setFilterType] = useState<string | null>(null); // For future filtering by quiz type
   const [sortBy, setSortBy] = useState('created_at'); // Default sort by completed date
   const [sortOrder, setSortOrder] = useState('desc'); // Default sort order descending
+
   const pageSize = 20;
 
   const fetchQuizResults = async (page = 0) => {
@@ -60,6 +66,9 @@ export function AdminQuizResults() {
         sort_by: sortBy,
         sort_order: sortOrder,
       });
+      if (filterType && filterType !== 'all') {
+        params.append('filter_type', filterType);
+      }
       const response = await makeRequest(
         `${API_BASE_URL}/api/v1/admin/quiz-results?${params.toString()}`,
         'GET'
@@ -82,7 +91,7 @@ export function AdminQuizResults() {
 
   useEffect(() => {
     fetchQuizResults(currentPage);
-  }, [currentPage, sortBy, sortOrder]);
+  }, [currentPage, sortBy, sortOrder, filterType]);
 
   const handleViewResult = (result: QuizResult) => {
     setSelectedResult(result);
@@ -135,7 +144,21 @@ export function AdminQuizResults() {
               className="max-w-sm"
             />
           </div>
+
           <div className="flex gap-2">
+            <Select value={filterType} onValueChange={(value: 'all' | 'MultipleChoice' | 'ShortAnswer' | 'TrueFalse') => setFilterType(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>All Types</SelectItem>
+                <SelectItem value="MultipleChoice">Multiple Choice</SelectItem>
+                <SelectItem value="ShortAnswer">Short Answer</SelectItem>
+                <SelectItem value="TrueFalse">True/False</SelectItem>
+                {/* Add more quiz types as needed */}
+              </SelectContent>
+            </Select>
+
             <Select value={sortBy} onValueChange={(value: 'created_at' | 'percentage') => setSortBy(value)}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Sort by" />
