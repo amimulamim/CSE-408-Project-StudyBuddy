@@ -21,6 +21,7 @@ interface Content {
   content_url: string;
   image_preview?: string;
   topic?: string;
+  collection?: string;
   content_type: string;
   raw_source?: string;
   created_at: string;

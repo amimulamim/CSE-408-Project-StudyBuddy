@@ -174,12 +174,22 @@ def get_all_content(
         title="Filter by type",
         description="Only return users whose type matches"
     ),
+    sort_by: Optional[str] = Query(
+        "created_at",
+        title="Sort by",
+        description="Field to sort content by (created_at, topic, etc.)"
+    ),
+    sort_order: Optional[str] = Query(
+        "desc",
+        title="Sort order",   
+        description="Order of sorting (asc or desc)"
+    )
 ):
     """Get paginated list of all generated content (Admin only)"""
     require_admin_access(db, user_info)
     
     pagination = PaginationQuery(offset=offset, size=size)
-    content, total = admin_service.get_all_content_paginated(db, pagination,filter_type)
+    content, total = admin_service.get_all_content_paginated(db, pagination,filter_type,sort_by=sort_by, sort_order=sort_order)
     
     return ContentListResponse(
         content=content,
