@@ -66,7 +66,6 @@ def get_all_users_paginated(
     filter_plan: Optional[str] = None
 ) -> Tuple[List[User], int]:
     """Get paginated list of all users"""
-    total = db.query(User).count()
 
     query = db.query(User)
     if filter_role:
@@ -74,6 +73,8 @@ def get_all_users_paginated(
     
     if filter_plan:
         query = query.filter(User.current_plan.ilike(f"%{filter_plan}%"))
+
+    total = query.count()
 
     users = query.order_by(desc(User.created_at))\
               .offset(pagination.offset)\
