@@ -183,13 +183,43 @@ def get_all_content(
         "desc",
         title="Sort order",   
         description="Order of sorting (asc or desc)"
-    )
+    ),
+    start_date: Optional[str] = Query(
+        None,
+        title="Start date",
+        description="Filter content from this date (ISO format)"
+    ),
+    end_date: Optional[str] = Query(
+        None,
+        title="End date", 
+        description="Filter content until this date (ISO format)"
+    ),
 ):
     """Get paginated list of all generated content (Admin only)"""
     require_admin_access(db, user_info)
     
+    # Parse date strings to datetime objects
+    parsed_start_date = None
+    parsed_end_date = None
+    
+    try:
+        if start_date:
+            from datetime import datetime
+            parsed_start_date = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        if end_date:
+            from datetime import datetime
+            parsed_end_date = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid date format: {str(e)}. Use ISO format (YYYY-MM-DDTHH:MM:SS)"
+        )
+    
     pagination = PaginationQuery(offset=offset, size=size)
-    content, total = admin_service.get_all_content_paginated(db, pagination,filter_type,sort_by=sort_by, sort_order=sort_order)
+    content, total = admin_service.get_all_content_paginated(
+        db, pagination, filter_type, sort_by=sort_by, sort_order=sort_order,
+        start_date=parsed_start_date, end_date=parsed_end_date
+    )
     
     return ContentListResponse(
         content=content,
