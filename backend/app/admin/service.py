@@ -131,7 +131,9 @@ def get_all_content_paginated(
     pagination: PaginationQuery,
     filter_type: Optional[str] = None,
     sort_by: Optional[str] = "created_at",
-    sort_order: Optional[str] = "desc"
+    sort_order: Optional[str] = "desc",
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None
 ) -> Tuple[List[Dict[str, Any]], int]:
     """Get paginated list of all generated content with user information"""
     from app.content_generator.models import ContentItem
@@ -141,6 +143,12 @@ def get_all_content_paginated(
 
     if filter_type:
         query=query.filter(ContentItem.content_type == filter_type)
+
+    # Apply date range filtering if specified
+    if start_date:
+        query = query.filter(ContentItem.created_at >= start_date)
+    if end_date:
+        query = query.filter(ContentItem.created_at <= end_date)
 
     total = query.count()
 
