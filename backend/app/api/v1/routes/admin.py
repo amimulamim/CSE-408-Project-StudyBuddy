@@ -71,12 +71,19 @@ def get_all_users(
         title="Filter by role",
         description="Only return users whose role is this value (student,researcher, etc.)"
     ),
+
+    filter_plan: Optional[str] = Query(
+        None,
+        title="Filter by plan",
+        description="Only return users whose current plan is this value (free,pro, etc.)"
+    )
+
 ):
     """Get paginated list of all users (Admin only)"""
     require_admin_access(db, user_info)
     
     pagination = PaginationQuery(offset=offset, size=size)
-    users, total = admin_service.get_all_users_paginated(db, pagination,filter_role=filter_role)
+    users, total = admin_service.get_all_users_paginated(db, pagination,filter_role=filter_role,filter_plan=filter_plan)
     
     # Convert users to dict format
     user_list = []
