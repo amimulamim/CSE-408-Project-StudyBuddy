@@ -6,11 +6,15 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { BarChart3, Search, Eye, Trophy, Clock } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { BarChart3, Search, Eye, Trophy, Calendar as CalendarIcon, X } from 'lucide-react';
 import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
 import { QuizResults } from '@/components/quiz/QuizResults';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 
 interface QuizResult {
@@ -49,9 +53,18 @@ export function AdminQuizResults() {
   type FilterType = 'all' | 'MultipleChoice' | 'ShortAnswer' | 'TrueFalse';
   const [filterType, setFilterType] = useState<FilterType>('all');
 
-  // const [filterType, setFilterType] = useState<string | null>(null); // For future filtering by quiz type
   const [sortBy, setSortBy] = useState('created_at'); // Default sort by completed date
   const [sortOrder, setSortOrder] = useState('desc'); // Default sort order descending
+
+  // Date range filtering state
+  const [dateRange, setDateRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({
+    from: undefined,
+    to: undefined,
+  });
+  const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
 
   const pageSize = 20;
 
@@ -66,9 +79,22 @@ export function AdminQuizResults() {
         sort_by: sortBy,
         sort_order: sortOrder,
       });
+      
       if (filterType && filterType !== 'all') {
         params.append('filter_type', filterType);
       }
+      
+      // Add date range filtering
+      if (dateRange.from) {
+        params.append('start_date', dateRange.from.toISOString());
+      }
+      if (dateRange.to) {
+        // Set to end of day for the 'to' date
+        const endOfDay = new Date(dateRange.to);
+        endOfDay.setHours(23, 59, 59, 999);
+        params.append('end_date', endOfDay.toISOString());
+      }
+      
       const response = await makeRequest(
         `${API_BASE_URL}/api/v1/admin/quiz-results?${params.toString()}`,
         'GET'
@@ -91,7 +117,7 @@ export function AdminQuizResults() {
 
   useEffect(() => {
     fetchQuizResults(currentPage);
-  }, [currentPage, sortBy, sortOrder, filterType]);
+  }, [currentPage, sortBy, sortOrder, filterType, dateRange]);
 
   const handleViewResult = (result: QuizResult) => {
     setSelectedResult(result);
@@ -177,7 +203,116 @@ export function AdminQuizResults() {
                 <SelectItem value="asc">Ascending</SelectItem>
               </SelectContent>
             </Select>
+
+            {/* Date Range Picker */}
+            <Popover open={isDateRangeOpen} onOpenChange={setIsDateRangeOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-[300px] justify-start text-left font-normal",
+                    !dateRange.from && !dateRange.to && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateRange.from ? (
+                    dateRange.to ? (
+                      <>
+                        {format(dateRange.from, "LLL dd, y")} -{" "}
+                        {format(dateRange.to, "LLL dd, y")}
+                      </>
+                    ) : (
+                      format(dateRange.from, "LLL dd, y")
+                    )
+                  ) : (
+                    <span>Pick a date range</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={dateRange.from}
+                  selected={{
+                    from: dateRange.from,
+                    to: dateRange.to,
+                  }}
+                  onSelect={(range) => {
+                    setDateRange({
+                      from: range?.from,
+                      to: range?.to,
+                    });
+                    setCurrentPage(0); // Reset to first page when date range changes
+                  }}
+                  numberOfMonths={2}
+                />
+                <div className="p-3 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      setDateRange({ from: undefined, to: undefined });
+                      setCurrentPage(0);
+                      setIsDateRangeOpen(false);
+                    }}
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Clear Date Range
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
+
+          {/* Active Filters Display */}
+          {(filterType !== 'all' || dateRange.from || dateRange.to) && (
+            <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+              <span className="text-sm font-medium">Active filters:</span>
+              {filterType !== 'all' && (
+                <Badge variant="secondary" className="gap-1">
+                  Type: {filterType}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-0 text-muted-foreground hover:text-foreground"
+                    onClick={() => setFilterType('all')}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </Badge>
+              )}
+              {(dateRange.from || dateRange.to) && (
+                <Badge variant="secondary" className="gap-1">
+                  Date: {dateRange.from ? format(dateRange.from, "MMM dd") : "Start"} - {dateRange.to ? format(dateRange.to, "MMM dd") : "End"}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-0 text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      setDateRange({ from: undefined, to: undefined });
+                      setCurrentPage(0);
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </Badge>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setFilterType('all');
+                  setDateRange({ from: undefined, to: undefined });
+                  setCurrentPage(0);
+                }}
+                className="ml-auto"
+              >
+                Clear All
+              </Button>
+            </div>
+          )}
 
           <div className="border rounded-lg overflow-hidden">
             <Table className="enhanced-table">
