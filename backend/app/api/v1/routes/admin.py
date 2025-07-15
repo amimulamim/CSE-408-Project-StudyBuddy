@@ -755,3 +755,66 @@ def search_users(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Search failed: {str(e)}"
         )
+
+@router.get("/quiz/{quiz_id}/user/{user_id}/result")
+def get_user_quiz_result(
+    quiz_id: str,
+    user_id: str,
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get a specific user's quiz result (Admin only)"""
+    require_admin_access(db, user_info)
+    
+    from app.quiz_generator.models import Quiz, QuizQuestion, QuizResult, QuestionResult
+    
+    # Get the quiz result for the specific user
+    quiz_result = db.query(QuizResult).filter(
+        QuizResult.quiz_id == quiz_id,
+        QuizResult.user_id == user_id
+    ).first()
+    
+    if not quiz_result:
+        raise HTTPException(status_code=404, detail="Quiz result not found")
+    
+    # Get quiz information
+    quiz = db.query(Quiz).filter(Quiz.quiz_id == quiz_id).first()
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    # Get question results for detailed answers
+    question_results = db.query(QuestionResult).filter(
+        QuestionResult.quiz_id == quiz_id,
+        QuestionResult.user_id == user_id
+    ).all()
+    
+    # Get quiz questions for additional context
+    questions = db.query(QuizQuestion).filter(QuizQuestion.quiz_id == quiz_id).all()
+    question_map = {str(q.id): q for q in questions}
+    
+    # Format question results
+    formatted_question_results = []
+    for qr in question_results:
+        question = question_map.get(str(qr.question_id))
+        formatted_question_results.append({
+            "question_id": str(qr.question_id),
+            "score": qr.score,
+            "is_correct": qr.is_correct,
+            "student_answer": qr.student_answer,
+            "correct_answer": question.correct_answer if question else None,
+            "explanation": qr.explanation if hasattr(qr, 'explanation') else None,
+            "type": question.type.value if question and question.type else None,
+            "options": question.options if question else None,
+            "question_text": question.question_text if question else None
+        })
+    
+    return {
+        "quiz_id": quiz_id,
+        "score": quiz_result.score,
+        "total": quiz_result.total,
+        "topic": quiz.topic if hasattr(quiz, 'topic') else 'Quiz',
+        "domain": quiz.domain if hasattr(quiz, 'domain') else 'General',
+        "feedback": quiz_result.feedback or '',
+        "completed_at": quiz_result.created_at.isoformat() if quiz_result.created_at else None,
+        "question_results": formatted_question_results
+    }
