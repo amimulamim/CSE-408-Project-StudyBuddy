@@ -28,6 +28,7 @@ interface ContentItem {
   topic: string;
   type: 'flashcards' | 'slides';
   createdAt: string;
+  collection_name?: string; // Optional, if content is associated with a collection
 }
 
 interface ContentListProps {
@@ -245,9 +246,16 @@ export function ContentList({ contents, loading, onContentUpdate, setContents }:
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <CardDescription className="flex-1">
-                  {item.type === 'flashcards' ? 'Interactive flashcards' : 'PDF presentation'}
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <CardDescription className="flex-1">
+                    {item.type === 'flashcards' ? 'Interactive flashcards' : 'PDF presentation'}
+                  </CardDescription>
+                  {item.collection_name && (
+                    <Badge variant="outline" className="text-xs text-muted-foreground border-muted-foreground/30">
+                      {item.collection_name}
+                    </Badge>
+                  )}
+                </div>
               </CardContent>
             </Card>
           );

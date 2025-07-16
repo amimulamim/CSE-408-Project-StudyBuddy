@@ -121,11 +121,15 @@ class TestDocumentRoutes:
         mock_collection2.full_collection_name = "test-uid_collection2"
         mock_collection2.created_at = datetime(2023, 1, 2, 12, 0, 0)
         
-        # Mock database query
+        # Mock database query with complete chain
         mock_query = Mock()
         mock_filter = Mock()
+        mock_order_by = Mock()
+        
         mock_query.filter.return_value = mock_filter
-        mock_filter.all.return_value = [mock_collection1, mock_collection2]
+        mock_filter.order_by.return_value = mock_order_by
+        mock_order_by.all.return_value = [mock_collection1, mock_collection2]
+        
         self.mock_db.query.return_value = mock_query
         
         # Act
@@ -145,8 +149,12 @@ class TestDocumentRoutes:
         # Arrange
         mock_query = Mock()
         mock_filter = Mock()
+        mock_order_by = Mock()
+        
         mock_query.filter.return_value = mock_filter
-        mock_filter.all.return_value = []
+        mock_filter.order_by.return_value = mock_order_by
+        mock_order_by.all.return_value = []
+        
         self.mock_db.query.return_value = mock_query
         
         # Act
@@ -375,8 +383,12 @@ class TestDocumentRoutes:
         # Arrange
         mock_query = Mock()
         mock_filter = Mock()
+        mock_order_by = Mock()
+        
         mock_query.filter.return_value = mock_filter
-        mock_filter.all.return_value = []
+        mock_filter.order_by.return_value = mock_order_by
+        mock_order_by.all.return_value = []
+        
         self.mock_db.query.return_value = mock_query
         
         # Act

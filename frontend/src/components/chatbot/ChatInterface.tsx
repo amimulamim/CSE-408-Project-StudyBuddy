@@ -61,13 +61,14 @@ export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfacePro
     // 1. User is at the very top (scrollTop < 5)
     // 2. User is scrolling upwards
     // 3. Not already loading
-    if (currentScrollTop < 3 && isScrollingUpRef.current) {
+    // 4. Chat has a valid ID (not a new chat)
+    if (currentScrollTop < 3 && isScrollingUpRef.current && currentChat?.id) {
       shouldScrollToBottomRef.current = false;
       
       prevScrollHeightRef.current = container.scrollHeight;
       setIsLoadingOldMessages(true);
       
-      loadMoreMessages(currentChat?.id || '', 5);
+      loadMoreMessages(currentChat.id, 5);
     }
   };
 
