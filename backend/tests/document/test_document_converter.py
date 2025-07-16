@@ -74,8 +74,8 @@ class TestDocumentConverter:
             # Act
             result = document_converter.extract_text(mock_pdf_content, "application/pdf")
             
-            # Assert
-            assert result == "Valid text. "
+            # Assert - text is now cleaned/normalized
+            assert result == "Valid text."
 
     def test_extract_text_pdf_all_empty_pages(self, document_converter):
         """Test text extraction from PDF with all empty pages"""
@@ -91,11 +91,9 @@ class TestDocumentConverter:
             mock_reader_instance.pages = [mock_page1, mock_page2]
             mock_pdf_reader.return_value = mock_reader_instance
             
-            # Act
-            result = document_converter.extract_text(mock_pdf_content, "application/pdf")
-            
-            # Assert
-            assert result == ""
+            # Act & Assert - should raise ValueError for empty content
+            with pytest.raises(ValueError, match="This PDF appears to be image-based or contains no extractable text"):
+                document_converter.extract_text(mock_pdf_content, "application/pdf")
 
     def test_extract_text_text_plain_success(self, document_converter):
         """Test successful text extraction from plain text"""
@@ -124,21 +122,18 @@ class TestDocumentConverter:
         # Arrange
         text_content = b""
         
-        # Act
-        result = document_converter.extract_text(text_content, "text/plain")
-        
-        # Assert
-        assert result == ""
+        # Act & Assert - should raise ValueError for empty content
+        with pytest.raises(ValueError, match="Text file appears to be empty"):
+            document_converter.extract_text(text_content, "text/plain")
 
     def test_extract_text_unsupported_file_type(self, document_converter):
         """Test extraction with unsupported file type"""
         # Arrange
         content = b"some content"
         
-        # Act & Assert
-        with pytest.raises(Exception) as exc_info:
+        # Act & Assert - should raise ValueError for unsupported file type
+        with pytest.raises(ValueError, match="Unsupported file type: application/msword"):
             document_converter.extract_text(content, "application/msword")
-        assert "Error extracting text: Unsupported file type: application/msword" in str(exc_info.value)
 
     def test_extract_text_pdf_reader_exception(self, document_converter):
         """Test PDF extraction with PdfReader exception"""
@@ -156,13 +151,14 @@ class TestDocumentConverter:
     def test_extract_text_plain_text_decode_exception(self, document_converter):
         """Test plain text extraction with decode exception"""
         # Arrange
-        # Create invalid UTF-8 bytes
+        # Create invalid UTF-8 bytes that will be handled by fallback encoding
         invalid_utf8_content = b'\xff\xfe\x00\x00'
         
-        # Act & Assert
-        with pytest.raises(Exception) as exc_info:
-            document_converter.extract_text(invalid_utf8_content, "text/plain")
-        assert "Error extracting text:" in str(exc_info.value)
+        # Act - should not raise exception due to fallback encoding handling
+        result = document_converter.extract_text(invalid_utf8_content, "text/plain")
+        
+        # Assert - should return the decoded content
+        assert result == "ÿþ\x00\x00"
 
     def test_extract_text_pdf_io_exception(self, document_converter):
         """Test PDF extraction with IO exception"""
@@ -187,11 +183,9 @@ class TestDocumentConverter:
             mock_reader_instance.pages = []  # No pages
             mock_pdf_reader.return_value = mock_reader_instance
             
-            # Act
-            result = document_converter.extract_text(mock_pdf_content, "application/pdf")
-            
-            # Assert
-            assert result == ""
+            # Act & Assert - should raise ValueError for empty PDF
+            with pytest.raises(ValueError, match="PDF file appears to be empty or corrupted"):
+                document_converter.extract_text(mock_pdf_content, "application/pdf")
 
     @patch('app.document_upload.document_converter.logger')
     def test_extract_text_logs_error(self, mock_logger, document_converter):
@@ -199,13 +193,17 @@ class TestDocumentConverter:
         # Arrange
         content = b"some content"
         
-        # Act & Assert
-        with pytest.raises(Exception):
-            document_converter.extract_text(content, "application/unsupported")
-        
-        mock_logger.error.assert_called_once()
-        error_message = mock_logger.error.call_args[0][0]
-        assert "Error extracting text from document:" in error_message
+        # Mock an internal exception that would be logged
+        with patch('app.document_upload.document_converter.PdfReader') as mock_pdf_reader:
+            mock_pdf_reader.side_effect = Exception("Internal error")
+            
+            # Act & Assert
+            with pytest.raises(RuntimeError):
+                document_converter.extract_text(content, "application/pdf")
+            
+            mock_logger.error.assert_called_once()
+            error_message = mock_logger.error.call_args[0][0]
+            assert "Error extracting text from document:" in error_message
 
     def test_extract_text_case_sensitivity(self, document_converter):
         """Test file type case sensitivity"""
@@ -213,13 +211,11 @@ class TestDocumentConverter:
         text_content = "Test content".encode("utf-8")
         
         # Act & Assert - Should handle case differences
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(ValueError, match="Unsupported file type: TEXT/PLAIN"):
             document_converter.extract_text(text_content, "TEXT/PLAIN")
-        assert "Error extracting text: Unsupported file type: TEXT/PLAIN" in str(exc_info.value)
         
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(ValueError, match="Unsupported file type: Application/PDF"):
             document_converter.extract_text(text_content, "Application/PDF")
-        assert "Error extracting text: Unsupported file type: Application/PDF" in str(exc_info.value)
 
     def test_extract_text_pdf_minimal_content(self, document_converter):
         """Test PDF with minimal extractable text (image-based PDF scenario)"""
@@ -273,8 +269,8 @@ class TestDocumentConverter:
 
     def test_extract_text_empty_after_cleaning(self, document_converter):
         """Test text file that becomes empty after cleaning"""
-        # Arrange - content that becomes empty after cleaning
-        content = b"\ufffd\ufffd"  # Only replacement characters
+        # Arrange - content that becomes empty after cleaning (just whitespace)
+        content = b"   \n\t   "  # Only whitespace
         
         # Act & Assert
         with pytest.raises(ValueError) as exc_info:
