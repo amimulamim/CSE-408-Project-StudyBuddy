@@ -12,6 +12,8 @@ import { ContentList } from '@/components/content/ContentList';
 import { ContentGenerator } from '@/components/content/ContentGenerator';
 import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { format } from 'date-fns';
 
 interface ContentItem {
   contentId: string;
@@ -19,6 +21,11 @@ interface ContentItem {
   type: 'flashcards' | 'slides';
   createdAt: string;
   collection_name: string;
+}
+
+interface DateRange {
+  from: Date | undefined;
+  to: Date | undefined;
 }
 
 export default function ContentLibrary() {
@@ -32,10 +39,11 @@ export default function ContentLibrary() {
   const [selectedCollections, setSelectedCollections] = useState<string[]>([]);
   const [tempSelectedCollections, setTempSelectedCollections] = useState<string[]>([]);
   const [availableCollections, setAvailableCollections] = useState<string[]>([]);
+  const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
 
   useEffect(() => {
     fetchUserContent();
-  }, [filterTopic, sortBy, sortOrder, selectedCollections]);
+  }, [filterTopic, sortBy, sortOrder, selectedCollections, dateRange]);
 
   const fetchUserContent = async () => {
     try {
@@ -51,6 +59,12 @@ export default function ContentLibrary() {
         selectedCollections.forEach(collection => {
           params.append('filter_collection', collection);
         });
+      }
+      if (dateRange.from) {
+        params.append('start_date', format(dateRange.from, 'yyyy-MM-dd'));
+      }
+      if (dateRange.to) {
+        params.append('end_date', format(dateRange.to, 'yyyy-MM-dd'));
       }
       params.append('sort_by', sortBy);
       params.append('sort_order', sortOrder);
@@ -93,6 +107,15 @@ export default function ContentLibrary() {
     setSelectedCollections([]);
     setTempSelectedCollections([]);
   };
+
+  const clearAllFilters = () => {
+    setFilterTopic('');
+    setSelectedCollections([]);
+    setTempSelectedCollections([]);
+    setDateRange({ from: undefined, to: undefined });
+  };
+
+  const hasActiveFilters = filterTopic || selectedCollections.length > 0 || dateRange.from || dateRange.to;
 
   const openCollectionFilter = () => {
     setTempSelectedCollections(selectedCollections);
@@ -142,130 +165,161 @@ export default function ContentLibrary() {
           </div>
         </div>
         {/* Filter and Sort Controls */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-4">
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="Search by topic…"
-              value={filterTopic}
-              onChange={e => setFilterTopic(e.target.value)}
-              className="w-full p-2 border rounded-md focus:outline-none focus:ring text-black placeholder-gray-500"
-            />
-          </div>
-          <div className="flex gap-2">
-            {/* Collection Filter */}
-            <Popover>
-              <PopoverTrigger asChild>
+        <div className="flex flex-col gap-4 mb-4">
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Search by topic…"
+                value={filterTopic}
+                onChange={e => setFilterTopic(e.target.value)}
+                className="w-full p-2 border rounded-md focus:outline-none focus:ring text-black placeholder-gray-500"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {/* Collection Filter */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2"
+                    onClick={openCollectionFilter}
+                  >
+                    <Filter className="h-4 w-4" />
+                    Collections
+                    {selectedCollections.length > 0 && (
+                      <Badge variant="secondary" className="ml-1">
+                        {selectedCollections.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64" align="end">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium">Filter by Collections</h4>
+                      {(selectedCollections.length > 0 || tempSelectedCollections.length > 0) && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={clearCollectionFilters}
+                          className="h-auto p-1"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {availableCollections.map((collection) => (
+                        <div key={collection} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={collection}
+                            checked={tempSelectedCollections.includes(collection)}
+                            onCheckedChange={() => handleCollectionToggle(collection)}
+                          />
+                          <label
+                            htmlFor={collection}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                          >
+                            {collection}
+                          </label>
+                        </div>
+                      ))}
+                      {availableCollections.length === 0 && (
+                        <p className="text-sm text-muted-foreground">No collections found</p>
+                      )}
+                    </div>
+                    {availableCollections.length > 0 && (
+                      <div className="flex gap-2 pt-2 border-t">
+                        <Button 
+                          size="sm" 
+                          onClick={applyCollectionFilters}
+                          className="flex-1"
+                          disabled={
+                            JSON.stringify([...tempSelectedCollections].sort((a, b) => a.localeCompare(b))) === 
+                            JSON.stringify([...selectedCollections].sort((a, b) => a.localeCompare(b)))
+                          }
+                        >
+                          Apply Filters
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+              
+              {/* Date Range Filter */}
+              <DateRangePicker
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+                placeholder="Filter by date range"
+                className="w-[280px]"
+              />
+              
+              <Select value={sortBy} onValueChange={(value: 'created_at' | 'topic') => setSortBy(value)}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="created_at">Created Date</SelectItem>
+                  <SelectItem value="topic">Topic</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="Order" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="desc">Descending</SelectItem>
+                  <SelectItem value="asc">Ascending</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {hasActiveFilters && (
                 <Button 
                   variant="outline" 
-                  className="flex items-center gap-2"
-                  onClick={openCollectionFilter}
+                  size="sm" 
+                  onClick={clearAllFilters}
+                  className="px-3"
                 >
-                  <Filter className="h-4 w-4" />
-                  Collections
-                  {selectedCollections.length > 0 && (
-                    <Badge variant="secondary" className="ml-1">
-                      {selectedCollections.length}
-                    </Badge>
-                  )}
+                  <X className="h-4 w-4" />
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-64" align="end">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium">Filter by Collections</h4>
-                    {(selectedCollections.length > 0 || tempSelectedCollections.length > 0) && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={clearCollectionFilters}
-                        className="h-auto p-1"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {availableCollections.map((collection) => (
-                      <div key={collection} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={collection}
-                          checked={tempSelectedCollections.includes(collection)}
-                          onCheckedChange={() => handleCollectionToggle(collection)}
-                        />
-                        <label
-                          htmlFor={collection}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
-                        >
-                          {collection}
-                        </label>
-                      </div>
-                    ))}
-                    {availableCollections.length === 0 && (
-                      <p className="text-sm text-muted-foreground">No collections found</p>
-                    )}
-                  </div>
-                  {availableCollections.length > 0 && (
-                    <div className="flex gap-2 pt-2 border-t">
-                      <Button 
-                        size="sm" 
-                        onClick={applyCollectionFilters}
-                        className="flex-1"
-                        disabled={
-                          JSON.stringify([...tempSelectedCollections].sort((a, b) => a.localeCompare(b))) === 
-                          JSON.stringify([...selectedCollections].sort((a, b) => a.localeCompare(b)))
-                        }
-                      >
-                        Apply Filters
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </PopoverContent>
-            </Popover>
-            
-            <Select value={sortBy} onValueChange={(value: 'created_at' | 'topic') => setSortBy(value)}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="created_at">Created Date</SelectItem>
-                <SelectItem value="topic">Topic</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Order" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="desc">Descending</SelectItem>
-                <SelectItem value="asc">Ascending</SelectItem>
-              </SelectContent>
-            </Select>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Active Filters Display */}
-        {selectedCollections.length > 0 && (
+        {hasActiveFilters && (
           <div className="flex flex-wrap gap-2 mb-4">
-            <span className="text-sm text-muted-foreground">Filtered by collections:</span>
+            <span className="text-sm text-muted-foreground">Active filters:</span>
+            {filterTopic && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                Topic: {filterTopic}
+                <X 
+                  className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                  onClick={() => setFilterTopic('')}
+                />
+              </Badge>
+            )}
             {selectedCollections.map((collection) => (
               <Badge key={collection} variant="secondary" className="flex items-center gap-1">
-                {collection}
+                Collection: {collection}
                 <X 
                   className="h-3 w-3 cursor-pointer hover:text-destructive" 
                   onClick={() => handleCollectionToggle(collection)}
                 />
               </Badge>
             ))}
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={clearCollectionFilters}
-              className="h-6 px-2 text-xs"
-            >
-              Clear all
-            </Button>
+            {(dateRange.from || dateRange.to) && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                Date: {dateRange.from ? format(dateRange.from, 'MMM dd, yyyy') : 'Start'} - {dateRange.to ? format(dateRange.to, 'MMM dd, yyyy') : 'End'}
+                <X 
+                  className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                  onClick={() => setDateRange({ from: undefined, to: undefined })}
+                />
+              </Badge>
+            )}
           </div>
         )}
 

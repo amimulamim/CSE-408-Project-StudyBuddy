@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 from app.rag.query_processor import QueryProcessor
@@ -57,11 +57,30 @@ async def upload_document(
 @router.get("/collections", response_model=List[CollectionResponse])
 async def list_collections(
     db: Session = Depends(get_db),
-    user_info: Dict[str, Any] = Depends(get_current_user)
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    start_date: Optional[str] = Query(None, description="Start date filter (ISO format: YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="End date filter (ISO format: YYYY-MM-DD)")
 ):
     try:
         user_id = user_info["uid"]
-        collections = db.query(UserCollection).filter(UserCollection.user_id == user_id).all()
+        query = db.query(UserCollection).filter(UserCollection.user_id == user_id)
+        
+        # Apply date range filtering
+        if start_date:
+            try:
+                start_date_obj = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+                query = query.filter(UserCollection.created_at >= start_date_obj)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD")
+        
+        if end_date:
+            try:
+                end_date_obj = datetime.fromisoformat(end_date).replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+                query = query.filter(UserCollection.created_at <= end_date_obj)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD")
+        
+        collections = query.order_by(UserCollection.created_at.desc()).all()
         return [
             {
                 "collection_name": col.collection_name,
