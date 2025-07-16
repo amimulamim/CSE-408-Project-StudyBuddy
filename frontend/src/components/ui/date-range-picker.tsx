@@ -27,21 +27,36 @@ export function DateRangePicker({
   disabled = false
 }: DateRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [tempDateRange, setTempDateRange] = useState<DateRange>({ from: undefined, to: undefined });
 
   const handleClearDateRange = () => {
     onDateRangeChange({ from: undefined, to: undefined });
+    setTempDateRange({ from: undefined, to: undefined });
     setIsOpen(false);
   };
 
   const handleDateSelect = (range: any) => {
-    onDateRangeChange({
+    setTempDateRange({
       from: range?.from,
       to: range?.to,
     });
   };
 
+  const handleApply = () => {
+    onDateRangeChange(tempDateRange);
+    setIsOpen(false);
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (open) {
+      // Initialize temp range with current date range when opening
+      setTempDateRange(dateRange);
+    }
+  };
+
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover open={isOpen} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -71,15 +86,24 @@ export function DateRangePicker({
         <Calendar
           initialFocus
           mode="range"
-          defaultMonth={dateRange.from}
+          defaultMonth={tempDateRange.from || dateRange.from}
           selected={{
-            from: dateRange.from,
-            to: dateRange.to,
+            from: tempDateRange.from,
+            to: tempDateRange.to,
           }}
           onSelect={handleDateSelect}
           numberOfMonths={2}
         />
-        <div className="p-3 border-t">
+        <div className="p-3 border-t space-y-2">
+          <Button
+            variant="default"
+            size="sm"
+            className="w-full"
+            onClick={handleApply}
+            disabled={!tempDateRange.from && !tempDateRange.to}
+          >
+            Apply Date Range
+          </Button>
           <Button
             variant="outline"
             size="sm"
