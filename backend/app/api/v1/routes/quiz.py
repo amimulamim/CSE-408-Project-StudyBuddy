@@ -426,12 +426,31 @@ async def evaluate_all_answers(
 @router.get("/quizzes", response_model=List[Dict[str, Any]])
 async def get_all_quizzes(
     user_info: Dict[str, Any] = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    start_date: Optional[str] = Query(None, description="Start date filter (ISO format: YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="End date filter (ISO format: YYYY-MM-DD)")
 ):
     """Fetches all quizzes created by the current user."""
     try:
         user_id = user_info["uid"]
-        quizzes = db.query(Quiz).filter(Quiz.user_id == user_id).order_by(Quiz.created_at.desc()).all()
+        query = db.query(Quiz).filter(Quiz.user_id == user_id)
+        
+        # Apply date range filtering
+        if start_date:
+            try:
+                start_date_obj = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+                query = query.filter(Quiz.created_at >= start_date_obj)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD")
+        
+        if end_date:
+            try:
+                end_date_obj = datetime.fromisoformat(end_date).replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+                query = query.filter(Quiz.created_at <= end_date_obj)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD")
+        
+        quizzes = query.order_by(Quiz.created_at.desc()).all()
         result = []
         for quiz in quizzes:
             result.append({
@@ -440,6 +459,8 @@ async def get_all_quizzes(
                 "difficulty": quiz.difficulty.value if hasattr(quiz.difficulty, "value") else str(quiz.difficulty),
                 "duration": getattr(quiz, "duration", None),
                 "collection_name": getattr(quiz, "collection_name", None),
+                "topic": getattr(quiz, "topic", None),
+                "domain": getattr(quiz, "domain", None),
                 # Add more fields as needed
             })
         return result
@@ -451,7 +472,9 @@ async def get_all_quizzes(
 async def get_quiz_marks(
     collection: Optional[str] = None,
     user_info: Dict[str, Any] = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    start_date: Optional[str] = Query(None, description="Start date filter (ISO format: YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="End date filter (ISO format: YYYY-MM-DD)")
 ):
     """
     Returns all quiz marks for the user (latest attempts only), with quiz details. If 'collection' is provided, filters by collection_name.
@@ -489,6 +512,22 @@ async def get_quiz_marks(
         
         if collection:
             query = query.filter(Quiz.collection_name == collection)
+            
+        # Apply date range filtering on quiz creation date
+        if start_date:
+            try:
+                start_date_obj = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+                query = query.filter(Quiz.created_at >= start_date_obj)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD")
+        
+        if end_date:
+            try:
+                end_date_obj = datetime.fromisoformat(end_date).replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+                query = query.filter(Quiz.created_at <= end_date_obj)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD")
+        
         results = query.all()
         response = []
         for quiz_result, quiz in results:
