@@ -243,7 +243,10 @@ async def get_quiz(
                         "correct_answer": question_map[str(qr.question_id)].correct_answer if str(qr.question_id) in question_map else None,
                         "explanation": question_map[str(qr.question_id)].explanation if str(qr.question_id) in question_map else None,
                         "type": question_map[str(qr.question_id)].type.value if str(qr.question_id) in question_map and hasattr(question_map[str(qr.question_id)].type, "value") else str(question_map[str(qr.question_id)].type) if str(qr.question_id) in question_map else None,
-                        "options": question_map[str(qr.question_id)].options if str(qr.question_id) in question_map else None
+                        "options": question_map[str(qr.question_id)].options if str(qr.question_id) in question_map else None,
+                        "question_text": question_map[str(qr.question_id)].question_text if str(qr.question_id) in question_map else None,
+                        "marks": question_map[str(qr.question_id)].marks if str(qr.question_id) in question_map else None,
+                        "difficulty": question_map[str(qr.question_id)].difficulty.value if str(qr.question_id) in question_map and hasattr(question_map[str(qr.question_id)].difficulty, "value") else str(question_map[str(qr.question_id)].difficulty) if str(qr.question_id) in question_map else None
                     }
                     for qr in question_results
                 ]

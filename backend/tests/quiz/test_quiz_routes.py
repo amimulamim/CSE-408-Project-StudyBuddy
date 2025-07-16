@@ -405,6 +405,9 @@ class TestQuizRoutes:
         mock_question.explanation = "Python is a programming language"
         mock_question.type = QuestionType.MultipleChoice
         mock_question.options = ["Language", "Snake", "Tool", "Framework"]
+        mock_question.question_text = "What is Python?"
+        mock_question.marks = 2.0
+        mock_question.difficulty = DifficultyLevel.Easy
 
         def mock_query(model):
             mock_query_obj = Mock()
