@@ -115,6 +115,8 @@ async def get_user_content(
         title="Filter by collection",
         description="Only return items from these collections (can specify multiple)"
     ),
+    start_date: Optional[str] = Query(None, description="Start date filter (ISO format: YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="End date filter (ISO format: YYYY-MM-DD)"),
     sort_by: Optional[str] = Query(
         "created_at",
         title="Sort by field",
@@ -145,6 +147,23 @@ async def get_user_content(
                 from sqlalchemy import func
                 # Use trimmed comparison for consistent matching
                 query = query.filter(func.trim(ContentItem.collection_name).in_(valid_collections))
+
+        # Apply date range filtering
+        if start_date:
+            try:
+                from datetime import datetime, timezone
+                start_date_obj = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+                query = query.filter(ContentItem.created_at >= start_date_obj)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD")
+        
+        if end_date:
+            try:
+                from datetime import datetime, timezone
+                end_date_obj = datetime.fromisoformat(end_date).replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+                query = query.filter(ContentItem.created_at <= end_date_obj)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD")
 
         # Apply sorting
         if sort_by == "topic":

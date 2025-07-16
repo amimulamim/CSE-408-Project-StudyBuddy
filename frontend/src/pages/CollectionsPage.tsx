@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { 
@@ -15,18 +16,27 @@ import {
   FileText, 
   Calendar,
   Folder,
-  Search
+  Search,
+  X,
+  Filter
 } from 'lucide-react';
 import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { ApiResponse } from '@/lib/api';
 import { DocumentUploadDialog } from '@/components/collections/DocumentUploadDialog';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { format } from 'date-fns';
 
 interface Collection {
   collection_name: string;
   full_collection_name: string;
   created_at: string;
+}
+
+interface DateRange {
+  from: Date | undefined;
+  to: Date | undefined;
 }
 
 export default function CollectionsPage() {
@@ -36,6 +46,9 @@ export default function CollectionsPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Date range filtering
+  const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
   
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -48,13 +61,28 @@ export default function CollectionsPage() {
 
   useEffect(() => {
     fetchCollections();
-  }, []);
+  }, [dateRange]);
 
   const fetchCollections = async () => {
     try {
       setLoading(true);
       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-      const response:ApiResponse = await makeRequest(`${API_BASE_URL}/api/v1/document/collections`, 'GET');
+      
+      const params = new URLSearchParams();
+      if (dateRange.from) {
+        params.append('start_date', format(dateRange.from, 'yyyy-MM-dd'));
+      }
+      if (dateRange.to) {
+        params.append('end_date', format(dateRange.to, 'yyyy-MM-dd'));
+      }
+      
+      let url = `${API_BASE_URL}/api/v1/document/collections`;
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
+      const response: ApiResponse = await makeRequest(url, 'GET');
+      
       if (response?.status !== 'success') {
         throw new Error('Failed to load collections');
       }
@@ -153,6 +181,13 @@ export default function CollectionsPage() {
     collection.collection_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    setDateRange({ from: undefined, to: undefined });
+  };
+
+  const hasActiveFilters = searchTerm || dateRange.from || dateRange.to;
+
   if (loading) {
     return <LoadingOverlay message="Loading collections..." />;
   }
@@ -218,16 +253,63 @@ export default function CollectionsPage() {
               </div>
             </div>
 
-            {/* Search */}
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 glass-text-description" />
-              <Input
-                placeholder="Search collections..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="glass-input pl-10"
-              />
+            {/* Search and Filters */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 glass-text-description" />
+                <Input
+                  placeholder="Search collections..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="glass-input pl-10"
+                />
+              </div>
+              
+              <div className="flex gap-2">
+                <DateRangePicker
+                  dateRange={dateRange}
+                  onDateRangeChange={setDateRange}
+                  placeholder="Filter by date range"
+                  className="w-[280px]"
+                />
+                
+                {hasActiveFilters && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearAllFilters}
+                    className="px-3"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
+
+            {/* Active Filters Display */}
+            {hasActiveFilters && (
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-sm glass-text-description">Active filters:</span>
+                {searchTerm && (
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    Search: {searchTerm}
+                    <X 
+                      className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                      onClick={() => setSearchTerm('')}
+                    />
+                  </Badge>
+                )}
+                {(dateRange.from || dateRange.to) && (
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    Date: {dateRange.from ? format(dateRange.from, 'MMM dd, yyyy') : 'Start'} - {dateRange.to ? format(dateRange.to, 'MMM dd, yyyy') : 'End'}
+                    <X 
+                      className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                      onClick={() => setDateRange({ from: undefined, to: undefined })}
+                    />
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Collections Grid */}
