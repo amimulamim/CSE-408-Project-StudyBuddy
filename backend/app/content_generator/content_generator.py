@@ -123,6 +123,7 @@ class ContentGenerator:
             content_item = ContentItem(
                 id=content_id,
                 user_id=user_id,
+                collection_name=collection_name.strip(),  # Store the collection name (trimmed)
                 content_url=content_url,
                 topic=topic,
                 content_type=content_type,
@@ -293,6 +294,16 @@ class ContentGenerator:
                 - If the slide contains code or uses \\verb, \\texttt (with special characters), or \\begin{{verbatim}}, use \\begin{{frame}}[fragile]
                 - NEVER use \\texttt for multi-line code or anything containing quotes, slashes, or backslashes
                 - Use only \\begin{{verbatim}} or \\begin{{lstlisting}} for multi-line code blocks, and always inside a [fragile] frame
+                - CRITICAL: Use \\begin{{frame}}[fragile] for ANY frame containing:
+                  * \\verb commands
+                  * \\texttt with special characters ($, %, &, #, \\, {{, }}, etc.)
+                  * \\begin{{verbatim}} blocks
+                  * Code examples or programming syntax
+                  * Any backslashes, dollar signs, or special LaTeX characters in text
+                - For multi-line code, ALWAYS use \\begin{{verbatim}}...\\end{{verbatim}} inside [fragile] frames
+                - NEVER use \\texttt for anything containing special characters - use \\begin{{verbatim}} instead
+                - Do not forget to escape special characters ($ % & # \\ {{ }}) in LaTeX text mode
+                - For inline code with special characters, use \\begin{{verbatim}} on separate lines instead of \\texttt 
 
                 CRITICAL CHARACTER ENCODING RULES:
                 - NEVER use special Unicode characters like ×, ∇, ⊙, •, –, —, ", ", ', '
@@ -386,10 +397,10 @@ class ContentGenerator:
                     '•': r'',  # Remove bullets, itemize handles them
                     '–': r'-',
                     '—': r'--',
-                    '"': r'"',  # Left double quote
-                    '"': r'"',  # Right double quote
-                    ''': r"'",  # Left single quote
-                    ''': r"'",  # Right single quote
+                    '"': r'"',  # Left smart quote
+                    '"': r'"',  # Right smart quote
+                    ''': r"'",  # Left smart quote
+                    ''': r"'",  # Right smart quote
                     '…': r'...',
                     '≤': r'$\leq$',
                     '≥': r'$\geq$',
@@ -517,6 +528,7 @@ class ContentGenerator:
                         # If this is not the last attempt, provide feedback to improve the LaTeX
                         if attempt < max_retries:
                             # Add specific error feedback to the prompt for the next iteration
+                            # Common LaTeX compilation errors and their fixes
                             common_errors = {
                                 "Undefined control sequence": "avoiding undefined LaTeX commands and using only standard LaTeX commands",
                                 "Missing $": "ensuring proper math mode syntax - put all mathematical expressions in $...$",
@@ -528,7 +540,10 @@ class ContentGenerator:
                                 "Unicode": "using only ASCII characters - replace × with $\\times$, ∇ with $\\nabla$, • with standard bullets",
                                 "Package inputenc Error": "avoiding Unicode characters and using proper LaTeX encoding",
                                 "Unknown character": "using only standard ASCII characters and proper LaTeX math symbols",
-                                "Invalid UTF-8": "replacing all special characters with proper LaTeX equivalents"
+                                "Invalid UTF-8": "replacing all special characters with proper LaTeX equivalents",
+                                "verb": "using [fragile] frames for all \\verb commands and \\texttt with special characters",
+                                "fragile": "marking frames as [fragile] when using \\verb, \\texttt with special chars, or \\begin{verbatim}",
+                                "verbatim": "using [fragile] frames for all verbatim environments and code blocks"
                             }
                             
                             error_feedback = ""
@@ -569,4 +584,112 @@ class ContentGenerator:
             return None
             
         raise Exception(f"Failed to generate valid slides after {max_retries} retries. Please try again with a different topic or check your collection documents.")
+
+    def update_content_collection_names(
+        self,
+        user_id: str,
+        old_collection_name: str,
+        new_collection_name: str,
+        db: Session
+    ) -> bool:
+        """Updates all content items when a collection is renamed."""
+        try:
+            from sqlalchemy import func
+            
+            # Trim input parameters
+            old_collection_name = old_collection_name.strip()
+            new_collection_name = new_collection_name.strip()
+            
+            # Update all content items that belong to the renamed collection
+            updated_count = db.query(ContentItem).filter(
+                ContentItem.user_id == user_id,
+                func.trim(ContentItem.collection_name) == old_collection_name
+            ).update({
+                ContentItem.collection_name: new_collection_name
+            }, synchronize_session=False)
+            
+            db.commit()
+            logger.info(f"Updated {updated_count} content items from collection '{old_collection_name}' to '{new_collection_name}' for user {user_id}")
+            return True
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error updating content collection names: {str(e)}")
+            return False
+
+    def get_content_by_collection(
+        self,
+        user_id: str,
+        collection_name: str,
+        db: Session
+    ) -> List[ContentItem]:
+        """Retrieves all content items for a specific collection."""
+        try:
+            from sqlalchemy import func
+            
+            # Trim input parameter
+            collection_name = collection_name.strip()
+            
+            # Use database trimming for consistent matching
+            content_items = db.query(ContentItem).filter(
+                ContentItem.user_id == user_id,
+                func.trim(ContentItem.collection_name) == collection_name
+            ).all()
+            return content_items
+        except Exception as e:
+            logger.error(f"Error retrieving content for collection {collection_name}: {str(e)}")
+            return []
+
+    def delete_content_by_collection(
+        self,
+        user_id: str,
+        collection_name: str,
+        db: Session
+    ) -> bool:
+        """Deletes all content items when a collection is deleted."""
+        try:
+            from sqlalchemy import func
+            
+            # Trim input parameter
+            collection_name = collection_name.strip()
+            
+            # Delete all content items for the collection
+            deleted_count = db.query(ContentItem).filter(
+                ContentItem.user_id == user_id,
+                func.trim(ContentItem.collection_name) == collection_name
+            ).delete(synchronize_session=False)
+            
+            db.commit()
+            logger.info(f"Deleted {deleted_count} content items from collection '{collection_name}' for user {user_id}")
+            return True
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error deleting content for collection {collection_name}: {str(e)}")
+            return False
+
+    def trim_all_collection_names(
+        self,
+        user_id: str,
+        db: Session
+    ) -> bool:
+        """Trims whitespace from all collection_name fields for a user's content items."""
+        try:
+            from sqlalchemy import text
+            
+            # Update all content items to trim their collection_name
+            result = db.execute(text("""
+                UPDATE content_items 
+                SET collection_name = TRIM(collection_name) 
+                WHERE user_id = :user_id 
+                AND collection_name != TRIM(collection_name)
+            """), {'user_id': user_id})
+            
+            updated_count = result.rowcount
+            db.commit()
+            
+            logger.info(f"Trimmed whitespace from {updated_count} content items for user {user_id}")
+            return True
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error trimming collection names: {str(e)}")
+            return False
 

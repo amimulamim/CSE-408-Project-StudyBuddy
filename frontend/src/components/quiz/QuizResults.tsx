@@ -25,36 +25,95 @@ interface QuestionResult {
   explanation?: string;
   type?: string;
   options?: string[];
+  question_text?: string;
+  marks?: number;
+  difficulty?: string;
 }
 
 interface QuizResultsProps {
   quizId: string;
+  isAdminMode?: boolean;
+  onClose?: () => void;
+  userId?: string; // Add userId for admin mode to view specific user's result
 }
 
-export function QuizResults({ quizId }: QuizResultsProps) {
+// Transform admin quiz response to match user quiz result format
+const transformAdminResponse = (adminData: any) => {
+  if (!adminData?.quiz) {
+    return null;
+  }
+
+  // Calculate total score from results
+  const totalScore = adminData.results?.reduce((sum: number, result: any) => sum + result.score, 0) || 0;
+  const totalPossible = adminData.results?.reduce((sum: number, result: any) => sum + result.total, 0) || 0;
+
+  // If no results found, calculate from questions
+  const questionsTotal = adminData.questions?.reduce((sum: number, question: any) => sum + (question.marks || 1), 0) || 0;
+
+  return {
+    quiz_id: adminData.quiz.quiz_id,
+    score: totalScore,
+    total: totalPossible || questionsTotal,
+    topic: 'Quiz', // Default topic since admin response doesn't have it
+    domain: 'General', // Default domain
+    feedback: '',
+    question_results: adminData.results?.map((result: any) => ({
+      question_id: result.id,
+      score: result.score,
+      is_correct: result.percentage === 100,
+      student_answer: 'Answer data not available in admin view' // Admin endpoint doesn't include detailed answers
+    })) || []
+  };
+};
+
+export function QuizResults({ quizId, isAdminMode = false, onClose, userId }: QuizResultsProps) {
   const navigate = useNavigate();
   const [results, setResults] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchResults();
-  }, [quizId]);
+  }, [quizId, userId]);
 
   const fetchResults = async () => {
     try {
       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-      const response = await makeRequest(
-        `${API_BASE_URL}/api/v1/quiz/quizzes/${quizId}?take=false`,
-        'GET'
-      );
       
-      if (response?.status === 'success') {
-        setResults(response.data);
+      let endpoint: string;
+      
+      if (isAdminMode && userId) {
+        // For admin viewing specific user's result, use the new admin endpoint
+        endpoint = `${API_BASE_URL}/api/v1/admin/quiz/${quizId}/user/${userId}/result`;
+      } else if (isAdminMode) {
+        // Fallback to quiz details if no userId provided
+        endpoint = `${API_BASE_URL}/api/v1/admin/quiz/${quizId}`;
+      } else {
+        // Regular user viewing their own result
+        endpoint = `${API_BASE_URL}/api/v1/quiz/quizzes/${quizId}?take=false`;
+      }
+        
+      const response = await makeRequest(endpoint, 'GET');
+      
+      if (response && typeof response === 'object' && 'status' in response) {
+        if (response.status === 'success' && 'data' in response && response.data) {
+          const data = response.data as any;
+          if (isAdminMode && !userId) {
+            // Transform admin quiz details response
+            setResults(transformAdminResponse(data));
+          } else {
+            // Use the data directly for user results or admin user-specific results
+            setResults(data);
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching quiz results:', error);
       toast.error('Failed to load quiz results');
-      navigate('/dashboard/quiz');
+      if (!isAdminMode) {
+        navigate('/dashboard/quiz');
+      } else if (onClose) {
+        onClose();
+      }
     } finally {
       setLoading(false);
     }
@@ -62,7 +121,7 @@ export function QuizResults({ quizId }: QuizResultsProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className={isAdminMode ? "flex items-center justify-center py-12" : "flex items-center justify-center min-h-screen"}>
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
           <p className="glass-text-description">Loading quiz results...</p>
@@ -73,7 +132,7 @@ export function QuizResults({ quizId }: QuizResultsProps) {
 
   if (!results) {
     return (
-      <div className="text-center py-12">
+      <div className={isAdminMode ? "text-center py-8" : "text-center py-12"}>
         <p className="glass-text-description">Quiz results not found.</p>
       </div>
     );
@@ -96,8 +155,9 @@ export function QuizResults({ quizId }: QuizResultsProps) {
   };
 
   return (
-    <div className="min-h-screen dashboard-bg-animated">
-      <div className="container mx-auto py-6 max-w-6xl">
+    <div className={isAdminMode ? "h-full flex flex-col" : "min-h-screen dashboard-bg-animated"}>
+      <div className={isAdminMode ? "flex-1 overflow-y-auto p-6" : "container mx-auto py-6 max-w-6xl"}>
+        <div className={isAdminMode ? "max-w-6xl mx-auto space-y-6" : ""}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -106,11 +166,17 @@ export function QuizResults({ quizId }: QuizResultsProps) {
           </div>
           <Button 
             variant="outline" 
-            onClick={() => navigate('/dashboard/quiz')}
+            onClick={() => {
+              if (isAdminMode && onClose) {
+                onClose();
+              } else {
+                navigate('/dashboard/quiz');
+              }
+            }}
             className="glass-card hover:bg-white/10"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Quizzes
+            {isAdminMode ? 'Close' : 'Back to Quizzes'}
           </Button>
         </div>
 
@@ -183,7 +249,7 @@ export function QuizResults({ quizId }: QuizResultsProps) {
                         )}
                       </CardTitle>
                       <CardDescription className="glass-text-description">
-                        {result.score} point{result.score !== 1 ? 's' : ''} • {result.type}
+                        {result.score}/{result.marks || 1} point{(result.marks || 1) !== 1 ? 's' : ''} • {result.type} • {result.difficulty}
                       </CardDescription>
                     </div>
                     <Badge 
@@ -195,25 +261,93 @@ export function QuizResults({ quizId }: QuizResultsProps) {
                 </CardHeader>
                 
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div>
-                      <span className="font-medium glass-text">Your Answer: </span>
-                      <span className={`${result.is_correct ? 'text-green-600' : 'text-red-600'}`}>
-                        {result.student_answer}
-                      </span>
+                  {/* Question Text */}
+                  {result.question_text && (
+                    <div className="p-4 rounded-lg bg-slate-800/30 border border-white/20">
+                      <h4 className="font-medium glass-text mb-2">Question:</h4>
+                      <p className="glass-text-description leading-relaxed">{result.question_text}</p>
                     </div>
+                  )}
+
+                  {/* Options for Multiple Choice */}
+                  {result.options && result.options.length > 0 && (
+                    <div className="p-4 rounded-lg bg-slate-800/30 border border-white/20">
+                      <h4 className="font-medium glass-text mb-3">Options:</h4>
+                      <div className="space-y-2">
+                        {result.options.map((option, optionIndex) => {
+                          const isCorrect = result.correct_answer === String(optionIndex);
+                          const isSelected = result.student_answer === String(optionIndex);
+                          const optionLabels = ['A', 'B', 'C', 'D', 'E'];
+                          
+                          return (
+                            <div
+                              key={optionIndex}
+                              className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                                isCorrect 
+                                  ? 'bg-green-500/10 border-green-400/50 text-green-300' 
+                                  : isSelected 
+                                    ? 'bg-red-500/10 border-red-400/50 text-red-300'
+                                    : 'bg-slate-700/30 border-slate-600/50 glass-text-description'
+                              }`}
+                            >
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm ${
+                                isCorrect 
+                                  ? 'bg-green-500 text-white' 
+                                  : isSelected 
+                                    ? 'bg-red-500 text-white'
+                                    : 'bg-slate-600 text-slate-300'
+                              }`}>
+                                {optionLabels[optionIndex]}
+                              </div>
+                              <span className="flex-1">{option}</span>
+                              {isCorrect && (
+                                <CheckCircle className="h-5 w-5 text-green-500" />
+                              )}
+                              {isSelected && !isCorrect && (
+                                <XCircle className="h-5 w-5 text-red-500" />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Answer Section */}
+                  <div className="space-y-3">
+                    <div className="p-4 rounded-lg bg-slate-800/30 border border-white/20">
+                      <h4 className="font-medium glass-text mb-2">Your Answer:</h4>
+                      <div className={`${result.is_correct ? 'text-green-400' : 'text-red-400'} font-medium`}>
+                        {result.options && result.options.length > 0 ? (
+                          // For multiple choice, show the option text
+                          result.options[parseInt(result.student_answer)] || result.student_answer
+                        ) : (
+                          // For other types, show the raw answer
+                          result.student_answer
+                        )}
+                      </div>
+                    </div>
+                    
                     {!result.is_correct && result.correct_answer && (
-                      <div>
-                        <span className="font-medium glass-text">Correct Answer: </span>
-                        <span className="text-green-600">{result.correct_answer}</span>
+                      <div className="p-4 rounded-lg bg-green-500/10 border border-green-400/50">
+                        <h4 className="font-medium text-green-300 mb-2">Correct Answer:</h4>
+                        <div className="text-green-400 font-medium">
+                          {result.options && result.options.length > 0 ? (
+                            // For multiple choice, show the option text
+                            result.options[parseInt(result.correct_answer)] || result.correct_answer
+                          ) : (
+                            // For other types, show the raw answer
+                            result.correct_answer
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
                   
                   {result.explanation && (
-                    <div className="p-4 rounded-lg bg-blue-50/50 border border-blue-200/50">
-                      <h4 className="font-medium glass-text mb-2">Explanation</h4>
-                      <p className="white">{result.explanation}</p>
+                    <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-400/50">
+                      <h4 className="font-medium text-blue-300 mb-2">Explanation:</h4>
+                      <p className="text-blue-200 leading-relaxed">{result.explanation}</p>
                     </div>
                   )}
                 </CardContent>
@@ -387,6 +521,7 @@ export function QuizResults({ quizId }: QuizResultsProps) {
             </Card>
           </TabsContent>
         </Tabs>
+        </div>
       </div>
     </div>
   );

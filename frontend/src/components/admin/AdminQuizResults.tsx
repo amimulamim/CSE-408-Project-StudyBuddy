@@ -6,9 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { BarChart3, Search, Eye, Trophy, Clock } from 'lucide-react';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { BarChart3, Search, Eye, Trophy, X } from 'lucide-react';
 import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
+import { QuizResults } from '@/components/quiz/QuizResults';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { format } from 'date-fns';
+
 
 interface QuizResult {
   id: string;
@@ -38,23 +43,65 @@ export function AdminQuizResults() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedResult, setSelectedResult] = useState<QuizResult | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isViewQuizResultsOpen, setIsViewQuizResultsOpen] = useState(false);
+  const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalResults, setTotalResults] = useState(0);
+  // at the top of your component
+  type FilterType = 'all' | 'MultipleChoice' | 'ShortAnswer' | 'TrueFalse';
+  const [filterType, setFilterType] = useState<FilterType>('all');
+
+  const [sortBy, setSortBy] = useState('created_at'); // Default sort by completed date
+  const [sortOrder, setSortOrder] = useState('desc'); // Default sort order descending
+
+  // Date range filtering state
+  const [dateRange, setDateRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({
+    from: undefined,
+    to: undefined,
+  });
+
   const pageSize = 20;
 
   const fetchQuizResults = async (page = 0) => {
     try {
       setLoading(true);
       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+
+      const params = new URLSearchParams({
+        offset: String(page * pageSize),
+        size: String(pageSize),
+        sort_by: sortBy,
+        sort_order: sortOrder,
+      });
+      
+      if (filterType && filterType !== 'all') {
+        params.append('filter_type', filterType);
+      }
+      
+      // Add date range filtering
+      if (dateRange.from) {
+        params.append('start_date', dateRange.from.toISOString());
+      }
+      if (dateRange.to) {
+        // Set to end of day for the 'to' date
+        const endOfDay = new Date(dateRange.to);
+        endOfDay.setHours(23, 59, 59, 999);
+        params.append('end_date', endOfDay.toISOString());
+      }
+      
       const response = await makeRequest(
-        `${API_BASE_URL}/api/v1/admin/quiz-results?offset=${page * pageSize}&size=${pageSize}`,
+        `${API_BASE_URL}/api/v1/admin/quiz-results?${params.toString()}`,
         'GET'
       );
 
       if (response && typeof response === 'object' && 'status' in response) {
-        if (response.status === 'success' && response.data) {
-          setQuizResults(response.data.quiz_results || []);
-          setTotalResults(response.data.total || 0);
+        if (response.status === 'success' && 'data' in response && response.data) {
+          const data = response.data as any;
+          setQuizResults(data.quiz_results || []);
+          setTotalResults(data.total || 0);
         }
       }
     } catch (error) {
@@ -67,11 +114,17 @@ export function AdminQuizResults() {
 
   useEffect(() => {
     fetchQuizResults(currentPage);
-  }, [currentPage]);
+  }, [currentPage, sortBy, sortOrder, filterType, dateRange]);
 
   const handleViewResult = (result: QuizResult) => {
     setSelectedResult(result);
     setIsViewDialogOpen(true);
+  };
+
+  const handleViewQuizResults = (result: QuizResult) => {
+    setSelectedQuizId(result.quiz_id);
+    setSelectedResult(result); // Store the full result for user context
+    setIsViewQuizResultsOpen(true);
   };
 
   const filteredResults = quizResults.filter(result =>
@@ -114,6 +167,98 @@ export function AdminQuizResults() {
               className="max-w-sm"
             />
           </div>
+
+          <div className="flex gap-2">
+            <Select value={filterType} onValueChange={(value: 'all' | 'MultipleChoice' | 'ShortAnswer' | 'TrueFalse') => setFilterType(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>All Types</SelectItem>
+                <SelectItem value="MultipleChoice">Multiple Choice</SelectItem>
+                <SelectItem value="ShortAnswer">Short Answer</SelectItem>
+                <SelectItem value="TrueFalse">True/False</SelectItem>
+                {/* Add more quiz types as needed */}
+              </SelectContent>
+            </Select>
+
+            <Select value={sortBy} onValueChange={(value: 'created_at' | 'percentage') => setSortBy(value)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="created_at">Created Date</SelectItem>
+                <SelectItem value="percentage">Score Percentage</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Order" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">Descending</SelectItem>
+                <SelectItem value="asc">Ascending</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Date Range Picker */}
+            <DateRangePicker
+              dateRange={dateRange}
+              onDateRangeChange={(range) => {
+                setDateRange(range);
+                setCurrentPage(0); // Reset to first page when date range changes
+              }}
+              placeholder="Pick a date range"
+            />
+          </div>
+
+          {/* Active Filters Display */}
+          {(filterType !== 'all' || dateRange.from || dateRange.to) && (
+            <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+              <span className="text-sm font-medium">Active filters:</span>
+              {filterType !== 'all' && (
+                <Badge variant="secondary" className="gap-1">
+                  Type: {filterType}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-0 text-muted-foreground hover:text-foreground"
+                    onClick={() => setFilterType('all')}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </Badge>
+              )}
+              {(dateRange.from || dateRange.to) && (
+                <Badge variant="secondary" className="gap-1">
+                  Date: {dateRange.from ? format(dateRange.from, "MMM dd") : "Start"} - {dateRange.to ? format(dateRange.to, "MMM dd") : "End"}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-0 text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      setDateRange({ from: undefined, to: undefined });
+                      setCurrentPage(0);
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </Badge>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setFilterType('all');
+                  setDateRange({ from: undefined, to: undefined });
+                  setCurrentPage(0);
+                }}
+                className="ml-auto"
+              >
+                Clear All
+              </Button>
+            </div>
+          )}
 
           <div className="border rounded-lg overflow-hidden">
             <Table className="enhanced-table">
@@ -173,13 +318,24 @@ export function AdminQuizResults() {
                         {new Date(result.completed_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewResult(result)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewResult(result)}
+                            title="View metadata"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewQuizResults(result)}
+                            title="View full quiz results"
+                          >
+                            <Trophy className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -305,6 +461,25 @@ export function AdminQuizResults() {
                 Close
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Full Quiz Results Dialog */}
+        <Dialog open={isViewQuizResultsOpen} onOpenChange={setIsViewQuizResultsOpen}>
+          <DialogContent className="max-w-7xl max-h-[95vh] flex flex-col p-0">
+            <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
+              <DialogTitle>Full Quiz Results</DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto min-h-0">
+              {selectedQuizId && selectedResult && (
+                <QuizResults 
+                  quizId={selectedQuizId} 
+                  isAdminMode={true}
+                  userId={selectedResult.user_id}
+                  onClose={() => setIsViewQuizResultsOpen(false)}
+                />
+              )}
+            </div>
           </DialogContent>
         </Dialog>
       </CardContent>

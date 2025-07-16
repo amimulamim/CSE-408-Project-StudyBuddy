@@ -125,11 +125,9 @@ class TestEmbeddingGenerator:
             
             generator = EmbeddingGenerator()
             
-            # Act
-            result = generator.get_embedding("")
-            
-            # Assert
-            assert result == [0.0, 0.0, 0.0]
+            # Act & Assert - should raise RuntimeError for empty text
+            with pytest.raises(RuntimeError, match="Gemini embedding failed: Text is empty after sanitization"):
+                generator.get_embedding("")
 
     def test_get_embedding_unicode_text(self):
         """Test embedding generation with unicode text"""

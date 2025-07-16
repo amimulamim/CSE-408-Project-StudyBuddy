@@ -2,12 +2,20 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Plus, BookOpen, Trophy, Clock, ArrowLeft, Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Plus, BookOpen, Trophy, Clock, ArrowLeft, Loader2, X } from 'lucide-react';
 import { QuizList } from './QuizList';
 import { QuizCreator } from './QuizCreator';
 import { useNavigate } from 'react-router-dom';
 import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { format } from 'date-fns';
+
+interface DateRange {
+  from: Date | undefined;
+  to: Date | undefined;
+}
 
 export interface Quiz {
   quiz_id: string;
@@ -28,16 +36,31 @@ export function QuizDashboard() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [quizMarks, setQuizMarks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
 
   useEffect(() => {
     fetchQuizzes();
     fetchQuizMarks();
-  }, []);
+  }, [dateRange]);
 
   const fetchQuizzes = async () => {
     try {
       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-      const response = await makeRequest(`${API_BASE_URL}/api/v1/quiz/quizzes`, 'GET');
+      
+      const params = new URLSearchParams();
+      if (dateRange.from) {
+        params.append('start_date', format(dateRange.from, 'yyyy-MM-dd'));
+      }
+      if (dateRange.to) {
+        params.append('end_date', format(dateRange.to, 'yyyy-MM-dd'));
+      }
+      
+      let url = `${API_BASE_URL}/api/v1/quiz/quizzes`;
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
+      const response = await makeRequest(url, 'GET') as any;
       
       if (response?.status === 'success') {
         setQuizzes(response.data || []);
@@ -51,7 +74,21 @@ export function QuizDashboard() {
   const fetchQuizMarks = async () => {
     try {
       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-      const response = await makeRequest(`${API_BASE_URL}/api/v1/quiz/quiz-marks`, 'GET');
+      
+      const params = new URLSearchParams();
+      if (dateRange.from) {
+        params.append('start_date', format(dateRange.from, 'yyyy-MM-dd'));
+      }
+      if (dateRange.to) {
+        params.append('end_date', format(dateRange.to, 'yyyy-MM-dd'));
+      }
+      
+      let url = `${API_BASE_URL}/api/v1/quiz/quiz-marks`;
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
+      const response = await makeRequest(url, 'GET') as any;
       
       if (response?.status === 'success') {
         const filteredData = (response.data || []).filter((quiz: any) => Number(quiz.total) > 0);
@@ -86,6 +123,12 @@ export function QuizDashboard() {
     navigate(`/quiz/take/${quiz.quiz_id}`);
     toast.info('Starting quiz retake. Your previous results will be overwritten.');
   };
+
+  const clearAllFilters = () => {
+    setDateRange({ from: undefined, to: undefined });
+  };
+
+  const hasActiveFilters = dateRange.from || dateRange.to;
 
   if (activeView === 'create') {
     return (
@@ -153,6 +196,46 @@ export function QuizDashboard() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Button>
+        </div>
+      </div>
+
+      {/* Filters Section */}
+      <div className="glass-card p-4 rounded-md">
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <div className="flex items-center gap-2">
+            <DateRangePicker
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+              placeholder="Filter by date range"
+              className="w-[280px]"
+            />
+            
+            {hasActiveFilters && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearAllFilters}
+                className="px-3"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          
+          {hasActiveFilters && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm glass-text-description">Filtering by:</span>
+              {(dateRange.from || dateRange.to) && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  Date: {dateRange.from ? format(dateRange.from, 'MMM dd, yyyy') : 'Start'} - {dateRange.to ? format(dateRange.to, 'MMM dd, yyyy') : 'End'}
+                  <X 
+                    className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                    onClick={() => setDateRange({ from: undefined, to: undefined })}
+                  />
+                </Badge>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

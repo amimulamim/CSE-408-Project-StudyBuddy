@@ -211,7 +211,7 @@ async def get_quiz(
             quiz_result = db.query(QuizResult).filter(
                 QuizResult.quiz_id == quiz_id,
                 QuizResult.user_id == user_id
-            ).first()
+            ).order_by(QuizResult.created_at.desc()).first()
             if not quiz_result:
                 raise HTTPException(status_code=404, detail="Quiz result not found. You have not taken this quiz yet.")
             question_results = db.query(QuestionResult).filter(
@@ -243,7 +243,10 @@ async def get_quiz(
                         "correct_answer": question_map[str(qr.question_id)].correct_answer if str(qr.question_id) in question_map else None,
                         "explanation": question_map[str(qr.question_id)].explanation if str(qr.question_id) in question_map else None,
                         "type": question_map[str(qr.question_id)].type.value if str(qr.question_id) in question_map and hasattr(question_map[str(qr.question_id)].type, "value") else str(question_map[str(qr.question_id)].type) if str(qr.question_id) in question_map else None,
-                        "options": question_map[str(qr.question_id)].options if str(qr.question_id) in question_map else None
+                        "options": question_map[str(qr.question_id)].options if str(qr.question_id) in question_map else None,
+                        "question_text": question_map[str(qr.question_id)].question_text if str(qr.question_id) in question_map else None,
+                        "marks": question_map[str(qr.question_id)].marks if str(qr.question_id) in question_map else None,
+                        "difficulty": question_map[str(qr.question_id)].difficulty.value if str(qr.question_id) in question_map and hasattr(question_map[str(qr.question_id)].difficulty, "value") else str(question_map[str(qr.question_id)].difficulty) if str(qr.question_id) in question_map else None
                     }
                     for qr in question_results
                 ]
@@ -292,7 +295,7 @@ async def get_quiz_result(
         quiz_result = db.query(QuizResult).filter(
             QuizResult.quiz_id == quiz_id,
             QuizResult.user_id == user_info["uid"]
-        ).first()
+        ).order_by(QuizResult.created_at.desc()).first()
         if not quiz_result:
             raise HTTPException(status_code=404, detail="Quiz result not found or not accessible")
         quiz_record = db.query(Quiz).filter(Quiz.quiz_id == quiz_id).first()
@@ -426,12 +429,31 @@ async def evaluate_all_answers(
 @router.get("/quizzes", response_model=List[Dict[str, Any]])
 async def get_all_quizzes(
     user_info: Dict[str, Any] = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    start_date: Optional[str] = Query(None, description="Start date filter (ISO format: YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="End date filter (ISO format: YYYY-MM-DD)")
 ):
     """Fetches all quizzes created by the current user."""
     try:
         user_id = user_info["uid"]
-        quizzes = db.query(Quiz).filter(Quiz.user_id == user_id).order_by(Quiz.created_at.desc()).all()
+        query = db.query(Quiz).filter(Quiz.user_id == user_id)
+        
+        # Apply date range filtering
+        if start_date:
+            try:
+                start_date_obj = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+                query = query.filter(Quiz.created_at >= start_date_obj)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD")
+        
+        if end_date:
+            try:
+                end_date_obj = datetime.fromisoformat(end_date).replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+                query = query.filter(Quiz.created_at <= end_date_obj)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD")
+        
+        quizzes = query.order_by(Quiz.created_at.desc()).all()
         result = []
         for quiz in quizzes:
             result.append({
@@ -440,6 +462,8 @@ async def get_all_quizzes(
                 "difficulty": quiz.difficulty.value if hasattr(quiz.difficulty, "value") else str(quiz.difficulty),
                 "duration": getattr(quiz, "duration", None),
                 "collection_name": getattr(quiz, "collection_name", None),
+                "topic": getattr(quiz, "topic", None),
+                "domain": getattr(quiz, "domain", None),
                 # Add more fields as needed
             })
         return result
@@ -451,21 +475,62 @@ async def get_all_quizzes(
 async def get_quiz_marks(
     collection: Optional[str] = None,
     user_info: Dict[str, Any] = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    start_date: Optional[str] = Query(None, description="Start date filter (ISO format: YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="End date filter (ISO format: YYYY-MM-DD)")
 ):
     """
-    Returns all quiz marks for the user, with quiz details. If 'collection' is provided, filters by collection_name.
+    Returns all quiz marks for the user (latest attempts only), with quiz details. If 'collection' is provided, filters by collection_name.
     """
     try:
         user_id = user_info["uid"]
-        # Join quiz_results and quizzes
-        query = db.query(
-            QuizResult,
-            Quiz
-        ).join(Quiz, QuizResult.quiz_id == Quiz.quiz_id)
-        query = query.filter(QuizResult.user_id == user_id)
+        
+        # Get the latest created_at timestamp for each quiz-user combination
+        from sqlalchemy import func, and_
+        latest_timestamps = (
+            db.query(
+                QuizResult.quiz_id,
+                QuizResult.user_id,
+                func.max(QuizResult.created_at).label('max_created_at')
+            )
+            .filter(QuizResult.user_id == user_id)
+            .group_by(QuizResult.quiz_id, QuizResult.user_id)
+            .subquery()
+        )
+        
+        # Join quiz_results and quizzes, but only get latest results
+        query = (
+            db.query(QuizResult, Quiz)
+            .join(Quiz, QuizResult.quiz_id == Quiz.quiz_id)
+            .join(
+                latest_timestamps,
+                and_(
+                    QuizResult.quiz_id == latest_timestamps.c.quiz_id,
+                    QuizResult.user_id == latest_timestamps.c.user_id,
+                    QuizResult.created_at == latest_timestamps.c.max_created_at
+                )
+            )
+            .filter(QuizResult.user_id == user_id)
+        )
+        
         if collection:
             query = query.filter(Quiz.collection_name == collection)
+            
+        # Apply date range filtering on quiz creation date
+        if start_date:
+            try:
+                start_date_obj = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+                query = query.filter(Quiz.created_at >= start_date_obj)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD")
+        
+        if end_date:
+            try:
+                end_date_obj = datetime.fromisoformat(end_date).replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+                query = query.filter(Quiz.created_at <= end_date_obj)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD")
+        
         results = query.all()
         response = []
         for quiz_result, quiz in results:

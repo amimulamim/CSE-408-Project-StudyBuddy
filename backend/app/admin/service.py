@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, func, and_, or_
+from sqlalchemy import desc, func, and_, or_, case, cast, Float
 from app.admin.model import AdminLog, Notification
 from app.admin.schema import (
     AdminLogCreate, NotificationCreate, NotificationUpdate,
@@ -61,12 +61,22 @@ def get_admin_logs(
 # User Management Functions
 def get_all_users_paginated(
     db: Session,
-    pagination: PaginationQuery
+    pagination: PaginationQuery,
+    filter_role: Optional[str] = None,
+    filter_plan: Optional[str] = None
 ) -> Tuple[List[User], int]:
     """Get paginated list of all users"""
-    total = db.query(User).count()
-    users = db.query(User)\
-              .order_by(desc(User.created_at))\
+
+    query = db.query(User)
+    if filter_role:
+        query = query.filter(User.role == filter_role)  
+    
+    if filter_plan:
+        query = query.filter(User.current_plan.ilike(f"%{filter_plan}%"))
+
+    total = query.count()
+
+    users = query.order_by(desc(User.created_at))\
               .offset(pagination.offset)\
               .limit(pagination.size)\
               .all()
@@ -118,16 +128,37 @@ def search_users_by_query(db: Session, query: str, limit: int = 50):
 # Content Management Functions
 def get_all_content_paginated(
     db: Session,
-    pagination: PaginationQuery
+    pagination: PaginationQuery,
+    filter_type: Optional[str] = None,
+    sort_by: Optional[str] = "created_at",
+    sort_order: Optional[str] = "desc",
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None
 ) -> Tuple[List[Dict[str, Any]], int]:
     """Get paginated list of all generated content with user information"""
     from app.content_generator.models import ContentItem
     
     # Join with users table to get user information
     query = db.query(ContentItem, User).join(User, ContentItem.user_id == User.uid)
+
+    if filter_type:
+        query=query.filter(ContentItem.content_type == filter_type)
+
+    # Apply date range filtering if specified
+    if start_date:
+        query = query.filter(ContentItem.created_at >= start_date)
+    if end_date:
+        query = query.filter(ContentItem.created_at <= end_date)
+
     total = query.count()
+
+    sort_column = getattr(ContentItem, sort_by, ContentItem.created_at)
+    if sort_order == "asc":
+        order_expr= sort_column.asc()
+    else:
+        order_expr= sort_column.desc()
     
-    content_items = query.order_by(ContentItem.created_at.desc())\
+    content_items = query.order_by(order_expr)\
                          .offset(pagination.offset)\
                          .limit(pagination.size)\
                          .all()
@@ -148,6 +179,7 @@ def get_all_content_paginated(
             "content_url": content_item.content_url,
             "image_preview": content_item.image_preview,
             "topic": content_item.topic,
+            "collection": content_item.collection_name,
             "content_type": content_item.content_type or "Unknown",
             "raw_source": content_item.raw_source,
             "created_at": content_item.created_at.isoformat() if content_item.created_at else None
@@ -289,26 +321,106 @@ def moderate_content(
 # Quiz Management Functions
 def get_all_quiz_results_paginated(
     db: Session,
-    pagination: PaginationQuery
+    pagination: PaginationQuery,
+    sort_by: Optional[str] = "created_at",
+    sort_order: Optional[str] = "desc",
+    filter_type: Optional[str] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None
 ) -> Tuple[List[Dict[str, Any]], int]:
-    """Get paginated list of all quiz results with user and quiz information"""
+    """Get paginated list of all quiz results with user and quiz information (latest attempt only)"""
     from app.quiz_generator.models import QuizResult, Quiz, QuizQuestion
     
-    # Join QuizResult with Quiz and User to get all information
-    query = db.query(QuizResult, Quiz, User).join(
-        Quiz, QuizResult.quiz_id == Quiz.quiz_id
-    ).join(
-        User, QuizResult.user_id == User.uid
+    # Get the latest created_at timestamp for each quiz-user combination, then find the corresponding records
+    latest_timestamps = (
+        db.query(
+            QuizResult.quiz_id,
+            QuizResult.user_id,
+            func.max(QuizResult.created_at).label('max_created_at')
+        )
+        .group_by(QuizResult.quiz_id, QuizResult.user_id)
+        .subquery()
     )
-    total = query.count()
     
-    quiz_results = query.order_by(QuizResult.created_at.desc())\
-                        .offset(pagination.offset)\
-                        .limit(pagination.size)\
-                        .all()
+    percentage_expr = case(
+        (QuizResult.total > 0,
+          cast(QuizResult.score, Float) / cast(QuizResult.total, Float) * 100),
+        else_=0.0
+    ).label("percentage")
+
+    # Base query: Only latest QuizResults + joins + inject the percentage column
+    query = (
+        db.query(QuizResult, Quiz, User, percentage_expr)
+        .join(Quiz, QuizResult.quiz_id == Quiz.quiz_id)
+        .join(User, QuizResult.user_id == User.uid)
+        .join(
+            latest_timestamps,
+            and_(
+                QuizResult.quiz_id == latest_timestamps.c.quiz_id,
+                QuizResult.user_id == latest_timestamps.c.user_id,
+                QuizResult.created_at == latest_timestamps.c.max_created_at
+            )
+        )
+    )
+    
+    # Apply quiz type filtering if specified
+    if filter_type:
+        try:
+            # Validate that the filter_type is a valid QuestionType enum value
+            from app.quiz_generator.models import QuestionType
+            # This will raise ValueError if filter_type is not a valid enum value
+            question_type_enum = QuestionType(filter_type)
+            
+            # Create a subquery to find quizzes that have questions of the specified type
+            quiz_type_subquery = (
+                db.query(QuizQuestion.quiz_id)
+                .filter(QuizQuestion.type == question_type_enum)
+                .distinct()
+                .subquery()
+            )
+            
+            # Filter the main query to only include quizzes with the specified type
+            query = query.filter(QuizResult.quiz_id.in_(
+                db.query(quiz_type_subquery.c.quiz_id)
+            ))
+        except ValueError:
+            # If filter_type is not a valid enum value, return empty results
+            # This prevents SQL errors and provides graceful handling
+            return [], 0
+    
+    # Apply date range filtering if specified
+    if start_date or end_date:
+        if start_date:
+            query = query.filter(QuizResult.created_at >= start_date)
+        if end_date:
+            query = query.filter(QuizResult.created_at <= end_date)
+
+
+    total = query.count()
+
+    # 3) Whitelist sorting fields
+    if sort_by not in ("created_at", "percentage"):
+        sort_by = "created_at"
+
+    # Pick the SQL expression to sort on
+    if sort_by == "percentage":
+        sort_col = percentage_expr
+    else:  # created_at
+        sort_col = QuizResult.created_at
+
+    order_expr = sort_col.asc() if sort_order.lower() == "asc" else sort_col.desc()
+
+    # 5) Apply ORDER / OFFSET / LIMIT
+    quiz_results = (
+        query
+        .order_by(order_expr)
+        .offset(pagination.offset)
+        .limit(pagination.size)
+        .all()
+    )
     
     results_list = []
-    for result, quiz, user in quiz_results:
+    for result, quiz, user, percentage in quiz_results:
         # Generate a title from quiz topic or use default
         quiz_title = quiz.topic if quiz.topic else UNTITLED_CONTENT
         if quiz_title == UNTITLED_CONTENT:
@@ -362,7 +474,7 @@ def get_all_quiz_results_paginated(
             "score": int(result.score),
             "total": int(result.total),
             "total_questions": len(quiz_questions),  # Actual number of questions
-            "percentage": round((result.score / result.total * 100), 2) if result.total > 0 else 0,
+            "percentage": round(float(percentage), 2),  # Use the calculated percentage from query
             "feedback": result.feedback,
             "topic": quiz.topic or "No Topic",
             "domain": quiz.domain or "No Domain",
