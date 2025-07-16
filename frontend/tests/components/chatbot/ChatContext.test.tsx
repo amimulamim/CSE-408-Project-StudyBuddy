@@ -309,7 +309,7 @@ describe('ChatContext', () => {
     })
 
     await waitFor(() => {
-      expect(mockToast.error).toHaveBeenCalledWith('Error sending message:, API Error')
+      expect(mockToast.error).toHaveBeenCalledWith('Error sending message: API Error')
     })
   })
 
