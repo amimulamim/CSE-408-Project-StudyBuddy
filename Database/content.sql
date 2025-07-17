@@ -11,4 +11,8 @@ CREATE TABLE content_items (
 );
 
 ALTER TABLE content_items
-ADD COLUMN raw_source TEXT
+ADD COLUMN raw_source TEXT;
+
+ALTER TABLE content_items
+ADD COLUMN collection_name TEXT NOT NULL DEFAULT '';
+
