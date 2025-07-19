@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks,Query
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional
 from app.content_generator.content_generator import ContentGenerator
+from app.content_generator.version_service import ContentVersionService
 from app.auth.firebase_auth import get_current_user
 from app.content_generator.models import ContentItem
 from app.users.model import User
@@ -30,6 +31,22 @@ class ContentGenerateRequest(BaseModel):
     tone: Literal["instructive", "engaging", "formal"] = Field("instructive", description="Tone of content")
     collection_name: str = Field("default", description="Name of the collection in vector DB")
     special_instructions: Optional[str] = Field("", description="Special user instructions for content generation")
+
+class ContentModificationRequest(BaseModel):
+    """Request model for modifying existing content."""
+    modification_instructions: str = Field(..., description="Instructions for how to modify the content")
+    source_version: Optional[int] = Field(None, description="Specific version to modify from (defaults to latest)")
+
+class ContentVersionResponse(BaseModel):
+    """Response model for content version information."""
+    id: str
+    version_number: int
+    content_url: str
+    topic: Optional[str]
+    content_type: Optional[str]
+    modification_instructions: Optional[str]
+    created_at: Optional[str]
+    is_latest_version: bool
 
 
 @router.post("/generate")
@@ -422,3 +439,120 @@ async def get_content_by_collection(
     except Exception as e:
         logger.error(f"Error retrieving content for collection {collection_name}: {str(e)}")
         raise HTTPException(status_code=500, detail="Error retrieving content")
+
+# Content Modification and Versioning Endpoints
+
+@router.post("/{content_id}/modify")
+async def modify_content(
+    content_id: str,
+    request: ContentModificationRequest,
+    user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """Create a modified version of existing content."""
+    try:
+        version_service = ContentVersionService()
+        result = await version_service.modify_content(
+            content_id=content_id,
+            user_id=user["uid"],
+            modification_instructions=request.modification_instructions,
+            source_version=request.source_version,
+            db=db
+        )
+        
+        return {
+            "status": "success",
+            "message": "Content modified successfully",
+            "data": result
+        }
+        
+    except ValueError as e:
+        logger.error(f"Content modification failed for user {user['uid']}: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error modifying content {content_id} for user {user['uid']}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Content modification failed. Please try again later.")
+
+@router.get("/{content_id}/versions")
+async def get_content_versions(
+    content_id: str,
+    user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """Get all versions of a content item."""
+    try:
+        version_service = ContentVersionService()
+        versions = version_service.get_content_versions(
+            content_id=content_id,
+            user_id=user["uid"],
+            db=db
+        )
+        
+        return {
+            "status": "success",
+            "content_id": content_id,
+            "versions": versions,
+            "total_versions": len(versions)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting versions for content {content_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error retrieving content versions")
+
+@router.get("/{content_id}/modifications")
+async def get_modification_history(
+    content_id: str,
+    user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """Get modification history for a content item."""
+    try:
+        version_service = ContentVersionService()
+        modifications = version_service.get_modification_history(
+            content_id=content_id,
+            user_id=user["uid"],
+            db=db
+        )
+        
+        return {
+            "status": "success",
+            "content_id": content_id,
+            "modifications": modifications,
+            "total_modifications": len(modifications)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting modification history for content {content_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error retrieving modification history")
+
+@router.delete("/{content_id}/versions/{version_number}")
+async def delete_content_version(
+    content_id: str,
+    version_number: int,
+    user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """Delete a specific version of content."""
+    try:
+        version_service = ContentVersionService()
+        success = version_service.delete_content_version(
+            content_id=content_id,
+            version_number=version_number,
+            user_id=user["uid"],
+            db=db
+        )
+        
+        if success:
+            return {
+                "status": "success",
+                "message": f"Version {version_number} deleted successfully"
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Failed to delete version")
+            
+    except ValueError as e:
+        logger.error(f"Version deletion failed: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error deleting version {version_number} of content {content_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error deleting content version")
