@@ -221,33 +221,45 @@ async def get_content(
     user: Dict[str, Any] = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
-    """Retrieves previously generated content by ID."""
+    """Retrieves previously generated content by ID. Always returns the latest version."""
     try:
-        content = db.query(ContentItem).filter(
-            ContentItem.id == contentId,
-            ContentItem.user_id == user["uid"]
+        # First, try to find the latest version of this content
+        latest_content = db.query(ContentItem).filter(
+            ContentItem.user_id == user["uid"],
+            ContentItem.is_latest_version == True
+        ).filter(
+            (ContentItem.id == contentId) | 
+            (ContentItem.parent_content_id == contentId)
         ).first()
-        if not content:
+        
+        # If no latest version found, try to get the content directly
+        if not latest_content:
+            latest_content = db.query(ContentItem).filter(
+                ContentItem.id == contentId,
+                ContentItem.user_id == user["uid"]
+            ).first()
+        
+        if not latest_content:
             raise HTTPException(status_code=404, detail="Content not found or access denied")
 
         # For flashcards, fetch and return the JSON content directly
-        if content.content_type == "flashcards":
+        if latest_content.content_type == "flashcards":
             try:
                 # Fetch the JSON content from Firebase Storage
-                response = requests.get(content.content_url, timeout=30)
+                response = requests.get(latest_content.content_url, timeout=30)
                 response.raise_for_status()
                 
                 # Parse and return the JSON content
                 flashcards_data = response.json()
                 
                 return {
-                    "contentId": content.id,
+                    "contentId": latest_content.id,
                     "content": flashcards_data,  # Return parsed JSON data
                     "metadata": {
-                        "type": content.content_type,
-                        "topic": content.topic,
-                        "createdAt": content.created_at,
-                        "collection_name": content.collection_name
+                        "type": latest_content.content_type,
+                        "topic": latest_content.topic,
+                        "createdAt": latest_content.created_at,
+                        "collection_name": latest_content.collection_name
                     }
                 }
             except requests.RequestException as e:
@@ -259,13 +271,13 @@ async def get_content(
         
         # For slides and other content types, return the URL
         return {
-            "contentId": content.id,
-            "content": content.content_url,  # Return URL for slides/PDFs
+            "contentId": latest_content.id,
+            "content": latest_content.content_url,  # Return URL for slides/PDFs
             "metadata": {
-                "type": content.content_type,
-                "topic": content.topic,
-                "createdAt": content.created_at,
-                "collection_name": content.collection_name
+                "type": latest_content.content_type,
+                "topic": latest_content.topic,
+                "createdAt": latest_content.created_at,
+                "collection_name": latest_content.collection_name
             }
         }
         
