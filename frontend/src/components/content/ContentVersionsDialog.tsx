@@ -82,8 +82,10 @@ export function ContentVersionsDialog({
         console.log('Versions array:', versionsResponse.data?.versions);
         console.log('Versions length:', versionsResponse.data?.versions?.length);
         const versionsData = versionsResponse.data?.versions || [];
-        setVersions(versionsData);
-        console.log('Set versions to:', versionsData);
+        // Sort versions by version_number in descending order (latest first)
+        const sortedVersions = versionsData.sort((a, b) => b.version_number - a.version_number);
+        setVersions(sortedVersions);
+        console.log('Set versions to:', sortedVersions);
       }
 
       if (modificationsResponse?.status === 'success') {
@@ -92,8 +94,14 @@ export function ContentVersionsDialog({
         console.log('Modifications array:', modificationsResponse.data?.modifications);
         console.log('Modifications length:', modificationsResponse.data?.modifications?.length);
         const modificationsData = modificationsResponse.data?.modifications || [];
-        setModifications(modificationsData);
-        console.log('Set modifications to:', modificationsData);
+        // Sort modifications by created_at in descending order (latest first)
+        const sortedModifications = modificationsData.sort((a, b) => {
+          const dateA = new Date(a.created_at || 0);
+          const dateB = new Date(b.created_at || 0);
+          return dateB.getTime() - dateA.getTime();
+        });
+        setModifications(sortedModifications);
+        console.log('Set modifications to:', sortedModifications);
       }
     } catch (error) {
       console.error('Error fetching content versions:', error);
@@ -132,6 +140,9 @@ export function ContentVersionsDialog({
         
         // Notify parent component
         onContentModified?.();
+        
+        // Close the dialog after successful modification
+        onClose();
       } else {
         toast.error(response?.message || 'Failed to modify content');
       }
@@ -220,14 +231,18 @@ export function ContentVersionsDialog({
                     id="sourceVersion"
                     value={selectedVersion || ''}
                     onChange={(e) => setSelectedVersion(e.target.value ? parseInt(e.target.value) : null)}
-                    className="w-full mt-1 p-2 border rounded-md"
+                    className="w-full mt-1 p-3 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   >
                     <option value="">Latest version</option>
-                    {versions.map((version) => (
-                      <option key={version.id} value={version.version_number}>
-                        Version {version.version_number} ({formatDate(version.created_at)})
-                      </option>
-                    ))}
+                    {versions
+                      .filter((version, index, self) => 
+                        index === self.findIndex(v => v.version_number === version.version_number)
+                      )
+                      .map((version) => (
+                        <option key={version.id} value={version.version_number}>
+                          Version {version.version_number} {version.is_latest_version ? '(Latest)' : ''} ({formatDate(version.created_at)})
+                        </option>
+                      ))}
                   </select>
                 </div>
                 

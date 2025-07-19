@@ -71,14 +71,6 @@ class ContentVersionService:
             # Generate new content ID
             new_content_id = str(uuid.uuid4())
             
-            # Create modification record
-            modification = ContentModification(
-                content_id=new_content_id,
-                modification_instructions=modification_instructions
-            )
-            db.add(modification)
-            db.flush()  # Get the modification ID
-            
             # Prepare modified instructions for content generation
             combined_instructions = f"""
             MODIFICATION REQUEST based on existing content:
@@ -112,6 +104,14 @@ class ContentVersionService:
                 new_content.parent_content_id = root_content_id
                 new_content.modification_instructions = modification_instructions
                 new_content.modified_from_version = source_content.version_number
+                
+                # Create modification record after content is created
+                modification = ContentModification(
+                    content_id=new_content_id,
+                    modification_instructions=modification_instructions
+                )
+                db.add(modification)
+                db.flush()  # Get the modification ID
                 
                 db.commit()
                 
