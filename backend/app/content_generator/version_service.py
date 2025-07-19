@@ -96,6 +96,57 @@ class ContentVersionService:
             # Generate new content ID
             new_content_id = str(uuid.uuid4())
             
+            # Retrieve relevant documents from vector database for enhanced context
+            rag_context = ""
+            try:
+                # Create an enhanced search query that combines the original topic with modification intent
+                search_query = f"{source_content.topic}"
+                
+                # Extract key terms from modification instructions to enhance the search
+                mod_keywords = []
+                mod_lower = modification_instructions.lower()
+                
+                # Look for specific technical terms or concepts
+                technical_terms = ["example", "code", "sample", "tutorial", "guide", "implementation", 
+                                 "python", "javascript", "react", "node", "docker", "ci/cd", "pipeline",
+                                 "testing", "deployment", "database", "api", "authentication", "security"]
+                
+                for term in technical_terms:
+                    if term in mod_lower:
+                        mod_keywords.append(term)
+                
+                # Add modification keywords to search query
+                if mod_keywords:
+                    search_query += f" {' '.join(mod_keywords)}"
+                
+                logger.info(f"Enhanced RAG query: '{search_query}'")
+                
+                documents = await self.content_generator.document_service.search_documents(
+                    query=search_query,
+                    user_id=user_id,
+                    collection_name=source_content.collection_name,
+                    limit=7  # Increased limit for more comprehensive context
+                )
+                if documents:
+                    rag_context = "\n\n".join([f"[Document {i+1}]\n{doc['content']}" for i, doc in enumerate(documents)])
+                    logger.info(f"Retrieved {len(documents)} documents for enhanced content generation")
+                else:
+                    # Fallback: try searching with just the original topic
+                    logger.warning(f"No RAG documents found for enhanced query: {search_query}, trying fallback")
+                    fallback_documents = await self.content_generator.document_service.search_documents(
+                        query=source_content.topic,
+                        user_id=user_id,
+                        collection_name=source_content.collection_name,
+                        limit=5
+                    )
+                    if fallback_documents:
+                        rag_context = "\n\n".join([f"[Document {i+1}]\n{doc['content']}" for i, doc in enumerate(fallback_documents)])
+                        logger.info(f"Fallback retrieved {len(fallback_documents)} documents")
+                    else:
+                        logger.warning("No RAG documents found even with fallback query")
+            except Exception as e:
+                logger.warning(f"Could not retrieve RAG context: {str(e)}")
+            
             # Prepare modified instructions for content generation
             # Fetch the actual content from the source to provide context
             source_content_text = ""
@@ -119,6 +170,9 @@ class ContentVersionService:
             
             {source_content_text}
             
+            RELEVANT KNOWLEDGE BASE CONTEXT:
+            {rag_context}
+            
             Original Topic: {source_content.topic}
             Content Type: {source_content.content_type}
             
@@ -128,13 +182,16 @@ class ContentVersionService:
             IMPORTANT GUIDELINES:
             1. ENHANCE and BUILD UPON the existing content - do not replace or remove existing valuable content unless explicitly instructed
             2. ADD the requested elements while KEEPING all existing quality content
-            3. If the existing content already has good examples, keep them and add more if requested
-            4. Only REMOVE content if the user explicitly asks to exclude or remove something
-            5. The goal is to make the content MORE comprehensive and valuable, not different
-            6. Maintain consistency with the existing style and educational approach
-            7. If adding examples (like cd.yml), include them as ADDITIONAL content alongside existing material
-            
-            Please enhance the content according to these instructions while preserving and building upon the existing educational value and structure.
+            3. Use the KNOWLEDGE BASE CONTEXT above to provide accurate, detailed, and up-to-date information
+            4. If the existing content already has good examples, keep them and add more if requested, drawing from the knowledge base
+            5. Only REMOVE something if the user explicitly asks to exclude or remove that (make sure you removed something the user explicitly asked to remove)
+            6. Make sure you remove any conflicting or redundant content that does not align with the new instructions
+            7. The goal is to make the content MORE comprehensive and valuable, leveraging both existing content and knowledge base
+            8. Maintain consistency with the existing style and educational approach
+            9. If adding examples (like cd.yml), include them as ADDITIONAL content alongside existing material, ensuring accuracy with knowledge base
+            10. Cross-reference the knowledge base to ensure all technical details, code examples, and explanations are current and correct
+
+            Please enhance the content according to these instructions while preserving and building upon the existing educational value and structure, enriched with knowledge base context.
             """
             
             # Generate modified content using the content generator
