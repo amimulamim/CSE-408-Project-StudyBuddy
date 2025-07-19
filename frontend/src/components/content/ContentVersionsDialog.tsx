@@ -5,8 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Clock, Edit, Trash2, ExternalLink, ArrowRight, Loader2 } from 'lucide-react';
+import { Clock, Edit, Trash2, ExternalLink, Loader2 } from 'lucide-react';
 import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -17,20 +16,11 @@ interface ContentVersion {
   content_url: string;
   topic: string | null;
   content_type: string | null;
+  length?: string | null;
   modification_instructions: string | null;
+  modified_from_version?: number | null;
   created_at: string | null;
   is_latest_version: boolean;
-}
-
-interface ModificationHistory {
-  id: string;
-  modification_instructions: string;
-  source_version: number;
-  target_version: number;
-  status: string;
-  created_at: string | null;
-  completed_at: string | null;
-  new_content_id: string;
 }
 
 interface ContentVersionsDialogProps {
@@ -49,10 +39,8 @@ export function ContentVersionsDialog({
   onContentModified 
 }: ContentVersionsDialogProps) {
   const [versions, setVersions] = useState<ContentVersion[]>([]);
-  const [modifications, setModifications] = useState<ModificationHistory[]>([]);
   const [loading, setLoading] = useState(false);
   const [modifyLoading, setModifyLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('versions');
   
   // Modification form state
   const [showModifyForm, setShowModifyForm] = useState(false);
@@ -61,42 +49,22 @@ export function ContentVersionsDialog({
 
   useEffect(() => {
     if (isOpen && contentId) {
-      fetchVersionsAndHistory();
+      fetchVersions();
     }
   }, [isOpen, contentId]);
 
-  const fetchVersionsAndHistory = async () => {
+  const fetchVersions = async () => {
     setLoading(true);
     try {
       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
       
-      // Fetch versions and modification history in parallel
-      const [versionsResponse, modificationsResponse] = await Promise.all([
-        makeRequest(`${API_BASE_URL}/api/v1/content/${contentId}/versions`, 'GET'),
-        makeRequest(`${API_BASE_URL}/api/v1/content/${contentId}/modifications`, 'GET')
-      ]);
+      const versionsResponse = await makeRequest(`${API_BASE_URL}/api/v1/content/${contentId}/versions`, 'GET');
 
       if (versionsResponse?.status === 'success') {
         const versionsData = versionsResponse.data?.versions || [];
         // Sort versions by version_number in descending order (latest first)
         const sortedVersions = versionsData.sort((a, b) => b.version_number - a.version_number);
         setVersions(sortedVersions);
-      }
-
-      if (modificationsResponse?.status === 'success') {
-        const modificationsData = modificationsResponse.data?.modifications || [];
-        
-        // Remove duplicates based on modification ID and sort by created_at in descending order (latest first)
-        const uniqueModifications = modificationsData.filter((mod, index, self) => 
-          index === self.findIndex(m => m.id === mod.id)
-        );
-        
-        const sortedModifications = uniqueModifications.sort((a, b) => {
-          const dateA = new Date(a.created_at || 0);
-          const dateB = new Date(b.created_at || 0);
-          return dateB.getTime() - dateA.getTime();
-        });
-        setModifications(sortedModifications);
       }
     } catch (error) {
       console.error('Error fetching content versions:', error);
@@ -131,7 +99,7 @@ export function ContentVersionsDialog({
         setSelectedVersion(null);
         
         // Refresh data
-        await fetchVersionsAndHistory();
+        await fetchVersions();
         
         // Notify parent component
         onContentModified?.();
@@ -163,7 +131,7 @@ export function ContentVersionsDialog({
 
       if (response?.status === 'success') {
         toast.success(`Version ${versionNumber} deleted successfully`);
-        await fetchVersionsAndHistory();
+        await fetchVersions();
       } else {
         toast.error('Failed to delete version');
       }
@@ -284,132 +252,77 @@ export function ContentVersionsDialog({
             </Card>
           )}
 
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList>
-              <TabsTrigger value="versions">Versions ({versions.length})</TabsTrigger>
-              {/* <TabsTrigger value="history">Modification History ({modifications.length})</TabsTrigger> */}
-            </TabsList>
-
-            <TabsContent value="versions" className="space-y-4">
-              {loading ? (
-                <div className="text-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-                  <p>Loading versions...</p>
-                </div>
-              ) : versions.length === 0 ? (
-                <p className="text-center py-8 text-muted-foreground">No versions found</p>
-              ) : (
-                <div className="space-y-3">
-                  {versions.map((version) => (
-                    <Card key={version.id} className={version.is_latest_version ? 'border-green-500' : ''}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Badge variant={version.is_latest_version ? 'default' : 'secondary'}>
-                              Version {version.version_number}
-                              {version.is_latest_version && ' (Latest)'}
+          <div className="space-y-4">
+            {loading ? (
+              <div className="text-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                <p>Loading versions...</p>
+              </div>
+            ) : versions.length === 0 ? (
+              <p className="text-center py-8 text-muted-foreground">No versions found</p>
+            ) : (
+              <div className="space-y-3">
+                {versions.map((version) => (
+                  <Card key={version.id} className={version.is_latest_version ? 'border-green-500' : ''}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Badge variant={version.is_latest_version ? 'default' : 'secondary'}>
+                            Version {version.version_number}
+                            {version.is_latest_version && ' (Latest)'}
+                          </Badge>
+                          {version.modified_from_version && (
+                            <Badge variant="outline" className="text-xs">
+                              Modified from v{version.modified_from_version}
                             </Badge>
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <Clock className="h-3 w-3" />
-                              {formatDate(version.created_at)}
-                            </div>
+                          )}
+                          {version.length && (
+                            <Badge variant="outline" className="text-xs">
+                              {version.length}
+                            </Badge>
+                          )}
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {formatDate(version.created_at)}
                           </div>
-                          
-                          <div className="flex items-center gap-2">
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openContent(version.content_url)}
+                          >
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            Open
+                          </Button>
+                          {version.version_number > 1 && (
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => openContent(version.content_url)}
+                              onClick={() => handleDeleteVersion(version.version_number)}
+                              className="text-red-600 hover:text-red-700"
                             >
-                              <ExternalLink className="h-3 w-3 mr-1" />
-                              Open
+                              <Trash2 className="h-3 w-3" />
                             </Button>
-                            {version.version_number > 1 && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleDeleteVersion(version.version_number)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
+                          )}
                         </div>
-                        
-                        {version.modification_instructions && (
-                          <div className="mt-3 p-3 bg-muted rounded-md">
-                            <p className="text-sm font-medium mb-1">Modification Instructions:</p>
-                            <p className="text-sm text-muted-foreground">
-                              {version.modification_instructions}
-                            </p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="history" className="space-y-4">
-              {loading ? (
-                <div className="text-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-                  <p>Loading modification history...</p>
-                </div>
-              ) : modifications.length === 0 ? (
-                <p className="text-center py-8 text-muted-foreground">No modifications yet</p>
-              ) : (
-                <div className="space-y-3">
-                  {modifications.map((mod) => (
-                    <Card key={mod.id}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <Badge variant={mod.status === 'completed' ? 'default' : 'secondary'}>
-                              {mod.status}
-                            </Badge>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <span>Version {mod.source_version}</span>
-                              <ArrowRight className="h-3 w-3" />
-                              <span>Version {mod.target_version}</span>
-                            </div>
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {formatDate(mod.created_at)}
-                          </div>
-                        </div>
-                        
-                        <div className="p-3 bg-muted rounded-md">
-                          <p className="text-sm font-medium mb-1">Instructions:</p>
+                      </div>
+                      
+                      {version.modification_instructions && (
+                        <div className="mt-3 p-3 bg-muted rounded-md">
+                          <p className="text-sm font-medium mb-1">Modification Instructions:</p>
                           <p className="text-sm text-muted-foreground">
-                            {mod.modification_instructions}
+                            {version.modification_instructions}
                           </p>
                         </div>
-                        
-                        {mod.status === 'completed' && (
-                          <div className="mt-3">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                const version = versions.find(v => v.version_number === mod.target_version);
-                                if (version) openContent(version.content_url);
-                              }}
-                            >
-                              <ExternalLink className="h-3 w-3 mr-1" />
-                              View Result
-                            </Button>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
