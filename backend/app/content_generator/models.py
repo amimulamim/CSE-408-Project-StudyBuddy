@@ -16,6 +16,7 @@ class ContentItem(Base):
     topic = Column(Text, nullable=True)
     content_type = Column(Text, nullable=True)
     raw_source = Column(Text, nullable=True)  # Store raw source URL for slides (LaTeX)
+    length = Column(String, nullable=True)  # Store content length (short, medium, long)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Versioning fields
