@@ -29,6 +29,7 @@ class ContentGenerateRequest(BaseModel):
     length: Literal["short", "medium", "long"] = Field("medium", description="Length of content")
     tone: Literal["instructive", "engaging", "formal"] = Field("instructive", description="Tone of content")
     collection_name: str = Field("default", description="Name of the collection in vector DB")
+    special_instructions: Optional[str] = Field("", description="Special user instructions for content generation")
 
 
 @router.post("/generate")
@@ -67,6 +68,7 @@ async def generate_content(
                 tone=request.tone,
                 collection_name=request.collection_name,
                 full_collection_name=full_collection_name,
+                special_instructions=request.special_instructions or "",
                 db=db
             )
             

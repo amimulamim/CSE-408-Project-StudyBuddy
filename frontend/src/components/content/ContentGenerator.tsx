@@ -28,7 +28,8 @@ export function ContentGenerator({ onClose, onSuccess }: ContentGeneratorProps) 
     difficulty: 'medium',
     length: 'medium',
     tone: 'instructive',
-    collection_name: 'default'
+    collection_name: 'default',
+    special_instructions: ''
   });
   const [loading, setLoading] = useState(false);
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -218,6 +219,20 @@ export function ContentGenerator({ onClose, onSuccess }: ContentGeneratorProps) 
                   value={formData.contentTopic}
                   onChange={(e) => setFormData(prev => ({ ...prev, contentTopic: e.target.value }))}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="special_instructions">Special Instructions</Label>
+                <Textarea
+                  id="special_instructions"
+                  placeholder="Add specific instructions about what to focus on, what to exclude, what form of details or examples you want, subtopics to emphasize, etc. (optional)"
+                  value={formData.special_instructions}
+                  onChange={(e) => setFormData(prev => ({ ...prev, special_instructions: e.target.value }))}
+                  className="min-h-[80px] resize-y"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Example: "Focus on practical examples, exclude theoretical proofs, include step-by-step solutions, emphasize real-world applications"
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
