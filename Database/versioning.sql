@@ -113,18 +113,19 @@ RETURNS TABLE (
 BEGIN
     RETURN QUERY
     WITH RECURSIVE version_tree AS (
-        -- Find all content IDs in the version chain
-        SELECT c.id as content_id, c.topic
+        -- Start with the base content
+        SELECT c.id as content_id, c.topic, 1 as level
         FROM content_items c
-        WHERE c.id = base_content_id OR c.parent_content_id = base_content_id
+        WHERE c.id = base_content_id
         
         UNION ALL
         
-        SELECT c.id as content_id, c.topic
+        -- Find all child versions
+        SELECT c.id as content_id, c.topic, vt.level + 1
         FROM content_items c
         INNER JOIN version_tree vt ON c.parent_content_id = vt.content_id
     )
-    SELECT cm.id, cm.content_id, cm.modification_instructions, cm.created_at,
+    SELECT DISTINCT cm.id, cm.content_id, cm.modification_instructions, cm.created_at,
            c.topic as content_topic, c.version_number
     FROM content_modifications cm
     INNER JOIN version_tree vt ON cm.content_id = vt.content_id
