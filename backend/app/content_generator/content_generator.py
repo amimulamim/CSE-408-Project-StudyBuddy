@@ -39,6 +39,7 @@ class ContentGenerator:
         tone: str,
         collection_name: str,
         full_collection_name: str,
+        special_instructions: str,
         db: Session
     ) -> None:
         """Generates content, stores it in Firebase, and saves metadata in database."""
@@ -77,7 +78,7 @@ class ContentGenerator:
 
             # Generate content
             if content_type == "flashcards":
-                content = await self._generate_flashcards(context, topic, difficulty, length, tone)
+                content = await self._generate_flashcards(context, topic, difficulty, length, tone, special_instructions)
                 file_content = json.dumps(content, indent=2)
                 file_extension = "json"
                 storage_path = f"content/{user_id}/{content_id}.{file_extension}"
@@ -89,7 +90,7 @@ class ContentGenerator:
                 # Use adjusted length if context was insufficient
                 actual_length = length  # length may have been adjusted above
                     
-                pdf_bytes, latex_source = await self._generate_slides(context, topic, difficulty, actual_length, tone, return_latex=True)
+                pdf_bytes, latex_source = await self._generate_slides(context, topic, difficulty, actual_length, tone, return_latex=True, special_instructions=special_instructions)
                 if pdf_bytes:
                     # Successful compilation - upload PDF
                     file_extension = "pdf"
@@ -144,16 +145,29 @@ class ContentGenerator:
         topic: str,
         difficulty: str,
         length: str,
-        tone: str
+        tone: str,
+        special_instructions: str = ""
     ) -> List[Dict[str, str]]:
         """Generates flashcards as a JSON list."""
         try:
             num_cards = {"short": 5, "medium": 10, "long": 15}.get(length, 10)
+            
+            # Build special instructions section
+            instructions_section = ""
+            if special_instructions and special_instructions.strip():
+                instructions_section = f"""
+            
+            SPECIAL USER INSTRUCTIONS:
+            {special_instructions.strip()}
+            
+            Please follow these specific instructions while creating the flashcards.
+            """
+            
             prompt = f"""
             You are an expert educator creating flashcards on the topic '{topic}' with a {tone} tone and {difficulty} difficulty.
             Based on the following context, generate {num_cards} flashcards:
             {context}
-            
+            {instructions_section}
             Each flashcard should have:
             - front: A question or term
             - back: The answer or definition
@@ -193,7 +207,8 @@ class ContentGenerator:
         length: str,
         tone: str,
         max_retries: int = 5,
-        return_latex: bool = False
+        return_latex: bool = False,
+        special_instructions: str = ""
     ) -> Any:
         """Generates LaTeX slides and compiles to PDF, retrying on error. Returns PDF bytes and optionally the LaTeX source."""
         last_latex_source = None
@@ -221,13 +236,24 @@ class ContentGenerator:
                     points_per_slide = "3-4"  # Reduced from 4-6 to prevent overflow
                     max_subpoints = 2
                 
+                # Build special instructions section
+                instructions_section = ""
+                if special_instructions and special_instructions.strip():
+                    instructions_section = f"""
+                
+                SPECIAL USER INSTRUCTIONS:
+                {special_instructions.strip()}
+                
+                Please follow these specific instructions while creating the presentation. Incorporate these requirements into all slides and content structure.
+                """
+                
                 prompt = f"""
                 You are an expert educator creating a comprehensive LaTeX Beamer presentation on the topic '{topic}' with a {tone} tone and {difficulty} difficulty.
                 Based on the following context, create exactly {num_slides} well-structured slides that form a complete, informative presentation:
                 
                 CONTEXT TO USE:
                 {context}
-                
+                {instructions_section}
                 PRESENTATION REQUIREMENTS:
                 Target: {num_slides} slides total ({length} presentation: {"<10" if length == "short" else "<20" if length == "medium" else "20+"} pages)
                 Content Density: {content_density} ({points_per_slide} substantial points per slide)
