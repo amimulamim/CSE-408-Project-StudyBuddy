@@ -49,9 +49,10 @@ class ContentGenerator:
                 query=topic,
                 user_id=user_id,
                 collection_name=collection_name,
-                limit=5
+                limit=7
             )
             context = "\n".join([doc["content"] for doc in documents])
+            logger.info(f"Retrieved context for {len(documents)} documents")
             if not context:
                 logger.warning(f"No relevant documents found for topic: {topic}")
                 raise ValueError("No relevant documents found")
@@ -129,6 +130,7 @@ class ContentGenerator:
                 topic=topic,
                 content_type=content_type,
                 raw_source=raw_source_url if content_type in ["slides", "slides_pending"] else None,
+                length=length,  # Store the content length
                 created_at=datetime.now(timezone.utc)
             )
             db.add(content_item)
