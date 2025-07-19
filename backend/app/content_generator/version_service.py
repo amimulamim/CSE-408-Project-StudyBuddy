@@ -38,31 +38,56 @@ class ContentVersionService:
         """
         try:
             # Get the source content
+            source_content = None
+            
             if source_version:
+                # First, try to find the specific version in the version chain
                 source_content = db.query(ContentItem).filter(
                     ContentItem.user_id == user_id,
-                    ContentItem.parent_content_id == content_id,
                     ContentItem.version_number == source_version
-                ).first()
-                
-                if not source_content:
-                    # Check if it's the original content
-                    source_content = db.query(ContentItem).filter(
-                        ContentItem.id == content_id,
-                        ContentItem.user_id == user_id,
-                        ContentItem.version_number == source_version
-                    ).first()
-            else:
-                # Get latest version
-                source_content = db.query(ContentItem).filter(
-                    ContentItem.user_id == user_id,
-                    ContentItem.is_latest_version == True
                 ).filter(
                     (ContentItem.id == content_id) | 
                     (ContentItem.parent_content_id == content_id)
                 ).first()
+                
+                # If not found, check if the content_id itself is the version we want
+                if not source_content:
+                    source_content = db.query(ContentItem).filter(
+                        ContentItem.id == content_id,
+                        ContentItem.user_id == user_id
+                    ).first()
+                    
+                    # Verify it's the right version or find the right version in the chain
+                    if source_content and source_content.version_number != source_version:
+                        # Look for the specific version in the entire chain
+                        root_id = source_content.parent_content_id or source_content.id
+                        source_content = db.query(ContentItem).filter(
+                            ContentItem.user_id == user_id,
+                            ContentItem.version_number == source_version
+                        ).filter(
+                            (ContentItem.id == root_id) | 
+                            (ContentItem.parent_content_id == root_id)
+                        ).first()
+            else:
+                # Get latest version - find any content in the chain and then get the latest
+                any_content = db.query(ContentItem).filter(
+                    (ContentItem.id == content_id) | 
+                    (ContentItem.parent_content_id == content_id),
+                    ContentItem.user_id == user_id
+                ).first()
+                
+                if any_content:
+                    root_id = any_content.parent_content_id or any_content.id
+                    source_content = db.query(ContentItem).filter(
+                        ContentItem.user_id == user_id,
+                        ContentItem.is_latest_version == True
+                    ).filter(
+                        (ContentItem.id == root_id) | 
+                        (ContentItem.parent_content_id == root_id)
+                    ).first()
             
             if not source_content:
+                logger.error(f"Could not find source content for content_id: {content_id}, user_id: {user_id}, source_version: {source_version}")
                 raise ValueError("Source content not found")
             
             # Find the root content ID (for versioning)
@@ -72,15 +97,44 @@ class ContentVersionService:
             new_content_id = str(uuid.uuid4())
             
             # Prepare modified instructions for content generation
+            # Fetch the actual content from the source to provide context
+            source_content_text = ""
+            try:
+                import requests
+                if source_content.content_url:
+                    response = requests.get(source_content.content_url, timeout=30)
+                    if response.status_code == 200:
+                        if source_content.content_type == "flashcards":
+                            # For flashcards, get the JSON content
+                            source_content_text = f"EXISTING FLASHCARDS:\n{response.text}"
+                        else:
+                            # For slides, we can't easily extract text, so provide a note
+                            source_content_text = f"EXISTING CONTENT: {source_content.content_type} presentation available at {source_content.content_url}"
+            except Exception as e:
+                logger.warning(f"Could not fetch source content: {str(e)}")
+                source_content_text = f"EXISTING CONTENT: {source_content.content_type} on topic '{source_content.topic}'"
+            
             combined_instructions = f"""
-            MODIFICATION REQUEST based on existing content:
+            ENHANCEMENT REQUEST - Build upon and improve existing content:
+            
+            {source_content_text}
+            
             Original Topic: {source_content.topic}
             Content Type: {source_content.content_type}
             
             USER MODIFICATION INSTRUCTIONS:
             {modification_instructions}
             
-            Please modify the content according to these instructions while maintaining the core educational value and structure.
+            IMPORTANT GUIDELINES:
+            1. ENHANCE and BUILD UPON the existing content - do not replace or remove existing valuable content unless explicitly instructed
+            2. ADD the requested elements while KEEPING all existing quality content
+            3. If the existing content already has good examples, keep them and add more if requested
+            4. Only REMOVE content if the user explicitly asks to exclude or remove something
+            5. The goal is to make the content MORE comprehensive and valuable, not different
+            6. Maintain consistency with the existing style and educational approach
+            7. If adding examples (like cd.yml), include them as ADDITIONAL content alongside existing material
+            
+            Please enhance the content according to these instructions while preserving and building upon the existing educational value and structure.
             """
             
             # Generate modified content using the content generator
@@ -192,7 +246,7 @@ class ContentVersionService:
         Get modification history for a content item.
         
         Args:
-            content_id: Root content ID
+            content_id: Root content ID or any version ID
             user_id: User ID for access control
             db: Database session
             
@@ -200,29 +254,51 @@ class ContentVersionService:
             List of modifications with details
         """
         try:
-            # Use the PostgreSQL function to get modification history
-            result = db.execute(
-                text("SELECT * FROM get_modification_history(:content_id)"),
-                {"content_id": content_id}
-            )
+            # First, find the root content ID by checking if this content has a parent
+            root_content_id = content_id
+            content_check = db.query(ContentItem).filter(
+                ContentItem.id == content_id,
+                ContentItem.user_id == user_id
+            ).first()
+            
+            if content_check and content_check.parent_content_id:
+                root_content_id = content_check.parent_content_id
+            
+            # Get all content items in this version chain
+            all_versions = db.query(ContentItem).filter(
+                ContentItem.user_id == user_id
+            ).filter(
+                (ContentItem.id == root_content_id) | 
+                (ContentItem.parent_content_id == root_content_id)
+            ).all()
             
             modifications = []
-            for row in result:
-                # Verify user access by checking if the content belongs to the user
-                content_check = db.query(ContentItem).filter(
-                    ContentItem.id == row.content_id,
-                    ContentItem.user_id == user_id
-                ).first()
-                
-                if content_check:
-                    modifications.append({
-                        "id": str(row.id),
-                        "content_id": str(row.content_id),
-                        "modification_instructions": row.modification_instructions,
-                        "created_at": row.created_at.isoformat() if row.created_at else None,
-                        "content_topic": row.content_topic,
-                        "version_number": row.version_number
-                    })
+            seen_modification_ids = set()
+            
+            # For each version that has modifications, get the modification record
+            for version in all_versions:
+                if version.modification_instructions:  # This version was created from a modification
+                    # Look for the modification record
+                    mod_record = db.query(ContentModification).filter(
+                        ContentModification.content_id == version.id
+                    ).first()
+                    
+                    if mod_record and str(mod_record.id) not in seen_modification_ids:
+                        seen_modification_ids.add(str(mod_record.id))
+                        
+                        modifications.append({
+                            "id": str(mod_record.id),
+                            "modification_instructions": version.modification_instructions,
+                            "source_version": version.modified_from_version or 1,
+                            "target_version": version.version_number,
+                            "status": "completed",
+                            "created_at": mod_record.created_at.isoformat() if mod_record.created_at else None,
+                            "completed_at": version.created_at.isoformat() if version.created_at else None,
+                            "new_content_id": str(version.id)
+                        })
+            
+            # Sort by target version number in descending order (latest first)
+            modifications.sort(key=lambda x: x["target_version"], reverse=True)
             
             return modifications
             

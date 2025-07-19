@@ -77,31 +77,26 @@ export function ContentVersionsDialog({
       ]);
 
       if (versionsResponse?.status === 'success') {
-        console.log('Versions response:', versionsResponse);
-        console.log('Versions data:', versionsResponse.data);
-        console.log('Versions array:', versionsResponse.data?.versions);
-        console.log('Versions length:', versionsResponse.data?.versions?.length);
         const versionsData = versionsResponse.data?.versions || [];
         // Sort versions by version_number in descending order (latest first)
         const sortedVersions = versionsData.sort((a, b) => b.version_number - a.version_number);
         setVersions(sortedVersions);
-        console.log('Set versions to:', sortedVersions);
       }
 
       if (modificationsResponse?.status === 'success') {
-        console.log('Modifications response:', modificationsResponse);
-        console.log('Modifications data:', modificationsResponse.data);
-        console.log('Modifications array:', modificationsResponse.data?.modifications);
-        console.log('Modifications length:', modificationsResponse.data?.modifications?.length);
         const modificationsData = modificationsResponse.data?.modifications || [];
-        // Sort modifications by created_at in descending order (latest first)
-        const sortedModifications = modificationsData.sort((a, b) => {
+        
+        // Remove duplicates based on modification ID and sort by created_at in descending order (latest first)
+        const uniqueModifications = modificationsData.filter((mod, index, self) => 
+          index === self.findIndex(m => m.id === mod.id)
+        );
+        
+        const sortedModifications = uniqueModifications.sort((a, b) => {
           const dateA = new Date(a.created_at || 0);
           const dateB = new Date(b.created_at || 0);
           return dateB.getTime() - dateA.getTime();
         });
         setModifications(sortedModifications);
-        console.log('Set modifications to:', sortedModifications);
       }
     } catch (error) {
       console.error('Error fetching content versions:', error);
@@ -233,12 +228,11 @@ export function ContentVersionsDialog({
                     onChange={(e) => setSelectedVersion(e.target.value ? parseInt(e.target.value) : null)}
                     className="w-full mt-1 p-3 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   >
-                    <option value="">Latest version</option>
                     {versions
                       .filter((version, index, self) => 
                         index === self.findIndex(v => v.version_number === version.version_number)
                       )
-                      .map((version) => (
+                      .map((version, index) => (
                         <option key={version.id} value={version.version_number}>
                           Version {version.version_number} {version.is_latest_version ? '(Latest)' : ''} ({formatDate(version.created_at)})
                         </option>
@@ -293,7 +287,7 @@ export function ContentVersionsDialog({
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList>
               <TabsTrigger value="versions">Versions ({versions.length})</TabsTrigger>
-              <TabsTrigger value="history">Modification History ({modifications.length})</TabsTrigger>
+              {/* <TabsTrigger value="history">Modification History ({modifications.length})</TabsTrigger> */}
             </TabsList>
 
             <TabsContent value="versions" className="space-y-4">
