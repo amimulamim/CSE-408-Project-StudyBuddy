@@ -36,10 +36,13 @@ export function ContentGenerator({ onClose, onSuccess }: ContentGeneratorProps) 
   const [loading, setLoading] = useState(false);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [collectionsLoading, setCollectionsLoading] = useState(true);
+  const [usageStatus, setUsageStatus] = useState<any>(null);
+  const [usageLoading, setUsageLoading] = useState(true);
 
-  // Fetch user collections on component mount
+  // Fetch user collections and usage status on component mount
   useEffect(() => {
     fetchCollections();
+    fetchUsageStatus();
   }, []);
 
   const fetchCollections = async () => {
@@ -70,6 +73,36 @@ export function ContentGenerator({ onClose, onSuccess }: ContentGeneratorProps) 
       setCollections([]);
     } finally {
       setCollectionsLoading(false);
+    }
+  };
+
+  const fetchUsageStatus = async () => {
+    try {
+      setUsageLoading(true);
+      const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+      const response: ApiResponse = await makeRequest(
+        `${API_BASE_URL}/api/v1/content/usage/status`,
+        'GET'
+      );
+
+      console.log('Usage status response:', response); // Debug log
+
+      if (response?.status === 'success' && response.data) {
+        setUsageStatus(response.data.data);
+        console.log('Usage status set:', response.data);
+        console.log('Can modify:', response.data.data.can_modify);
+
+        console.log('Has premium:', response.data.data.has_premium);
+      } else if (response.data) {
+        // Fallback in case the response structure is different
+        console.log('Fallback usage status:', response);
+        setUsageStatus(response);
+      }
+    } catch (error) {
+      console.error('Error fetching usage status:', error);
+      toast.error('Failed to load usage information');
+    } finally {
+      setUsageLoading(false);
     }
   };
 
@@ -148,8 +181,59 @@ export function ContentGenerator({ onClose, onSuccess }: ContentGeneratorProps) 
             <CardDescription>
               Fill in the details to generate educational content
             </CardDescription>
+            
+            {/* Usage Status Indicator */}
+            {!usageLoading && usageStatus && (
+              <div className="mt-4 p-3 rounded-lg border">
+                {usageStatus.has_premium ? (
+                  <div className="flex items-center gap-2 text-green-600">
+                    <Crown className="h-4 w-4" />
+                    <span className="text-sm font-medium">Premium Account - Unlimited Generation</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">Daily Usage:</span>
+                      <span className="text-sm font-medium">
+                        {usageStatus.daily_count}/5 content generations
+                      </span>
+                    </div>
+                    {usageStatus.daily_count >= 5 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate('/dashboard/billing')}
+                        className="text-xs"
+                      >
+                        <Crown className="h-3 w-3 mr-1" />
+                        Upgrade
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </CardHeader>
           <CardContent>
+            {/* Show limit reached message */}
+            {!usageLoading && usageStatus && !usageStatus.can_generate && (
+              <div className="mb-6 p-4 rounded-lg bg-yellow-50 border border-yellow-200">
+                <div className="flex items-center gap-2 text-yellow-800 mb-2">
+                  <Sparkles className="h-4 w-4" />
+                  <span className="font-medium">Daily Limit Reached</span>
+                </div>
+                <p className="text-sm text-yellow-700 mb-3">
+                  You've reached your daily limit of 5 content generations. Upgrade to premium for unlimited access.
+                </p>
+                <Button
+                  onClick={() => navigate('/dashboard/billing')}
+                  className="w-full"
+                >
+                  <Crown className="h-4 w-4 mr-2" />
+                  Upgrade to Premium
+                </Button>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -310,11 +394,19 @@ export function ContentGenerator({ onClose, onSuccess }: ContentGeneratorProps) 
                 <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={loading} className="button-gradient">
+                <Button type="submit" 
+                  disabled={loading || (usageStatus && !usageStatus.can_generate)} 
+                  className="button-gradient"
+                >
                   {loading ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Generating...
+                    </>
+                  ) : usageStatus && !usageStatus.can_generate ? (
+                    <>
+                      <Crown className="h-4 w-4 mr-2" />
+                      Limit Reached
                     </>
                   ) : (
                     <>

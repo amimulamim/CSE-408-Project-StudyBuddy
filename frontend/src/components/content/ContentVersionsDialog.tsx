@@ -43,6 +43,8 @@ export function ContentVersionsDialog({
   const [versions, setVersions] = useState<ContentVersion[]>([]);
   const [loading, setLoading] = useState(false);
   const [modifyLoading, setModifyLoading] = useState(false);
+  const [usageStatus, setUsageStatus] = useState<any>(null);
+  const [usageLoading, setUsageLoading] = useState(true);
   
   // Modification form state
   const [showModifyForm, setShowModifyForm] = useState(false);
@@ -52,6 +54,7 @@ export function ContentVersionsDialog({
   useEffect(() => {
     if (isOpen && contentId) {
       fetchVersions();
+      fetchUsageStatus();
     }
   }, [isOpen, contentId]);
 
@@ -73,6 +76,31 @@ export function ContentVersionsDialog({
       toast.error('Failed to load content versions');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUsageStatus = async () => {
+    try {
+      setUsageLoading(true);
+      const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+      const response = await makeRequest(
+        `${API_BASE_URL}/api/v1/content/usage/status`,
+        'GET'
+      );
+
+      console.log('Usage status response:', response); // Debug log
+      
+      if (response?.status === 'success' && response.data) {
+        setUsageStatus(response.data.data);
+      } else if (response.data) {
+        // Fallback in case the response structure is different
+        setUsageStatus(response);
+      }
+    } catch (error) {
+      console.error('Error fetching usage status:', error);
+      toast.error('Failed to load usage information');
+    } finally {
+      setUsageLoading(false);
     }
   };
 
@@ -184,19 +212,51 @@ export function ContentVersionsDialog({
           {/* Modify Content Button */}
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-medium">Content Management</h3>
-            <Button
-              onClick={() => setShowModifyForm(!showModifyForm)}
-              className="button-gradient flex items-center gap-2"
-              disabled={loading}
-            >
-              <Edit className="h-4 w-4" />
-              Request Modification
-              <Crown className="h-3 w-3 text-yellow-400" />
-            </Button>
+            
+            {console.log('Usage status in render:', usageStatus, 'can_modify:', usageStatus?.can_modify, 'loading:', usageLoading)}
+            
+            {!usageLoading && usageStatus ? (
+              usageStatus.can_modify ? (
+                <Button
+                  onClick={() => setShowModifyForm(!showModifyForm)}
+                  className="button-gradient flex items-center gap-2"
+                  disabled={loading}
+                >
+                  <Edit className="h-4 w-4" />
+                  Request Modification
+                  <Crown className="h-3 w-3 text-yellow-400" />
+                </Button>
+              ) : (
+                <div className="text-right">
+                  <div className="text-xs text-gray-500 mb-1">Premium Feature</div>
+                  <Button
+                    onClick={() => navigate('/dashboard/billing')}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                    disabled={loading}
+                  >
+                    <Crown className="h-4 w-4 text-yellow-500" />
+                    Upgrade to Modify
+                  </Button>
+                </div>
+              )
+            ) : (
+              <div className="text-right">
+                <div className="text-xs text-gray-500 mb-1">Loading...</div>
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2"
+                  disabled={true}
+                >
+                  <Crown className="h-4 w-4 text-yellow-500" />
+                  Loading...
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Modification Form */}
-          {showModifyForm && (
+          {showModifyForm && usageStatus?.can_modify && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm">Request Content Modification</CardTitle>
