@@ -5,10 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, Edit, Trash2, ExternalLink, Loader2 } from 'lucide-react';
+import { Clock, FileText, Edit, Sparkles, X, Crown, Loader2, ExternalLink, Trash2 } from 'lucide-react';
 import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 
 interface ContentVersion {
   id: string;
@@ -38,6 +39,7 @@ export function ContentVersionsDialog({
   contentTitle,
   onContentModified 
 }: ContentVersionsDialogProps) {
+  const navigate = useNavigate();
   const [versions, setVersions] = useState<ContentVersion[]>([]);
   const [loading, setLoading] = useState(false);
   const [modifyLoading, setModifyLoading] = useState(false);
@@ -107,12 +109,26 @@ export function ContentVersionsDialog({
         // Close the dialog after successful modification
         onClose();
       } else {
-        toast.error(response?.message || 'Failed to modify content');
+        console.error('Modification response error:', response);
+                if (response?.data?.detail?.error === 'PREMIUM_REQUIRED') {
+          toast.error(
+            'You need a premium subscription to modify content.',
+            {
+              action: {
+                label: 'Upgrade to Premium',
+                onClick: () => navigate('/dashboard/billing')
+              }
+            }
+          );
+        } else {
+          toast.error(response?.msg || 'Failed to generate content');
+        }
+        // toast.error(response?.message || 'Failed to modify content,make sure you have a premium subscription .');
       }
-    } catch (error) {
-      console.error('Error modifying content:', error);
-      toast.error('Failed to modify content');
-    } finally {
+    }  catch (err: any) {
+    console.error('Error modifying content:', err)
+    toast.error('Failed to modify content,Try again Later.')
+  } finally {
       setModifyLoading(false);
     }
   };
@@ -170,11 +186,12 @@ export function ContentVersionsDialog({
             <h3 className="text-lg font-medium">Content Management</h3>
             <Button
               onClick={() => setShowModifyForm(!showModifyForm)}
-              className="button-gradient"
+              className="button-gradient flex items-center gap-2"
               disabled={loading}
             >
-              <Edit className="h-4 w-4 mr-2" />
+              <Edit className="h-4 w-4" />
               Request Modification
+              <Crown className="h-3 w-3 text-yellow-400" />
             </Button>
           </div>
 
