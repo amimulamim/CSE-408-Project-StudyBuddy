@@ -57,13 +57,31 @@ async def generate_content(
 ) -> Dict[str, Any]:
     """Generates educational content (flashcards or slides) based on user request."""
     try:
-        # Check content generation limits
-        from app.utils.subscription_utils import has_active_premium_subscription, get_daily_content_count
+        # Check content generation limits using billing service
+        from app.billing.service import BillingService
+        from app.content_generator.models import ContentItem
+        from sqlalchemy import func
+        from datetime import datetime
         
-        has_premium = has_active_premium_subscription(user["uid"], db)
+        billing_service = BillingService()
+        subscription_status = billing_service.get_subscription_status(db, user["uid"])
+        
+        # Check if user has active premium subscription
+        has_premium = (
+            subscription_status and 
+            subscription_status.status == "active" and 
+            subscription_status.end_date and 
+            subscription_status.end_date > datetime.now(subscription_status.end_date.tzinfo)
+        )
         
         if not has_premium:
-            daily_count = get_daily_content_count(user["uid"], db)
+            # Count content items created today for free users
+            today = datetime.now().date()
+            daily_count = db.query(ContentItem).filter(
+                ContentItem.user_id == user["uid"],
+                func.date(ContentItem.created_at) == today
+            ).count()
+            
             if daily_count >= 5:
                 raise HTTPException(
                     status_code=403,
@@ -236,6 +254,52 @@ async def get_user_content(
         }
     except Exception as e:
         logger.error(f"Error fetching user content for {user['uid']}: {str(e)}")
+        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
+
+@router.get("/usage/status")
+async def get_usage_status(
+    user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """Get user's content generation usage status and subscription info."""
+    try:
+        from app.billing.service import BillingService
+        from app.content_generator.models import ContentItem
+        from sqlalchemy import func
+        from datetime import datetime
+        
+        billing_service = BillingService()
+        subscription_status = billing_service.get_subscription_status(db, user["uid"])
+        
+        # Check if user has active premium subscription
+        has_premium = (
+            subscription_status and 
+            subscription_status.status == "active" and 
+            subscription_status.end_date and 
+            subscription_status.end_date > datetime.now(subscription_status.end_date.tzinfo)
+        )
+        
+        # Count content items created today
+        today = datetime.now().date()
+        daily_count = db.query(ContentItem).filter(
+            ContentItem.user_id == user["uid"],
+            func.date(ContentItem.created_at) == today
+        ).count()
+        
+        return {
+            "status": "success",
+            "data": {
+                "has_premium": has_premium,
+                "daily_count": daily_count,
+                "daily_limit": None if has_premium else 5,
+                "can_generate": has_premium or daily_count < 5,
+                "can_modify": has_premium,
+                "subscription_status": subscription_status.model_dump() if subscription_status else None
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching usage status for {user['uid']}: {str(e)}")
         raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
 
 @router.get("/{contentId}")
@@ -486,10 +550,22 @@ async def modify_content(
 ) -> Dict[str, Any]:
     """Create a modified version of existing content."""
     try:
-        # Check if user has active premium subscription
-        from app.utils.subscription_utils import has_active_premium_subscription
+        # Check if user has active premium subscription using billing service
+        from app.billing.service import BillingService
+        from datetime import datetime
         
-        if not has_active_premium_subscription(user["uid"], db):
+        billing_service = BillingService()
+        subscription_status = billing_service.get_subscription_status(db, user["uid"])
+        
+        # Check if user has active premium subscription
+        has_premium = (
+            subscription_status and 
+            subscription_status.status == "active" and 
+            subscription_status.end_date and 
+            subscription_status.end_date > datetime.now(subscription_status.end_date.tzinfo)
+        )
+        
+        if not has_premium:
             raise HTTPException(
                 status_code=403, 
                 detail={
