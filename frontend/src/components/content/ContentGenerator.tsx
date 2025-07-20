@@ -89,14 +89,9 @@ export function ContentGenerator({ onClose, onSuccess }: ContentGeneratorProps) 
 
       if (response?.status === 'success' && response.data) {
         setUsageStatus(response.data.data);
-        console.log('Usage status set:', response.data);
-        console.log('Can modify:', response.data.data.can_modify);
-
-        console.log('Has premium:', response.data.data.has_premium);
       } else if (response.data) {
         // Fallback in case the response structure is different
-        console.log('Fallback usage status:', response);
-        setUsageStatus(response);
+        setUsageStatus(response.data);
       }
     } catch (error) {
       console.error('Error fetching usage status:', error);
@@ -195,10 +190,11 @@ export function ContentGenerator({ onClose, onSuccess }: ContentGeneratorProps) 
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-gray-600">Daily Usage:</span>
                       <span className="text-sm font-medium">
-                        {usageStatus.daily_count}/5 content generations
+                        {usageStatus.daily_count}/{usageStatus.daily_limit ?? '∞'} content generations
                       </span>
                     </div>
-                    {usageStatus.daily_count >= 5 && (
+                    {usageStatus.daily_limit !== null &&
+   usageStatus.daily_count >= usageStatus.daily_limit && (
                       <Button
                         size="sm"
                         variant="outline"
