@@ -5,10 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Sparkles, Loader2, Plus } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, Plus, Crown } from 'lucide-react';
 import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
 import { ApiResponse } from '@/lib/api';
+import { useNavigate } from 'react-router-dom';
 
 interface ContentGeneratorProps {
   onClose: () => void;
@@ -22,6 +23,7 @@ interface Collection {
 }
 
 export function ContentGenerator({ onClose, onSuccess }: ContentGeneratorProps) {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     contentType: '',
     contentTopic: '',
@@ -92,11 +94,27 @@ export function ContentGenerator({ onClose, onSuccess }: ContentGeneratorProps) 
         toast.success('Content generated successfully!');
         onSuccess();
       } else {
-        toast.error(response?.msg || 'Failed to generate content');
+        // Check for daily limit exceeded error
+        if (response?.data?.detail?.error === 'DAILY_LIMIT_EXCEEDED') {
+          toast.error(
+            'Daily content generation limit reached (5/day for free users)',
+            {
+              action: {
+                label: 'Upgrade to Premium',
+                onClick: () => navigate('/dashboard/billing')
+              }
+            }
+          );
+        } else {
+          toast.error(response?.msg || 'Failed to generate content');
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating content:', error);
+      
+
       toast.error('Failed to generate content');
+      
     } finally {
       setLoading(false);
     }

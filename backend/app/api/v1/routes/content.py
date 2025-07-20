@@ -57,6 +57,25 @@ async def generate_content(
 ) -> Dict[str, Any]:
     """Generates educational content (flashcards or slides) based on user request."""
     try:
+        # Check content generation limits
+        from app.utils.subscription_utils import has_active_premium_subscription, get_daily_content_count
+        
+        has_premium = has_active_premium_subscription(user["uid"], db)
+        
+        if not has_premium:
+            daily_count = get_daily_content_count(user["uid"], db)
+            if daily_count >= 5:
+                raise HTTPException(
+                    status_code=403,
+                    detail={
+                        "error": "DAILY_LIMIT_EXCEEDED",
+                        "message": "You have reached your daily limit of 5 content generations. Upgrade to premium for unlimited access.",
+                        "action": "redirect_to_billing",
+                        "daily_count": daily_count,
+                        "daily_limit": 5
+                    }
+                )
+        
         # Validate collection_name exists in user_collections
         collection = db.query(UserCollection).filter(
             UserCollection.user_id == user["uid"],
@@ -467,6 +486,19 @@ async def modify_content(
 ) -> Dict[str, Any]:
     """Create a modified version of existing content."""
     try:
+        # Check if user has active premium subscription
+        from app.utils.subscription_utils import has_active_premium_subscription
+        
+        if not has_active_premium_subscription(user["uid"], db):
+            raise HTTPException(
+                status_code=403, 
+                detail={
+                    "error": "PREMIUM_REQUIRED",
+                    "message": "Content modification requires an active premium subscription",
+                    "action": "redirect_to_billing"
+                }
+            )
+        
         version_service = ContentVersionService()
         result = await version_service.modify_content(
             content_id=content_id,
@@ -482,6 +514,8 @@ async def modify_content(
             "data": result
         }
         
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions as-is
     except ValueError as e:
         logger.error(f"Content modification failed for user {user['uid']}: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
