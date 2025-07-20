@@ -192,8 +192,37 @@ class ContentGenerator:
             else:
                 response_text = response.text.strip()
 
-            flashcards = json.loads(response_text)
+            # Clean up common JSON formatting issues
+            response_text = response_text.replace('\n', ' ').replace('\r', '')
+            response_text = response_text.replace('```json', '').replace('```', '')
+            
+            # Try to fix trailing commas and other common issues
+            import re
+            response_text = re.sub(r',\s*}', '}', response_text)  # Remove trailing commas before }
+            response_text = re.sub(r',\s*]', ']', response_text)  # Remove trailing commas before ]
+            response_text = re.sub(r'\s+', ' ', response_text)    # Replace multiple spaces with single space
+
+            try:
+                flashcards = json.loads(response_text)
+            except json.JSONDecodeError as json_error:
+                logger.error(f"JSON decode error: {json_error}")
+                logger.error(f"Problematic JSON: {response_text[:500]}...")
+                
+                # Try to fix common JSON issues and parse again
+                try:
+                    # Remove any text before first [ and after last ]
+                    start_bracket = response_text.find('[')
+                    end_bracket = response_text.rfind(']')
+                    if start_bracket != -1 and end_bracket != -1:
+                        clean_json = response_text[start_bracket:end_bracket + 1]
+                        flashcards = json.loads(clean_json)
+                    else:
+                        raise ValueError("No valid JSON array found")
+                except:
+                    raise ValueError(f"Could not parse flashcard JSON: {json_error}")
+            
             if not isinstance(flashcards, list) or not all("front" in f and "back" in f for f in flashcards):
+                raise ValueError("Invalid flashcard format")
                 raise ValueError("Invalid flashcard format")
             
             return flashcards
@@ -320,18 +349,27 @@ class ContentGenerator:
                 - Use LaTeX Beamer syntax only: \\begin{{frame}}...\\end{{frame}}
                 - Each slide must be created with: \\begin{{frame}}...\\end{{frame}}
                 - If the slide contains code or uses \\verb, \\texttt (with special characters), or \\begin{{verbatim}}, use \\begin{{frame}}[fragile]
+                - CRITICAL: If ANY slide contains code examples, special characters, backslashes, or verbatim content, you MUST(make sure) use \\begin{{frame}}[fragile]
                 - NEVER use \\texttt for multi-line code or anything containing quotes, slashes, or backslashes
-                - Use only \\begin{{verbatim}} or \\begin{{lstlisting}} for multi-line code blocks, and always inside a [fragile] frame
+                - Use only \\begin{{verbatim}} or \\begin{{lstlisting}} for multi-line code blocks, and ALWAYS(make sure) inside a [fragile] frame
                 - CRITICAL: Use \\begin{{frame}}[fragile] for ANY frame containing:
                   * \\verb commands
                   * \\texttt with special characters ($, %, &, #, \\, {{, }}, etc.)
                   * \\begin{{verbatim}} blocks
                   * Code examples or programming syntax
+                  * HTML tags like <script> or any angle brackets
+                  * SQL code like 'OR '1'='1'
                   * Any backslashes, dollar signs, or special LaTeX characters in text
+                  * JavaScript, Python, or any programming code
                 - For multi-line code, ALWAYS use \\begin{{verbatim}}...\\end{{verbatim}} inside [fragile] frames
                 - NEVER use \\texttt for anything containing special characters - use \\begin{{verbatim}} instead
                 - Do not forget to escape special characters ($ % & # \\ {{ }}) in LaTeX text mode
                 - For inline code with special characters, use \\begin{{verbatim}} on separate lines instead of \\texttt 
+                
+                - For ANY code examples, ALWAYS use \\begin{{verbatim}}...\\end{{verbatim}} inside [fragile] frames
+                - NEVER use \\texttt for code examples - use \\begin{{verbatim}} instead
+                - Do not forget to escape special characters ($ % & # \\ {{ }}) in regular LaTeX text mode
+                - When showing code like <script>alert('XSS!');</script>, use \\begin{{verbatim}} inside [fragile] frame 
 
                 CRITICAL CHARACTER ENCODING RULES:
                 - NEVER use special Unicode characters like ×, ∇, ⊙, •, –, —, ", ", ', '
