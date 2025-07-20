@@ -94,7 +94,7 @@ export function ContentVersionsDialog({
         setUsageStatus(response.data.data);
       } else if (response.data) {
         // Fallback in case the response structure is different
-        setUsageStatus(response);
+        setUsageStatus(response.data);
       }
     } catch (error) {
       console.error('Error fetching usage status:', error);
@@ -212,8 +212,6 @@ export function ContentVersionsDialog({
           {/* Modify Content Button */}
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-medium">Content Management</h3>
-            
-            {console.log('Usage status in render:', usageStatus, 'can_modify:', usageStatus?.can_modify, 'loading:', usageLoading)}
             
             {!usageLoading && usageStatus ? (
               usageStatus.can_modify ? (
