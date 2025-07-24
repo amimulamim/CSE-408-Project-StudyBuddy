@@ -40,14 +40,20 @@ class DocumentService:
         try:
             if not collection_name or len(collection_name) > 50:
                 raise ValueError("Invalid collection name. Max 50 characters allowed.")
-            # Allow alphanumeric, underscore, and hyphen characters
-            import re
-            if not re.match(r'^[a-zA-Z0-9_-]+$', collection_name):
-                raise ValueError("Invalid collection name. Use alphanumeric characters, underscores, and hyphens only.")
+            
+            # Check if collection already exists first
             existing = db.query(UserCollection).filter(
                 UserCollection.user_id == user_id,
                 UserCollection.collection_name == collection_name
             ).first()
+            
+            # Only apply strict validation for new collections
+            if not existing:
+                # Allow alphanumeric, underscore, hyphen, and space characters for new collections
+                import re
+                if not re.match(r'^[a-zA-Z0-9_\- ]+$', collection_name):
+                    raise ValueError("Invalid collection name. Use alphanumeric characters, spaces, underscores, and hyphens only.")
+            
             if not existing:
                 vector_db = VectorDatabaseManager(
                     qdrant_url=settings.QDRANT_HOST,
@@ -71,7 +77,7 @@ class DocumentService:
             raise Exception(f"Error managing Qdrant collection: {str(e)}")
 
     async def delete_collection(self, user_id: str, collection_name: str, db: Session) -> None:
-        """Deletes a Qdrant collection and its metadata from PostgreSQL."""
+        """Deletes a Qdrant collection and its metadata from PostgreSQL, and cleans up related content."""
         full_collection_name = f"{user_id}_{collection_name}"
         try:
             collection = db.query(UserCollection).filter(
@@ -80,6 +86,22 @@ class DocumentService:
             ).first()
             if not collection:
                 raise HTTPException(status_code=404, detail=f"Collection {collection_name} not found")
+            
+            # Delete related content items first
+            try:
+                from app.content_generator.content_generator import ContentGenerator
+                content_generator = ContentGenerator()
+                content_deleted = content_generator.delete_content_by_collection(
+                    user_id, collection_name, db
+                )
+                if not content_deleted:
+                    logger.warning(f"Failed to delete content items for collection: {collection_name}")
+            except ImportError as ie:
+                logger.warning(f"Could not import ContentGenerator for content cleanup: {ie}")
+            except Exception as ce:
+                logger.warning(f"Failed to delete content items during collection deletion: {ce}")
+                # Don't fail the entire operation if content cleanup fails
+            
             vector_db = VectorDatabaseManager(
                 qdrant_url=settings.QDRANT_HOST,
                 qdrant_api_key=settings.QDRANT_API_KEY,
@@ -114,16 +136,50 @@ class DocumentService:
                 qdrant_api_key=settings.QDRANT_API_KEY,
                 collection_name=full_collection_name
             )
-            text = self.converter.extract_text(content, file.content_type)
-            if not text:
-                raise ValueError("No text extracted from document")
-            chunks = self.chunker.chunk_text(text)
-            if not chunks:
-                raise ValueError("No chunks generated from document text")
+            
+            # Extract and clean text
+            try:
+                text = self.converter.extract_text(content, file.content_type)
+                if not text:
+                    raise ValueError("No text extracted from document")
+            except Exception as e:
+                logger.error(f"Text extraction failed for {file.filename}: {str(e)}")
+                raise ValueError(f"Failed to extract text from document: {str(e)}")
+            
+            # Generate chunks
+            try:
+                chunks = self.chunker.chunk_text(text)
+                if not chunks:
+                    raise ValueError("No chunks generated from document text")
+            except Exception as e:
+                logger.error(f"Text chunking failed for {file.filename}: {str(e)}")
+                raise ValueError(f"Failed to process document text: {str(e)}")
+            
             document_id = str(uuid.uuid4())
-            embeddings = [self.embedding_generator.get_embedding(chunk) for chunk in chunks]
-            vector_db.upsert_vectors(document_id, chunks, embeddings, file.filename, storage_path)
-            logger.debug(f"Stored {len(chunks)} embeddings for document {document_id} in {full_collection_name}")
+            
+            # Generate embeddings with better error handling
+            try:
+                embeddings = []
+                for i, chunk in enumerate(chunks):
+                    try:
+                        embedding = self.embedding_generator.get_embedding(chunk)
+                        embeddings.append(embedding)
+                    except Exception as e:
+                        logger.error(f"Embedding generation failed for chunk {i} of {file.filename}: {str(e)}")
+                        raise ValueError(f"Failed to generate embeddings for document content: {str(e)}")
+                        
+            except Exception as e:
+                logger.error(f"Embedding process failed for {file.filename}: {str(e)}")
+                raise ValueError(f"Failed to process document for search indexing: {str(e)}")
+            
+            # Store in vector database
+            try:
+                vector_db.upsert_vectors(document_id, chunks, embeddings, file.filename, storage_path)
+                logger.debug(f"Stored {len(chunks)} embeddings for document {document_id} in {full_collection_name}")
+            except Exception as e:
+                logger.error(f"Vector storage failed for {file.filename}: {str(e)}")
+                raise ValueError(f"Failed to store document in search index: {str(e)}")
+            
             return {
                 "document_id": document_id,
                 "file_name": file.filename,
@@ -131,10 +187,13 @@ class DocumentService:
                 "storage_path": storage_path,
                 "collection_name": collection_name
             }
+        except ValueError:
+            # Re-raise ValueError with specific error messages
+            raise
         except Exception as e:
             db.rollback()
             logger.error(f"Error uploading document: {str(e)}")
-            raise Exception(f"Error uploading document: {str(e)}")
+            raise RuntimeError(f"Error uploading document: {str(e)}")
 
     async def search_documents(self, query: str, user_id: str, collection_name: str, limit: int = 5) -> List[Dict[str, Any]]:
         """Searches for relevant documents in a user's Qdrant collection."""
@@ -159,7 +218,7 @@ class DocumentService:
             return documents
         except Exception as e:
             logger.error(f"Error searching documents: {str(e)}")
-            raise Exception(f"Error searching documents: {str(e)}")
+            raise RuntimeError(f"Error searching documents: {str(e)}")
 
     def list_documents_in_collection(self, user_id: str, collection_name: str, db: Session) -> List[Dict[str, Any]]:
         """Lists all documents in a user's collection."""
@@ -264,7 +323,7 @@ class DocumentService:
             raise RuntimeError(f"Error getting document content URL: {str(e)}")
 
     def rename_collection_with_migration(self, user_id: str, old_collection_name: str, new_collection_name: str, db: Session) -> bool:
-        """Rename a collection including both database and Qdrant migration."""
+        """Rename a collection including both database and Qdrant migration, and update related content items."""
         try:
             # Verify old collection exists
             collection = db.query(UserCollection).filter(
@@ -301,6 +360,27 @@ class DocumentService:
             # Update database metadata
             collection.collection_name = new_collection_name
             collection.full_collection_name = new_full_name
+            
+            # Update all related content items - avoid circular import by importing here
+            try:
+                from app.content_generator.content_generator import ContentGenerator
+                content_generator = ContentGenerator()
+                
+                # First, trim whitespace from all collection names to ensure consistency
+                content_generator.trim_all_collection_names(user_id, db)
+                
+                # Then update the collection names
+                content_updated = content_generator.update_content_collection_names(
+                    user_id, old_collection_name, new_collection_name, db
+                )
+                if not content_updated:
+                    logger.warning(f"Failed to update content items for collection rename: {old_collection_name} -> {new_collection_name}")
+            except ImportError as ie:
+                logger.warning(f"Could not import ContentGenerator for content update: {ie}")
+            except Exception as ce:
+                logger.warning(f"Failed to update content items during collection rename: {ce}")
+                # Don't fail the entire operation if content update fails
+            
             db.commit()
             
             logger.debug(f"Successfully renamed collection from {old_collection_name} to {new_collection_name}")
@@ -312,3 +392,71 @@ class DocumentService:
             db.rollback()
             logger.error(f"Error renaming collection with migration: {str(e)}")
             raise RuntimeError(f"Error renaming collection: {str(e)}")
+
+    def delete_document(self, user_id: str, collection_name: str, document_id: str, db: Session) -> bool:
+        """Delete a document from a collection."""
+        try:
+            logger.info(f"Starting delete_document: user_id={user_id}, collection={collection_name}, doc_id={document_id}")
+            
+            # Verify collection exists
+            collection = db.query(UserCollection).filter(
+                UserCollection.user_id == user_id,
+                UserCollection.collection_name == collection_name
+            ).first()
+            
+            if not collection:
+                logger.error(f"Collection {collection_name} not found for user {user_id}")
+                raise ValueError(f"Collection {collection_name} not found")
+            
+            full_collection_name = f"{user_id}_{collection_name}"
+            logger.debug(f"Full collection name: {full_collection_name}")
+            
+            vector_db = VectorDatabaseManager(
+                qdrant_url=settings.QDRANT_HOST,
+                qdrant_api_key=settings.QDRANT_API_KEY,
+                collection_name=full_collection_name
+            )
+            
+            # Get document info to find storage path before deletion
+            documents = vector_db.list_documents()
+            logger.info(f"Available documents in collection: {[{'id': doc.get('document_id', 'NO_ID'), 'name': doc.get('document_name', 'NO_NAME')} for doc in documents]}")
+            logger.info(f"Looking for document ID: '{document_id}' (type: {type(document_id)})")
+            
+            # Check for exact match and also try string conversion
+            document = None
+            for doc in documents:
+                doc_id = doc.get("document_id")
+                logger.debug(f"Comparing '{doc_id}' (type: {type(doc_id)}) with '{document_id}' (type: {type(document_id)})")
+                if str(doc_id) == str(document_id):
+                    document = doc
+                    break
+            
+            # Try to delete from vector database regardless of whether we found it in list_documents
+            # This handles cases where list_documents might not return all documents
+            logger.info(f"Attempting to delete document {document_id} from vector database")
+            success = vector_db.delete_document(document_id)
+            
+            if not success:
+                available_ids = [doc.get('document_id', 'NO_ID') for doc in documents]
+                error_msg = f"Document {document_id} not found in collection {collection_name}. Available documents: {available_ids}"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+            
+            # Delete from Firebase Storage if we found the document and it has storage path
+            if document and document.get("storage_path"):
+                try:
+                    blob = self.bucket.blob(document["storage_path"])
+                    blob.delete()
+                    logger.debug(f"Deleted document from Firebase Storage: {document['storage_path']}")
+                except Exception as e:
+                    logger.warning(f"Could not delete from Firebase Storage: {str(e)}")
+                    # Continue even if Firebase deletion fails
+            
+            logger.debug(f"Successfully deleted document {document_id} from collection {collection_name}")
+            return True
+            
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error(f"Error deleting document: {str(e)}")
+            raise RuntimeError(f"Error deleting document: {str(e)}")

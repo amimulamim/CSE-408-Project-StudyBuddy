@@ -44,7 +44,12 @@ async function makeRequest<T = unknown>(
     } else if (response.status === 409) {
       data.msg = "overlap";
       data.data = await response.json();
-    } else {
+    } 
+    else if (response.status === 403) {
+      data.msg = "Forbidden";
+      data.data = await response.json();
+    }
+    else {
       const errorData = await response.json();
       console.log('Error response:', errorData);
       data.msg = "Failed to make request";

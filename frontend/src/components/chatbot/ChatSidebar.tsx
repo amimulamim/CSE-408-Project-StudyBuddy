@@ -86,7 +86,7 @@ export function ChatSidebar({ isOpen, onToggle }: ChatSidebarProps) {
               key={index}
               className={cn(
                 "group relative p-3 rounded-lg mb-2 cursor-pointer transition-colors min-w-0",
-                currentChat.id === chat.id || chat.id === 'start'
+                (currentChat?.id === chat.id) || (currentChat?.id === null && chat.id === null)
                   ? "bg-study-purple/20 border border-study-purple/30" 
                   : "hover:bg-white/5"
               )}
@@ -114,28 +114,32 @@ export function ChatSidebar({ isOpen, onToggle }: ChatSidebarProps) {
               </div>
               
               <div className="opacity-0 group-hover:opacity-100 absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-muted-foreground hover:text-white hover:bg-white/10"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleStartEdit(chat.id, chat.title);
-                  }}
-                >
-                  <Pencil className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteChat(chat.id);
-                  }}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
+                {chat.id && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-white hover:bg-white/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartEdit(chat.id!, chat.title);
+                      }}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteChat(chat.id!);
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           ))}

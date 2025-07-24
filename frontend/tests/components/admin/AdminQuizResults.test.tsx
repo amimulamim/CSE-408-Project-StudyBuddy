@@ -263,7 +263,7 @@ describe('AdminQuizResults', () => {
 
     await waitFor(() => {
       expect(mockMakeRequest).toHaveBeenCalledWith(
-        'http://localhost:8000/api/v1/admin/quiz-results?offset=20&size=20',
+        'http://localhost:8000/api/v1/admin/quiz-results?offset=20&size=20&sort_by=created_at&sort_order=desc',
         'GET'
       );
     });

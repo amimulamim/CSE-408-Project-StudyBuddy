@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, Edit, Trash2, UserPlus, Search } from 'lucide-react';
+import { Users, Edit, Trash2, UserPlus, Search, Filter } from 'lucide-react';
 import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
 
@@ -27,6 +27,8 @@ export function AdminUserManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRole, setSelectedRole] = useState<string>('');
+  const [filterPlan, setFilterPlan] = useState<string>('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isPromoteDialogOpen, setIsPromoteDialogOpen] = useState(false);
@@ -39,15 +41,29 @@ export function AdminUserManagement() {
     try {
       setLoading(true);
       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+      
+      // Build query parameters
+      const params = new URLSearchParams({
+        offset: (page * pageSize).toString(),
+        size: pageSize.toString()
+      });
+      
+      if (selectedRole) {
+        params.append('filter_role', selectedRole);
+      }
+      if (filterPlan) {
+        params.append('filter_plan', filterPlan);
+      }
       const response = await makeRequest(
-        `${API_BASE_URL}/api/v1/admin/users?offset=${page * pageSize}&size=${pageSize}`,
+        `${API_BASE_URL}/api/v1/admin/users?${params.toString()}`,
         'GET'
       );
 
       if (response && typeof response === 'object' && 'status' in response) {
-        if (response.status === 'success' && response.data) {
-          setUsers(response.data.users || []);
-          setTotalUsers(response.data.total || 0);
+        if (response.status === 'success' && 'data' in response && response.data) {
+          const data = response.data as any;
+          setUsers(data.users || []);
+          setTotalUsers(data.total || 0);
         }
       }
     } catch (error) {
@@ -60,7 +76,7 @@ export function AdminUserManagement() {
 
   useEffect(() => {
     fetchUsers(currentPage);
-  }, [currentPage]);
+  }, [currentPage, selectedRole , filterPlan]);
 
   const handleEditUser = async (userData: Partial<User>) => {
     if (!selectedUser) return;
@@ -191,14 +207,82 @@ export function AdminUserManagement() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search users..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
-            />
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center space-x-2">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search users..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-sm"
+              />
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="role-filter" className="text-sm font-medium whitespace-nowrap">
+                Filter by Role:
+              </Label>
+              <Select
+                value={selectedRole}
+                onValueChange={(value) => {
+                  setSelectedRole(value === 'all' ? '' : value);
+                  setCurrentPage(0); // Reset to first page when filtering
+                }}
+              >
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="All Roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="student">Student</SelectItem>
+                  <SelectItem value="teacher">Teacher</SelectItem>
+                  <SelectItem value="researcher">Researcher</SelectItem>
+                  <SelectItem value="developer">Developer</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+                  <div className="flex items-center space-x-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="filter-plan" className="text-sm font-medium whitespace-nowrap">
+                Filter by Plan:
+              </Label>
+              <Select
+                value={filterPlan}
+                onValueChange={(value) => {
+                  setFilterPlan(value === 'all' ? '' : value);
+                  setCurrentPage(0); // Reset to first page when filtering
+                }}
+              >
+              
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="All Plans" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Plans</SelectItem>
+                  <SelectItem value="free">Free</SelectItem>
+                  <SelectItem value="premium">Premium</SelectItem>   
+                </SelectContent>
+
+              </Select>
+            </div>
+            
+            {(searchTerm || selectedRole || filterPlan) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedRole('');
+                  setFilterPlan('');
+                  setCurrentPage(0);
+                }}
+                className="flex items-center gap-2"
+              >
+                Clear Filters
+              </Button>
+            )}
           </div>
 
           <div className="border rounded-lg overflow-hidden">
@@ -281,9 +365,17 @@ export function AdminUserManagement() {
           </div>
 
           <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Showing {filteredUsers.length} of {totalUsers} users
-            </p>
+            <div className="text-sm text-muted-foreground">
+              <p>Showing {filteredUsers.length} of {totalUsers} users</p>
+              {(selectedRole || searchTerm || filterPlan) && (
+                <p className="text-xs mt-1">
+                  Filters active: 
+                  {selectedRole && <span className="ml-1 text-blue-600">Role: {selectedRole}</span>}
+                  {searchTerm && <span className="ml-1 text-blue-600">Search: "{searchTerm}"</span>}
+                  {filterPlan && <span className="ml-1 text-blue-600">Plan: {filterPlan}</span>}
+                </p>
+              )}
+            </div>
             <div className="flex items-center space-x-2">
               <Button
                 variant="outline"

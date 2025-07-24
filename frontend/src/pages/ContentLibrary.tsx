@@ -4,17 +4,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, BookOpen, CreditCard, Plus } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ArrowLeft, BookOpen, CreditCard, Plus, Filter, X } from 'lucide-react';
 import { ContentList } from '@/components/content/ContentList';
 import { ContentGenerator } from '@/components/content/ContentGenerator';
 import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { format } from 'date-fns';
 
 interface ContentItem {
   contentId: string;
   topic: string;
   type: 'flashcards' | 'slides';
   createdAt: string;
+  collection_name: string;
+}
+
+interface DateRange {
+  from: Date | undefined;
+  to: Date | undefined;
 }
 
 export default function ContentLibrary() {
@@ -23,23 +34,54 @@ export default function ContentLibrary() {
   const [loading, setLoading] = useState(true);
   const [showGenerator, setShowGenerator] = useState(false);
   const [filterTopic, setFilterTopic] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'created_at' | 'topic'>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [selectedCollections, setSelectedCollections] = useState<string[]>([]);
+  const [tempSelectedCollections, setTempSelectedCollections] = useState<string[]>([]);
+  const [availableCollections, setAvailableCollections] = useState<string[]>([]);
+  const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
 
   useEffect(() => {
     fetchUserContent();
-  }, [filterTopic]);
+  }, [filterTopic, sortBy, sortOrder, selectedCollections, dateRange]);
 
   const fetchUserContent = async () => {
     try {
       setLoading(true);
       const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
       let url = `${API_BASE_URL}/api/v1/content/user`;
+      
+      const params = new URLSearchParams();
       if (filterTopic?.trim()) {
-        url += `?filter_topic=${encodeURIComponent(filterTopic.trim())}`;
+        params.append('filter_topic', filterTopic.trim());
       }
-      const response = await makeRequest(url, 'GET');
+      if (selectedCollections.length > 0) {
+        selectedCollections.forEach(collection => {
+          params.append('filter_collection', collection);
+        });
+      }
+      if (dateRange.from) {
+        params.append('start_date', format(dateRange.from, 'yyyy-MM-dd'));
+      }
+      if (dateRange.to) {
+        params.append('end_date', format(dateRange.to, 'yyyy-MM-dd'));
+      }
+      params.append('sort_by', sortBy);
+      params.append('sort_order', sortOrder);
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
+      const response = await makeRequest(url, 'GET') as any;
       
       if (response?.status === 'success') {
-        setContents(response.data?.contents || []);
+        const contentData = response.data?.contents || [];
+        setContents(contentData);
+        
+        // Extract unique collection names for the filter
+        const collections = [...new Set(contentData.map((item: ContentItem) => item.collection_name))].filter(Boolean);
+        setAvailableCollections(collections as string[]);
       }
     } catch (error) {
       console.error('Error fetching content:', error);
@@ -47,6 +89,36 @@ export default function ContentLibrary() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCollectionToggle = (collection: string) => {
+    setTempSelectedCollections(prev => 
+      prev.includes(collection) 
+        ? prev.filter(c => c !== collection)
+        : [...prev, collection]
+    );
+  };
+
+  const applyCollectionFilters = () => {
+    setSelectedCollections(tempSelectedCollections);
+  };
+
+  const clearCollectionFilters = () => {
+    setSelectedCollections([]);
+    setTempSelectedCollections([]);
+  };
+
+  const clearAllFilters = () => {
+    setFilterTopic('');
+    setSelectedCollections([]);
+    setTempSelectedCollections([]);
+    setDateRange({ from: undefined, to: undefined });
+  };
+
+  const hasActiveFilters = filterTopic || selectedCollections.length > 0 || dateRange.from || dateRange.to;
+
+  const openCollectionFilter = () => {
+    setTempSelectedCollections(selectedCollections);
   };
 
   const flashcards = contents.filter(item => item.type === 'flashcards');
@@ -92,16 +164,164 @@ export default function ContentLibrary() {
             </Button>
           </div>
         </div>
-        {/* Filter Input */}
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="Search by topic…"
-            value={filterTopic}
-            onChange={e => setFilterTopic(e.target.value)}
-            className="w-full md:w-1/3 p-2 border rounded-md focus:outline-none focus:ring text-black placeholder-gray-500"
-          />
+        {/* Filter and Sort Controls */}
+        <div className="flex flex-col gap-4 mb-4">
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Search by topic…"
+                value={filterTopic}
+                onChange={e => setFilterTopic(e.target.value)}
+                className="w-full p-2 border rounded-md focus:outline-none focus:ring text-black placeholder-gray-500"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {/* Collection Filter */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2"
+                    onClick={openCollectionFilter}
+                  >
+                    <Filter className="h-4 w-4" />
+                    Collections
+                    {selectedCollections.length > 0 && (
+                      <Badge variant="secondary" className="ml-1">
+                        {selectedCollections.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64" align="end">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium">Filter by Collections</h4>
+                      {(selectedCollections.length > 0 || tempSelectedCollections.length > 0) && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={clearCollectionFilters}
+                          className="h-auto p-1"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {availableCollections.map((collection) => (
+                        <div key={collection} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={collection}
+                            checked={tempSelectedCollections.includes(collection)}
+                            onCheckedChange={() => handleCollectionToggle(collection)}
+                          />
+                          <label
+                            htmlFor={collection}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                          >
+                            {collection}
+                          </label>
+                        </div>
+                      ))}
+                      {availableCollections.length === 0 && (
+                        <p className="text-sm text-muted-foreground">No collections found</p>
+                      )}
+                    </div>
+                    {availableCollections.length > 0 && (
+                      <div className="flex gap-2 pt-2 border-t">
+                        <Button 
+                          size="sm" 
+                          onClick={applyCollectionFilters}
+                          className="flex-1"
+                          disabled={
+                            JSON.stringify([...tempSelectedCollections].sort((a, b) => a.localeCompare(b))) === 
+                            JSON.stringify([...selectedCollections].sort((a, b) => a.localeCompare(b)))
+                          }
+                        >
+                          Apply Filters
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+              
+              {/* Date Range Filter */}
+              <DateRangePicker
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+                placeholder="Filter by date range"
+                className="w-[280px]"
+              />
+              
+              <Select value={sortBy} onValueChange={(value: 'created_at' | 'topic') => setSortBy(value)}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="created_at">Created Date</SelectItem>
+                  <SelectItem value="topic">Topic</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="Order" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="desc">Descending</SelectItem>
+                  <SelectItem value="asc">Ascending</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {hasActiveFilters && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={clearAllFilters}
+                  className="px-3"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
+
+        {/* Active Filters Display */}
+        {hasActiveFilters && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            <span className="text-sm text-muted-foreground">Active filters:</span>
+            {filterTopic && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                Topic: {filterTopic}
+                <X 
+                  className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                  onClick={() => setFilterTopic('')}
+                />
+              </Badge>
+            )}
+            {selectedCollections.map((collection) => (
+              <Badge key={collection} variant="secondary" className="flex items-center gap-1">
+                Collection: {collection}
+                <X 
+                  className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                  onClick={() => handleCollectionToggle(collection)}
+                />
+              </Badge>
+            ))}
+            {(dateRange.from || dateRange.to) && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                Date: {dateRange.from ? format(dateRange.from, 'MMM dd, yyyy') : 'Start'} - {dateRange.to ? format(dateRange.to, 'MMM dd, yyyy') : 'End'}
+                <X 
+                  className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                  onClick={() => setDateRange({ from: undefined, to: undefined })}
+                />
+              </Badge>
+            )}
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
