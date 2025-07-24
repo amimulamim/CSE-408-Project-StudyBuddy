@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 from app.rag.query_processor import QueryProcessor
@@ -46,6 +46,10 @@ async def upload_document(
         user_id = user_info["uid"]
         await document_service.upload_document(file, user_id, collection_name, db)
         return {"message": "Document uploaded successfully"}
+    except ValueError as e:
+        # Handle specific validation errors with 400 status
+        logger.warning(f"Document upload validation error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error uploading document: {str(e)}")
         raise HTTPException(status_code=500, detail=INTERNAL_SERVER_ERROR_MSG)
@@ -53,11 +57,30 @@ async def upload_document(
 @router.get("/collections", response_model=List[CollectionResponse])
 async def list_collections(
     db: Session = Depends(get_db),
-    user_info: Dict[str, Any] = Depends(get_current_user)
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    start_date: Optional[str] = Query(None, description="Start date filter (ISO format: YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="End date filter (ISO format: YYYY-MM-DD)")
 ):
     try:
         user_id = user_info["uid"]
-        collections = db.query(UserCollection).filter(UserCollection.user_id == user_id).all()
+        query = db.query(UserCollection).filter(UserCollection.user_id == user_id)
+        
+        # Apply date range filtering
+        if start_date:
+            try:
+                start_date_obj = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+                query = query.filter(UserCollection.created_at >= start_date_obj)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD")
+        
+        if end_date:
+            try:
+                end_date_obj = datetime.fromisoformat(end_date).replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+                query = query.filter(UserCollection.created_at <= end_date_obj)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD")
+        
+        collections = query.order_by(UserCollection.created_at.desc()).all()
         return [
             {
                 "collection_name": col.collection_name,
@@ -184,4 +207,27 @@ async def get_document_content_url(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Error getting document content URL: {str(e)}")
+        raise HTTPException(status_code=500, detail=INTERNAL_SERVER_ERROR_MSG)
+
+@router.delete("/collections/{collection_name}/documents/{document_id}")
+async def delete_document(
+    collection_name: str,
+    document_id: str,
+    db: Session = Depends(get_db),
+    user_info: Dict[str, Any] = Depends(get_current_user)
+):
+    try:
+        user_id = user_info["uid"]
+        logger.info(f"Attempting to delete document {document_id} from collection {collection_name} for user {user_id}")
+        success = document_service.delete_document(user_id, collection_name, document_id, db)
+        if success:
+            return {"message": "Document deleted successfully"}
+        else:
+            logger.warning(f"Delete operation returned False for document {document_id}")
+            raise HTTPException(status_code=404, detail="Document not found")
+    except ValueError as e:
+        logger.warning(f"ValueError in delete_document: {str(e)}")
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Exception in delete_document: {str(e)}")
         raise HTTPException(status_code=500, detail=INTERNAL_SERVER_ERROR_MSG)

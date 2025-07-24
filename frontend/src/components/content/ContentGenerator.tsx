@@ -5,10 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Sparkles, Loader2, Plus } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, Plus, Crown } from 'lucide-react';
 import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
 import { ApiResponse } from '@/lib/api';
+import { useNavigate } from 'react-router-dom';
 
 interface ContentGeneratorProps {
   onClose: () => void;
@@ -22,21 +23,26 @@ interface Collection {
 }
 
 export function ContentGenerator({ onClose, onSuccess }: ContentGeneratorProps) {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     contentType: '',
     contentTopic: '',
     difficulty: 'medium',
     length: 'medium',
     tone: 'instructive',
-    collection_name: 'default'
+    collection_name: 'default',
+    special_instructions: ''
   });
   const [loading, setLoading] = useState(false);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [collectionsLoading, setCollectionsLoading] = useState(true);
+  const [usageStatus, setUsageStatus] = useState<any>(null);
+  const [usageLoading, setUsageLoading] = useState(true);
 
-  // Fetch user collections on component mount
+  // Fetch user collections and usage status on component mount
   useEffect(() => {
     fetchCollections();
+    fetchUsageStatus();
   }, []);
 
   const fetchCollections = async () => {
@@ -70,6 +76,31 @@ export function ContentGenerator({ onClose, onSuccess }: ContentGeneratorProps) 
     }
   };
 
+  const fetchUsageStatus = async () => {
+    try {
+      setUsageLoading(true);
+      const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+      const response: ApiResponse = await makeRequest(
+        `${API_BASE_URL}/api/v1/content/usage/status`,
+        'GET'
+      );
+
+      console.log('Usage status response:', response); // Debug log
+
+      if (response?.status === 'success' && response.data) {
+        setUsageStatus(response.data.data);
+      } else if (response.data) {
+        // Fallback in case the response structure is different
+        setUsageStatus(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching usage status:', error);
+      toast.error('Failed to load usage information');
+    } finally {
+      setUsageLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -91,11 +122,27 @@ export function ContentGenerator({ onClose, onSuccess }: ContentGeneratorProps) 
         toast.success('Content generated successfully!');
         onSuccess();
       } else {
-        toast.error(response?.msg || 'Failed to generate content');
+        // Check for daily limit exceeded error
+        if (response?.data?.detail?.error === 'DAILY_LIMIT_EXCEEDED') {
+          toast.error(
+            'Daily content generation limit reached (5/day for free users)',
+            {
+              action: {
+                label: 'Upgrade to Premium',
+                onClick: () => navigate('/dashboard/billing')
+              }
+            }
+          );
+        } else {
+          toast.error(response?.msg || 'Failed to generate content');
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating content:', error);
+      
+
       toast.error('Failed to generate content');
+      
     } finally {
       setLoading(false);
     }
@@ -129,8 +176,60 @@ export function ContentGenerator({ onClose, onSuccess }: ContentGeneratorProps) 
             <CardDescription>
               Fill in the details to generate educational content
             </CardDescription>
+            
+            {/* Usage Status Indicator */}
+            {!usageLoading && usageStatus && (
+              <div className="mt-4 p-3 rounded-lg border">
+                {usageStatus.has_premium ? (
+                  <div className="flex items-center gap-2 text-green-600">
+                    <Crown className="h-4 w-4" />
+                    <span className="text-sm font-medium">Premium Account - Unlimited Generation</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">Daily Usage:</span>
+                      <span className="text-sm font-medium">
+                        {usageStatus.daily_count}/{usageStatus.daily_limit ?? '∞'} content generations
+                      </span>
+                    </div>
+                    {usageStatus.daily_limit !== null &&
+   usageStatus.daily_count >= usageStatus.daily_limit && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate('/dashboard/billing')}
+                        className="text-xs"
+                      >
+                        <Crown className="h-3 w-3 mr-1" />
+                        Upgrade
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </CardHeader>
           <CardContent>
+            {/* Show limit reached message */}
+            {!usageLoading && usageStatus && !usageStatus.can_generate && (
+              <div className="mb-6 p-4 rounded-lg bg-yellow-50 border border-yellow-200">
+                <div className="flex items-center gap-2 text-yellow-800 mb-2">
+                  <Sparkles className="h-4 w-4" />
+                  <span className="font-medium">Daily Limit Reached</span>
+                </div>
+                <p className="text-sm text-yellow-700 mb-3">
+                  You've reached your daily limit of 5 content generations. Upgrade to premium for unlimited access.
+                </p>
+                <Button
+                  onClick={() => navigate('/dashboard/billing')}
+                  className="w-full"
+                >
+                  <Crown className="h-4 w-4 mr-2" />
+                  Upgrade to Premium
+                </Button>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -220,6 +319,20 @@ export function ContentGenerator({ onClose, onSuccess }: ContentGeneratorProps) 
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="special_instructions">Special Instructions</Label>
+                <Textarea
+                  id="special_instructions"
+                  placeholder="Add specific instructions about what to focus on, what to exclude, what form of details or examples you want, subtopics to emphasize, etc. (optional)"
+                  value={formData.special_instructions}
+                  onChange={(e) => setFormData(prev => ({ ...prev, special_instructions: e.target.value }))}
+                  className="min-h-[80px] resize-y"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Example: "Focus on practical examples, exclude theoretical proofs, include step-by-step solutions, emphasize real-world applications"
+                </p>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="difficulty">Difficulty</Label>
@@ -277,11 +390,19 @@ export function ContentGenerator({ onClose, onSuccess }: ContentGeneratorProps) 
                 <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={loading} className="button-gradient">
+                <Button type="submit" 
+                  disabled={loading || (usageStatus && !usageStatus.can_generate)} 
+                  className="button-gradient"
+                >
                   {loading ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Generating...
+                    </>
+                  ) : usageStatus && !usageStatus.can_generate ? (
+                    <>
+                      <Crown className="h-4 w-4 mr-2" />
+                      Limit Reached
                     </>
                   ) : (
                     <>

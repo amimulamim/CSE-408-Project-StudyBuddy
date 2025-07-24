@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.orm import Session
-from typing import Dict, Any, List
+from typing import Dict, Any, List,Optional
 
 from app.auth.firebase_auth import get_current_user
 from app.core.database import get_db
@@ -64,13 +64,26 @@ def get_all_users(
     offset: int = 0,
     size: int = 20,
     user_info: Dict[str, Any] = Depends(get_current_user),
-    db: Session = Depends(get_db)
+
+    db: Session = Depends(get_db),
+    filter_role: Optional[str] = Query(
+        None,
+        title="Filter by role",
+        description="Only return users whose role is this value (student,researcher, etc.)"
+    ),
+
+    filter_plan: Optional[str] = Query(
+        None,
+        title="Filter by plan",
+        description="Only return users whose current plan is this value (free,pro, etc.)"
+    )
+
 ):
     """Get paginated list of all users (Admin only)"""
     require_admin_access(db, user_info)
     
     pagination = PaginationQuery(offset=offset, size=size)
-    users, total = admin_service.get_all_users_paginated(db, pagination)
+    users, total = admin_service.get_all_users_paginated(db, pagination,filter_role=filter_role,filter_plan=filter_plan)
     
     # Convert users to dict format
     user_list = []
@@ -155,13 +168,58 @@ def get_all_content(
     offset: int = 0,
     size: int = 20,
     user_info: Dict[str, Any] = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    filter_type: Optional[str] = Query(
+        None,
+        title="Filter by type",
+        description="Only return users whose type matches"
+    ),
+    sort_by: Optional[str] = Query(
+        "created_at",
+        title="Sort by",
+        description="Field to sort content by (created_at, topic, etc.)"
+    ),
+    sort_order: Optional[str] = Query(
+        "desc",
+        title="Sort order",   
+        description="Order of sorting (asc or desc)"
+    ),
+    start_date: Optional[str] = Query(
+        None,
+        title="Start date",
+        description="Filter content from this date (ISO format)"
+    ),
+    end_date: Optional[str] = Query(
+        None,
+        title="End date", 
+        description="Filter content until this date (ISO format)"
+    ),
 ):
     """Get paginated list of all generated content (Admin only)"""
     require_admin_access(db, user_info)
     
+    # Parse date strings to datetime objects
+    parsed_start_date = None
+    parsed_end_date = None
+    
+    try:
+        if start_date:
+            from datetime import datetime
+            parsed_start_date = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        if end_date:
+            from datetime import datetime
+            parsed_end_date = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid date format: {str(e)}. Use ISO format (YYYY-MM-DDTHH:MM:SS)"
+        )
+    
     pagination = PaginationQuery(offset=offset, size=size)
-    content, total = admin_service.get_all_content_paginated(db, pagination)
+    content, total = admin_service.get_all_content_paginated(
+        db, pagination, filter_type, sort_by=sort_by, sort_order=sort_order,
+        start_date=parsed_start_date, end_date=parsed_end_date
+    )
     
     return ContentListResponse(
         content=content,
@@ -261,20 +319,77 @@ def get_all_quiz_results(
     offset: int = 0,
     size: int = 20,
     user_info: Dict[str, Any] = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    sort_by: Optional[str] = Query("created_at", description="Field to sort quiz results by"),
+    sort_order: Optional[str] = Query("desc", description="Order of sorting (asc or desc)"),
+    filter_type: Optional[str] = Query(
+        None,
+        title="Filter by type",
+        description="Only return quiz results of this type (e.g., MultipleChoice,ShortAnswer,TrueFalse, etc.)"
+    ),
+    start_date: Optional[str] = Query(
+        None,
+        title="Start date",
+        description="Filter results from this date (ISO format)"
+    ),
+    end_date: Optional[str] = Query(
+        None,
+        title="End date", 
+        description="Filter results until this date (ISO format)"
+    ),
 ):
     """Get paginated list of all quiz results (Admin only)"""
     require_admin_access(db, user_info)
     
-    pagination = PaginationQuery(offset=offset, size=size)
-    quiz_results, total = admin_service.get_all_quiz_results_paginated(db, pagination)
+    # Validate filter_type if provided
+    from app.quiz_generator.models import QuestionType
+    valid_question_types = [qt.value for qt in QuestionType]
+    if filter_type and filter_type not in valid_question_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid filter_type '{filter_type}'. Valid types are: {', '.join(valid_question_types)}"
+        )
     
-    return QuizResultsResponse(
-        quiz_results=quiz_results,
-        total=total,
-        offset=offset,
-        size=size
-    )
+    # Parse date strings to datetime objects
+    parsed_start_date = None
+    parsed_end_date = None
+    
+    try:
+        if start_date:
+            from datetime import datetime
+            parsed_start_date = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        if end_date:
+            from datetime import datetime
+            parsed_end_date = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid date format: {str(e)}. Use ISO format (YYYY-MM-DDTHH:MM:SS)"
+        )
+    
+    try:
+        pagination = PaginationQuery(offset=offset, size=size)
+        quiz_results, total = admin_service.get_all_quiz_results_paginated(
+            db, pagination, sort_by=sort_by, sort_order=sort_order, 
+            filter_type=filter_type, start_date=parsed_start_date, end_date=parsed_end_date
+        )
+        
+        return QuizResultsResponse(
+            quiz_results=quiz_results,
+            total=total,
+            offset=offset,
+            size=size
+        )
+    except Exception as e:
+        # Log the error for debugging
+        import logging
+        logging.error(f"Error in get_all_quiz_results: {str(e)}")
+        
+        # Return a more user-friendly error
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve quiz results. Please check your filter parameters."
+        )
 
 @router.get("/quiz/{quiz_id}")
 def get_quiz_details(
@@ -725,3 +840,82 @@ def search_users(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Search failed: {str(e)}"
         )
+
+@router.get("/quiz/{quiz_id}/user/{user_id}/result")
+def get_user_quiz_result(
+    quiz_id: str,
+    user_id: str,
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get a specific user's quiz result (Admin only)"""
+    require_admin_access(db, user_info)
+    
+    from app.quiz_generator.models import Quiz, QuizQuestion, QuizResult, QuestionResult
+    
+    # Get the latest quiz result for the specific user (in case of retakes)
+    quiz_result = db.query(QuizResult).filter(
+        QuizResult.quiz_id == quiz_id,
+        QuizResult.user_id == user_id
+    ).order_by(QuizResult.created_at.desc()).first()
+    
+    if not quiz_result:
+        raise HTTPException(status_code=404, detail="Quiz result not found")
+    
+    # Get quiz information
+    quiz = db.query(Quiz).filter(Quiz.quiz_id == quiz_id).first()
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    # Get question results for detailed answers (matching the same attempt timeframe)
+    if quiz_result.created_at:
+        # Get question results created around the same time as the quiz result
+        # Allow a 10-minute window to account for any timing differences
+        from datetime import timedelta
+        time_window = timedelta(minutes=10)
+        start_time = quiz_result.created_at - time_window
+        end_time = quiz_result.created_at + time_window
+        
+        question_results = db.query(QuestionResult).filter(
+            QuestionResult.quiz_id == quiz_id,
+            QuestionResult.user_id == user_id,
+            QuestionResult.created_at >= start_time,
+            QuestionResult.created_at <= end_time
+        ).order_by(QuestionResult.created_at.desc()).all()
+    else:
+        # Fallback to getting the most recent question results
+        question_results = db.query(QuestionResult).filter(
+            QuestionResult.quiz_id == quiz_id,
+            QuestionResult.user_id == user_id
+        ).order_by(QuestionResult.created_at.desc()).all()
+    
+    # Get quiz questions for additional context
+    questions = db.query(QuizQuestion).filter(QuizQuestion.quiz_id == quiz_id).all()
+    question_map = {str(q.id): q for q in questions}
+    
+    # Format question results
+    formatted_question_results = []
+    for qr in question_results:
+        question = question_map.get(str(qr.question_id))
+        formatted_question_results.append({
+            "question_id": str(qr.question_id),
+            "score": qr.score,
+            "is_correct": qr.is_correct,
+            "student_answer": qr.student_answer,
+            "correct_answer": question.correct_answer if question else None,
+            "explanation": qr.explanation if hasattr(qr, 'explanation') else None,
+            "type": question.type.value if question and question.type else None,
+            "options": question.options if question else None,
+            "question_text": question.question_text if question else None
+        })
+    
+    return {
+        "quiz_id": quiz_id,
+        "score": quiz_result.score,
+        "total": quiz_result.total,
+        "topic": quiz.topic if hasattr(quiz, 'topic') else 'Quiz',
+        "domain": quiz.domain if hasattr(quiz, 'domain') else 'General',
+        "feedback": quiz_result.feedback or '',
+        "completed_at": quiz_result.created_at.isoformat() if quiz_result.created_at else None,
+        "question_results": formatted_question_results
+    }

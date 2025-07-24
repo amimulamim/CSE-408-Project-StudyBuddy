@@ -97,7 +97,7 @@ export function AdminStatistics() {
     { name: 'Chats Done', value: stats.chats_done, color: colors[1] },
     { name: 'Content Generated', value: stats.content_generated, color: colors[2] },
     { name: 'Quizzes Generated', value: stats.quiz_generated, color: colors[3] },
-    { name: 'Content Uploaded', value: stats.content_uploaded, color: colors[4] }
+    // { name: 'Content Uploaded', value: stats.content_uploaded, color: colors[4] }
   ] : [];
 
   const timeSeriesData = stats ? [
@@ -206,10 +206,10 @@ export function AdminStatistics() {
                   <CardContent className="p-4">
                     <div className="flex items-center space-x-2">
                       <TrendingUp className="h-4 w-4 text-red-500" />
-                      <div>
+                      {/* <div>
                         <p className="text-sm font-medium text-muted-foreground">Content Uploaded</p>
                         <p className="text-2xl font-bold">{stats.content_uploaded}</p>
-                      </div>
+                      </div> */}
                     </div>
                   </CardContent>
                 </Card>

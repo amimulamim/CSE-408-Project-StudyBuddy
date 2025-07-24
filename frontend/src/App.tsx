@@ -10,6 +10,7 @@ import FlashcardsView from '@/pages/FlashcardsView';
 import SlidesView from '@/pages/SlidesView';
 
 // import RedirectHandler from "./pages/RedirectHandler";
+// import not needed anymore, replaced by the new routing system
 
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
