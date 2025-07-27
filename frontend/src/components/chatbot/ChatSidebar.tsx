@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, MessageSquare, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, MessageSquare, Pencil, Trash2, X, Menu, MessageSquareReplyIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useChat } from './ChatContext';
@@ -46,15 +46,24 @@ export function ChatSidebar({ isOpen, onToggle }: ChatSidebarProps) {
       {/* Sidebar */}
       <div className={cn(
         "fixed md:relative top-0 left-0 h-full bg-study-dark border-r border-white/10 z-50 transition-all duration-300 flex flex-col overflow-hidden",
-        isOpen ? "w-80 translate-x-0" : "w-0 -translate-x-full md:translate-x-0"
+        isOpen ? "w-80 translate-x-0" : "w-16 -translate-x-full md:translate-x-0"
       )}>
-        <div className="p-4 border-b border-white/10 flex items-center justify-between min-w-0">
+        <div className={`p-4 px-3 border-b border-white/10 ${isOpen ? 'flex' : 'flex-column'} items-center min-w-0`}>
           <Button
             onClick={createNewChat}
             className="flex-1 bg-study-purple hover:bg-study-purple/90 text-white min-w-0"
+            size={`${isOpen ? 'default' : 'icon'}`}
           >
-            <Plus className="h-4 w-4 mr-2 flex-shrink-0" />
-            <span className="truncate">New Chat</span>
+            <Plus className={`h-4 w-4 flex-shrink-0 ${isOpen ? 'mr-2' : ''}`} />
+            { isOpen && <span className="truncate">New Chat</span>}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggle}
+            className={`bg-study-purple hover:bg-study-purple/90 text-white flex-shrink-0 ${isOpen ? 'ml-2' : 'mt-2'}`}
+          >
+            <Menu className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
@@ -81,7 +90,7 @@ export function ChatSidebar({ isOpen, onToggle }: ChatSidebarProps) {
               No chats available. Start a new chat!
             </div>
           )}
-          {chatList.map((chat,index) => (
+          { isOpen && chatList.map((chat,index) => (
             <div
               key={index}
               className={cn(

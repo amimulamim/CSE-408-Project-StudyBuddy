@@ -222,7 +222,7 @@ export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfacePro
   return (
     <div className="flex-1 flex flex-col h-full">
       {/* Header */}
-      <div className="border-b border-white/10 p-4 flex items-center gap-3 bg-study-dark">
+      {/* <div className="border-b border-white/10 p-4 flex items-center gap-3 bg-study-dark">
         <Button
           variant="ghost"
           size="icon"
@@ -234,7 +234,7 @@ export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfacePro
         <h1 className="text-lg font-semibold text-white">
           {currentChat?.title || 'StudyBuddy AI'}
         </h1>
-      </div>
+      </div> */}
 
       {/* Messages */}
       <div 
