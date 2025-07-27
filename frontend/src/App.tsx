@@ -27,6 +27,7 @@ import DocumentsPage from './pages/DocumentsPage';
 
 const queryClient = new QueryClient();
 
+
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>

@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { BillingSubscription } from '@/components/billing/BillingSubscription';
 import { toast } from 'sonner';
+import { Header } from '@/components/header/Header';
+import { Footer } from '@/components/footer/Footer';
 
 export default function BillingPage() {
   const navigate = useNavigate();
@@ -33,27 +35,18 @@ export default function BillingPage() {
 
   return (
     <div className="dashboard-bg-animated">
+      <Header />
+      <div className="fixed top-20 bottom-0 w-screen overflow-y-auto scrollbar-hide">
       <div className="container mx-auto py-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
-          </Button>
-        </div>
-
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Billing & Subscription</h1>
           <p className="text-muted-foreground">
             Manage your subscription and billing information
           </p>
         </div>
-
         <BillingSubscription ref={billingRef} />
+      </div>
+      <Footer />
       </div>
     </div>
   );

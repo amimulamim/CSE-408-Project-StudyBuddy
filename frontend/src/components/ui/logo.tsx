@@ -2,6 +2,7 @@ import React from 'react';
 import { Book } from 'lucide-react';
 import logo from '@/assets/icon_v1.0.png';
 import { Avatar, AvatarFallback, AvatarImage } from '@radix-ui/react-avatar';
+import { useNavigate } from 'react-router-dom';
 
 interface LogoProps {
   className?: string;
@@ -16,8 +17,13 @@ export function Logo({
   iconClassName = "",
   showText = true
 }: LogoProps) {
+
+  const navigate = useNavigate();
   return (
-    <div className={`flex items-center gap-1 ${className}`}>
+    <div 
+     className={`flex items-center gap-1 ${className} cursor-pointer`}
+     onClick={() => navigate('/dashboard')}
+    >
       <div className="relative">
         <div className="w-16 h-16 relative">
           <img 
