@@ -15,7 +15,7 @@ export function Logo({
   className = "",
   textClassName = "",
   iconClassName = "",
-  showText = true
+  showText = true,
 }: LogoProps) {
 
   const navigate = useNavigate();

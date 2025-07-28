@@ -24,6 +24,7 @@ import QuizTakePage from './pages/QuizTakePage';
 import QuizResultsPage from './pages/QuizResultsPage';
 import CollectionsPage from './pages/CollectionsPage';
 import DocumentsPage from './pages/DocumentsPage';
+import MainLayout from './pages/Mainlayout';
 
 const queryClient = new QueryClient();
 
@@ -37,20 +38,22 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/dashboard/billing" element={<Billing />} />
-            <Route path="/dashboard/content" element={<ContentLibrary />} />
-            <Route path="/dashboard/quiz" element={<QuizPage />} />
-            <Route path="/collections" element={<CollectionsPage />} />
-            <Route path="/collections/:collectionName" element={<DocumentsPage />} />
-            <Route path="/content/flashcards/:contentId" element={<FlashcardsView />} />
-            <Route path="/content/slides/:contentId" element={<SlidesView />} />
-            <Route path="/content/document/:collectionName/:documentId" element={<SlidesView contentType="document" />} />
-            <Route path="/chatbot" element={<Chatbot />} />
-            <Route path="*" element={<NotFound />} />
-            <Route path="/quiz/take/:quizId" element={<QuizTakePage />} />
-            <Route path="/quiz/results/:quizId" element={<QuizResultsPage />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/profile" element={<Profile />} />
+            <Route element={<MainLayout />}>
+              <Route path="/collections" element={<CollectionsPage />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/collections/:collectionName" element={<DocumentsPage />} />
+              <Route path="/content/flashcards/:contentId" element={<FlashcardsView />} />
+              <Route path="/content/slides/:contentId" element={<SlidesView />} />
+              <Route path="/content/document/:collectionName/:documentId" element={<SlidesView contentType="document" />} />
+              <Route path="/quiz/take/:quizId" element={<QuizTakePage />} />
+              <Route path="/quiz/results/:quizId" element={<QuizResultsPage />} />
+              <Route path="/dashboard/billing" element={<Billing />} />
+              <Route path="/dashboard/content" element={<ContentLibrary />} />
+              <Route path="/dashboard/quiz" element={<QuizPage />} />
+              <Route path="/chatbot" element={<Chatbot />} />
+              <Route path="*" element={<NotFound />} />
+            </Route>
           </Routes>
         </BrowserRouter>
       </TooltipProvider>

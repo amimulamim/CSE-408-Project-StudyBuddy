@@ -149,7 +149,7 @@ export function ContentGenerator({ onClose, onSuccess }: ContentGeneratorProps) 
   };
 
   return (
-    <div className="min-h-screen dashboard-bg-animated">
+    <div className="min-h-screen ">
       <div className="container mx-auto py-6 max-w-2xl">
         <div className="flex items-center justify-between mb-6">
           <div>

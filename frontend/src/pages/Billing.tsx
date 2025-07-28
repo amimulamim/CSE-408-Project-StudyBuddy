@@ -6,6 +6,7 @@ import { BillingSubscription } from '@/components/billing/BillingSubscription';
 import { toast } from 'sonner';
 import { Header } from '@/components/header/Header';
 import { Footer } from '@/components/footer/Footer';
+import { LoadedHeader } from './Dashboard';
 
 export default function BillingPage() {
   const navigate = useNavigate();
@@ -34,9 +35,7 @@ export default function BillingPage() {
   }, [searchParams, toast, navigate]);
 
   return (
-    <div className="dashboard-bg-animated">
-      <Header />
-      <div className="fixed top-20 bottom-0 w-screen overflow-y-auto scrollbar-hide">
+    <div>  
       <div className="container mx-auto py-6 space-y-6">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Billing & Subscription</h1>
@@ -45,8 +44,6 @@ export default function BillingPage() {
           </p>
         </div>
         <BillingSubscription ref={billingRef} />
-      </div>
-      <Footer />
       </div>
     </div>
   );

@@ -89,7 +89,7 @@ export function FlashcardsViewer({ flashcards, topic, onClose }: FlashcardsViewe
 
   if (flashcards.length === 0) {
     return (
-      <div className="min-h-screen dashboard-bg-animated flex items-center justify-center">
+      <div className="min-h-screen  flex items-center justify-center">
         <Card className="glass-card max-w-md">
           <CardContent className="p-6 text-center">
             <h3 className="text-lg font-semibold mb-2">No flashcards found</h3>
@@ -102,8 +102,8 @@ export function FlashcardsViewer({ flashcards, topic, onClose }: FlashcardsViewe
   }
 
   return (
-    <div className="min-h-screen dashboard-bg-animated p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen  p-4">
+      <div className="container mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>

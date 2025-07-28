@@ -24,6 +24,8 @@ import { ScoreDistributionChart } from '@/components/analytics/ScoreDistribution
 import { DifficultyAnalysisChart } from '@/components/analytics/DifficultyAnalysisChart';
 import { ProgressTimelineChart } from '@/components/analytics/ProgressTimelineChart';
 import { TopicMasteryChart } from '@/components/analytics/TopicMasteryChart';
+import { LoadedHeader } from './Dashboard';
+import { Footer } from '@/components/footer/Footer';
 
 interface UserProfile {
   uid: string;
@@ -221,7 +223,7 @@ export default function Profile() {
 
   if (!userProfile) {
     return (
-      <div className="min-h-screen dashboard-bg-animated flex items-center justify-center">
+      <div className="min-h-screen  flex items-center justify-center">
         <Card className="glass-card p-8">
           <CardContent className="text-center">
             <h2 className="text-xl font-bold glass-text-title mb-2">Profile not found</h2>
@@ -233,10 +235,11 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen dashboard-bg-animated">
+    
+    <div className="min-h-screen ">
       {analyticsLoading && <LoadingOverlay message="Updating analytics..." />}
       
-      <div className="container mx-auto py-8 max-w-7xl">
+      <div className="container mx-auto py-8">
         {/* Use the existing ProfileCard component */}
         <div className="mb-8">
           <ProfileCard 
@@ -447,5 +450,6 @@ export default function Profile() {
         </div>
       </div>
     </div>
+    
   );
 }
