@@ -107,6 +107,8 @@ class TestContentGenerator:
 
     @pytest.mark.asyncio
     @patch('app.content_generator.content_generator.genai.configure')
+    @pytest.mark.asyncio
+    @patch('app.content_generator.content_generator.genai.configure')
     @patch('app.content_generator.content_generator.genai.GenerativeModel')
     @patch('app.content_generator.content_generator.DocumentService')
     @patch('firebase_admin.storage.bucket')
@@ -142,6 +144,7 @@ class TestContentGenerator:
             tone="educational",
             collection_name="test-collection",
             full_collection_name="test-collection",
+            special_instructions="",  # Added missing parameter
             db=mock_db
         )
 
@@ -150,7 +153,7 @@ class TestContentGenerator:
             query="Python Programming",
             user_id="test-user",
             collection_name="test-collection",
-            limit=5
+            limit=7
         )
         generator._generate_flashcards.assert_called_once()
         mock_bucket_instance.blob.assert_called_once()
@@ -198,6 +201,7 @@ class TestContentGenerator:
             tone="educational",
             collection_name="test-collection",
             full_collection_name="test-collection",
+            special_instructions="",  # Added missing parameter
             db=mock_db
         )
 
@@ -237,6 +241,7 @@ class TestContentGenerator:
                 tone="educational",
                 collection_name="test-collection",
                 full_collection_name="test-collection",
+                special_instructions="",  # Added missing parameter
                 db=mock_db
             )
 
@@ -271,6 +276,7 @@ class TestContentGenerator:
                 tone="educational",
                 collection_name="test-collection",
                 full_collection_name="test-collection",
+                special_instructions="",  # Added missing parameter
                 db=mock_db
             )
 
@@ -305,6 +311,7 @@ class TestContentGenerator:
                 tone="educational",
                 collection_name="test-collection",
                 full_collection_name="test-collection",
+                special_instructions="",  # Added missing parameter
                 db=mock_db
             )
 
