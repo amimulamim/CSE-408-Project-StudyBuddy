@@ -141,6 +141,12 @@ export function QuizResults({ quizId, isAdminMode = false, onClose, userId }: Qu
   const percentage = Math.round((results.score / results.total) * 100);
   const correctAnswers = results.question_results?.filter((q: QuestionResult) => q.is_correct).length || 0;
   const totalQuestions = results.question_results?.length || 0;
+  
+  // Calculate more detailed statistics
+  const incorrectAnswers = results.question_results?.filter((q: QuestionResult) => !q.is_correct && q.score > 0).length || 0;
+  const wrongAnswers = results.question_results?.filter((q: QuestionResult) => !q.is_correct && q.score === 0).length || 0;
+  const partiallyCorrect = results.question_results?.filter((q: QuestionResult) => !q.is_correct && q.score > 0).length || 0;
+  const unansweredQuestions = totalQuestions - (correctAnswers + incorrectAnswers + wrongAnswers);
 
   const getScoreColor = (percentage: number) => {
     if (percentage >= 80) return 'text-green-600';
@@ -152,6 +158,17 @@ export function QuizResults({ quizId, isAdminMode = false, onClose, userId }: Qu
     if (percentage >= 80) return 'bg-green-500';
     if (percentage >= 60) return 'bg-yellow-500';
     return 'bg-red-500';
+  };
+
+  // Helper function to determine result status for individual questions
+  const getQuestionStatus = (result: QuestionResult) => {
+    if (result.is_correct) {
+      return { label: 'Correct', color: 'bg-green-500', textColor: 'text-green-500', icon: CheckCircle };
+    } else if (result.score > 0) {
+      return { label: 'Partially Correct', color: 'bg-yellow-500', textColor: 'text-yellow-500', icon: CheckCircle };
+    } else {
+      return { label: 'Incorrect', color: 'bg-red-500', textColor: 'text-red-500', icon: XCircle };
+    }
   };
 
   return (
@@ -235,30 +252,30 @@ export function QuizResults({ quizId, isAdminMode = false, onClose, userId }: Qu
           </TabsList>
 
           <TabsContent value="questions" className="space-y-4">
-            {results.question_results?.map((result: QuestionResult, index: number) => (
-              <Card key={result.question_id} className="glass-card">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="glass-text-title flex items-center gap-2">
-                        <span>Question {index + 1}</span>
-                        {result.is_correct ? (
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <XCircle className="h-5 w-5 text-red-500" />
-                        )}
-                      </CardTitle>
-                      <CardDescription className="glass-text-description">
-                        {result.score}/{result.marks || 1} point{(result.marks || 1) !== 1 ? 's' : ''} • {result.type} • {result.difficulty}
-                      </CardDescription>
+            {results.question_results?.map((result: QuestionResult, index: number) => {
+              const questionStatus = getQuestionStatus(result);
+              const StatusIcon = questionStatus.icon;
+              
+              return (
+                <Card key={result.question_id} className="glass-card">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="glass-text-title flex items-center gap-2">
+                          <span>Question {index + 1}</span>
+                          <StatusIcon className={`h-5 w-5 ${questionStatus.textColor}`} />
+                        </CardTitle>
+                        <CardDescription className="glass-text-description">
+                          {result.score}/{result.marks || 1} point{(result.marks || 1) !== 1 ? 's' : ''} • {result.type} • {result.difficulty}
+                        </CardDescription>
+                      </div>
+                      <Badge 
+                        className={`text-white ${questionStatus.color}`}
+                      >
+                        {questionStatus.label}
+                      </Badge>
                     </div>
-                    <Badge 
-                      className={`text-white ${result.is_correct ? 'bg-green-500' : 'bg-red-500'}`}
-                    >
-                      {result.is_correct ? 'Correct' : 'Incorrect'}
-                    </Badge>
-                  </div>
-                </CardHeader>
+                  </CardHeader>
                 
                 <CardContent className="space-y-4">
                   {/* Question Text */}
@@ -317,7 +334,7 @@ export function QuizResults({ quizId, isAdminMode = false, onClose, userId }: Qu
                   <div className="space-y-3">
                     <div className="p-4 rounded-lg bg-slate-800/30 border border-white/20">
                       <h4 className="font-medium glass-text mb-2">Your Answer:</h4>
-                      <div className={`${result.is_correct ? 'text-green-400' : 'text-red-400'} font-medium`}>
+                      <div className={`${result.is_correct ? 'text-green-400' : result.score > 0 ? 'text-yellow-400' : 'text-red-400'} font-medium`}>
                         {result.options && result.options.length > 0 ? (
                           // For multiple choice, show the option text
                           result.options[parseInt(result.student_answer)] || result.student_answer
@@ -352,7 +369,8 @@ export function QuizResults({ quizId, isAdminMode = false, onClose, userId }: Qu
                   )}
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </TabsContent>
 
           <TabsContent value="analysis">
@@ -376,10 +394,22 @@ export function QuizResults({ quizId, isAdminMode = false, onClose, userId }: Qu
                         <span className="font-medium text-green-300">Correct Answers</span>
                         <span className="text-green-400 font-bold text-xl">{correctAnswers}</span>
                       </div>
+                      {partiallyCorrect > 0 && (
+                        <div className="flex justify-between items-center p-3 rounded-lg bg-yellow-500/10 border border-yellow-400/20">
+                          <span className="font-medium text-yellow-300">Partially Correct</span>
+                          <span className="text-yellow-400 font-bold text-xl">{partiallyCorrect}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-center p-3 rounded-lg bg-red-500/10 border border-red-400/20">
-                        <span className="font-medium text-red-300">Incorrect Answers</span>
-                        <span className="text-red-400 font-bold text-xl">{totalQuestions - correctAnswers}</span>
+                        <span className="font-medium text-red-300">Wrong Answers</span>
+                        <span className="text-red-400 font-bold text-xl">{wrongAnswers}</span>
                       </div>
+                      {unansweredQuestions > 0 && (
+                        <div className="flex justify-between items-center p-3 rounded-lg bg-gray-500/10 border border-gray-400/20">
+                          <span className="font-medium text-gray-300">Unanswered</span>
+                          <span className="text-gray-400 font-bold text-xl">{unansweredQuestions}</span>
+                        </div>
+                      )}
                       <div className="h-px bg-gradient-to-r from-transparent via-white/30 to-transparent my-4"></div>
                       <div className="flex justify-between items-center p-4 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-400/30">
                         <span className="font-bold text-purple-300">Total Questions</span>
