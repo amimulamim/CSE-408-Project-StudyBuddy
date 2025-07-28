@@ -24,8 +24,6 @@ import { ScoreDistributionChart } from '@/components/analytics/ScoreDistribution
 import { DifficultyAnalysisChart } from '@/components/analytics/DifficultyAnalysisChart';
 import { ProgressTimelineChart } from '@/components/analytics/ProgressTimelineChart';
 import { TopicMasteryChart } from '@/components/analytics/TopicMasteryChart';
-import { LoadedHeader } from './Dashboard';
-import { Footer } from '@/components/footer/Footer';
 
 interface UserProfile {
   uid: string;

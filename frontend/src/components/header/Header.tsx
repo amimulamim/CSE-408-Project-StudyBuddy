@@ -15,7 +15,6 @@ import { clearAuthCache } from "@/lib/authState";
 import { SubscriptionStatus } from "@/lib/billingTypes";
 import { useNavigate } from "react-router-dom";
 
-
 interface HeaderProps {
   userProfile?: {
     name: string;
@@ -25,8 +24,8 @@ interface HeaderProps {
   billingLoading?: boolean;
 }
 
-export function Header({ userProfile, subscription, billingLoading }: HeaderProps) {
-   const navigate = useNavigate();
+export function Header({userProfile, subscription, billingLoading}: HeaderProps) {
+  const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
