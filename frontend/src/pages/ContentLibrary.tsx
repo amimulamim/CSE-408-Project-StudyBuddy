@@ -14,6 +14,7 @@ import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { format } from 'date-fns';
+import { Input } from '@/components/ui/input';
 
 interface ContentItem {
   contentId: string;
@@ -167,12 +168,12 @@ export default function ContentLibrary() {
           <div className="flex flex-col gap-4 mb-4">
             <div className="flex flex-col lg:flex-row gap-4">
               <div className="flex-1">
-                <input
+                <Input
                   type="text"
                   placeholder="Search by topic…"
                   value={filterTopic}
                   onChange={e => setFilterTopic(e.target.value)}
-                  className="w-full p-2 border rounded-md focus:outline-none focus:ring text-black placeholder-gray-500"
+                  className="w-full p-2 border rounded-md focus:outline-none focus:ring"
                 />
               </div>
               <div className="flex flex-wrap gap-2">
