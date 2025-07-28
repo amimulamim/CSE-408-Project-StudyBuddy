@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from app.users.model import User
-from app.users.schema import UserBase, SecureProfileEdit, AdminUserEdit
+from app.users.schema import UserBase, SecureProfileEdit, AdminUserEdit, Activity
 from time import sleep
 from sqlalchemy.exc import OperationalError
 from typing import List, Optional
@@ -305,3 +305,13 @@ def delete_user_avatar(db: Session, uid: str) -> Optional[User]:
     except Exception as e:
         db.rollback()
         raise e
+
+def build_activities(records, activity_type):
+    return [
+        Activity(
+            activity_type = activity_type,
+            details = dict(r._mapping),
+            created_at = r.created_at
+        )
+        for r in records
+    ]

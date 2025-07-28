@@ -51,7 +51,7 @@
 
 @layer utilities {
   .glass-effect {
-    @apply bg-opacity-20 backdrop-blur-lg bg-study-darker border border-white/10;
+    @apply bg-opacity-20 border-b border-white/20;
   }
   
   .gradient-text {

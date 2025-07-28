@@ -72,6 +72,8 @@ export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfacePro
     }
   };
 
+  const isMobile = window.innerWidth < 768;
+
   // Smart scroll logic - only scroll for new messages
   useEffect(() => {
     if (isNewChatLoading) setIsNewChatLoading(false);
@@ -220,21 +222,7 @@ export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfacePro
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full">
-      {/* Header */}
-      <div className="border-b border-white/10 p-4 flex items-center gap-3 bg-study-dark">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggleSidebar}
-          className="text-white hover:bg-white/10"
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
-        <h1 className="text-lg font-semibold text-white">
-          {currentChat?.title || 'StudyBuddy AI'}
-        </h1>
-      </div>
+    <div className={`fixed top-0 ${ sidebarOpen && !isMobile? "left-80 w-[calc(100vw-20rem)]" : "left-16 w-[calc(100vw-4rem)]" } h-screen pt-20 flex flex-col z-30`}>
 
       {/* Messages */}
       <div 
@@ -269,7 +257,7 @@ export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfacePro
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-white/10 p-4 bg-study-dark">
+      <div className={`p-4`}>
         {/* File Previews */}
         {attachedFiles.length > 0 && (
           <div className="mb-4 flex flex-wrap gap-3">

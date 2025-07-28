@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, MessageSquare, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, MessageSquare, Pencil, Trash2, X, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useChat } from './ChatContext';
@@ -34,40 +34,48 @@ export function ChatSidebar({ isOpen, onToggle }: ChatSidebarProps) {
   };
 
   return (
-    <>
-      {/* Mobile overlay */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={onToggle}
-        />
-      )}
-
+    <div>
       {/* Sidebar */}
       <div className={cn(
-        "fixed md:relative top-0 left-0 h-full bg-study-dark border-r border-white/10 z-50 transition-all duration-300 flex flex-col overflow-hidden",
-        isOpen ? "w-80 translate-x-0" : "w-0 -translate-x-full md:translate-x-0"
+        "fixed h-screen top-20 left-0 bg-study-dark border-r border-white/10 transition-all duration-300 overflow-y-auto pb-20 scrollbar-hide z-50",
+        isOpen ? "w-80 translate-x-0" : "w-16 translate-x-0"
       )}>
-        <div className="p-4 border-b border-white/10 flex items-center justify-between min-w-0">
+        <div className={`p-4 px-3 border-b border-white/10 items-center min-w-0 ${isOpen ? 'flex' : 'flex-column'} transition-all duration-300`}>
+          {/* New Chat Button */}
           <Button
             onClick={createNewChat}
-            className="flex-1 bg-study-purple hover:bg-study-purple/90 text-white min-w-0"
+            className={`relative flex items-center bg-study-purple hover:bg-study-purple/90 text-white min-w-0 transition-all duration-300
+              ${isOpen ? 'pl-4 pr-4 w-full' : 'w-10 justify-center'}
+            `}
+            size="default"
           >
-            <Plus className="h-4 w-4 mr-2 flex-shrink-0" />
-            <span className="truncate">New Chat</span>
+            <Plus className="h-4 w-4 flex-shrink-0 transition-all duration-300 ml-2" />
+            
+            {/* Always render span, animate opacity/scale */}
+            <span
+              className={`transition-all duration-300 whitespace-nowrap overflow-hidden
+                ${isOpen ? 'opacity-100 w-auto scale-100' : 'opacity-0 w-0 scale-95'}
+              `}
+            >
+              New Chat
+            </span>
           </Button>
+
+          {/* Toggle Button */}
           <Button
-            variant="ghost"
             size="icon"
             onClick={onToggle}
-            className="ml-2 md:hidden text-white hover:bg-white/10 flex-shrink-0"
+            className={`transition-all duration-300 text-white flex-shrink-0
+              ${isOpen ? 'ml-2' : 'mt-2'}
+            `}
           >
-            <X className="h-4 w-4" />
+            { isOpen? (<ArrowLeft className="h-4 w-4" />) : (<ArrowRight className="h-4 w-4" />) }
           </Button>
         </div>
 
+
         <div className="flex-1 overflow-y-auto p-2 min-w-0">
-          {isChatListLoading && (
+          {isChatListLoading && isOpen && (
             <div className="flex items-center justify-center py-4">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 border-2 border-study-purple/30 border-t-study-purple rounded-full animate-spin"></div>
@@ -81,7 +89,7 @@ export function ChatSidebar({ isOpen, onToggle }: ChatSidebarProps) {
               No chats available. Start a new chat!
             </div>
           )}
-          {chatList.map((chat,index) => (
+          { isOpen && chatList.map((chat,index) => (
             <div
               key={index}
               className={cn(
@@ -145,6 +153,6 @@ export function ChatSidebar({ isOpen, onToggle }: ChatSidebarProps) {
           ))}
         </div>
       </div>
-    </>
+    </div>
   );
 }

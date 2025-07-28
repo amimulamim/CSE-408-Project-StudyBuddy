@@ -61,7 +61,7 @@ export default function FlashcardsView() {
 
   if (loading) {
     return (
-      <div className="min-h-screen dashboard-bg-animated flex items-center justify-center">
+      <div className="min-h-screen  flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
           <p className="text-muted-foreground">Loading flashcards...</p>
@@ -72,17 +72,17 @@ export default function FlashcardsView() {
 
   if (error || !metadata) {
     return (
-      <div className="min-h-screen dashboard-bg-animated flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <Card className="glass-card max-w-md">
           <CardContent className="p-6 text-center">
             <h3 className="text-lg font-semibold mb-2">Error Loading Content</h3>
             <p className="text-muted-foreground mb-4">{error}</p>
             <div className="flex gap-2 justify-center">
               <Button onClick={fetchFlashcards}>Try Again</Button>
-              <Button variant="outline" onClick={() => navigate('/dashboard/content')}>
+              {/* <Button variant="outline" onClick={() => navigate('/dashboard/content')}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Library
-              </Button>
+              </Button> */}
             </div>
           </CardContent>
         </Card>
