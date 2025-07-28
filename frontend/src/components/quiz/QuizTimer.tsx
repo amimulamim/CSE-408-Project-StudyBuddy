@@ -89,8 +89,33 @@ export function QuizTimer({ duration, onTimeUp }: QuizTimerProps) {
   const styles = getTimerStyles();
 
   return (
-    <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50">
-      <div className={`px-6 py-4 rounded-xl border transition-all duration-500 ${styles.container} ${styles.glow}`}>
+    // <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50">
+    //   <div className={`px-6 py-4 rounded-xl border transition-all duration-500 ${styles.container} ${styles.glow}`}>
+    //     <div className="flex items-center gap-3">
+    //       {isLowTime && <AlertTriangle className={`h-5 w-5 ${styles.icon}`} />}
+    //       <Timer className={`h-5 w-5 ${styles.icon}`} />
+    //       <div className="text-center">
+    //         <div className={`text-2xl font-bold font-mono tracking-wide ${styles.text}`}>
+    //           {formatTime(timeLeft)}
+    //         </div>
+    //         <div className={`text-xs font-medium tracking-wider uppercase ${styles.label}`}>
+    //           Time Remaining
+    //         </div>
+    //       </div>
+    //     </div>
+        
+    //     {/* Progress bar */}
+    //     <div className="mt-3 w-full bg-slate-700/50 rounded-full h-1.5 z-50">
+    //       <div 
+    //         className={`h-1.5 rounded-full transition-all duration-1000 ${styles.progress}`}
+    //         style={{ 
+    //           width: `${(timeLeft / (duration * 60)) * 100}%`
+    //         }}
+    //       />
+    //     </div>
+    //   </div>
+    // </div>
+    <div className={`px-6 py-4 mt-4 md:mt-0 md:mr-20 rounded-xl border transition-all duration-500 ${styles.container} ${styles.glow}`}>
         <div className="flex items-center gap-3">
           {isLowTime && <AlertTriangle className={`h-5 w-5 ${styles.icon}`} />}
           <Timer className={`h-5 w-5 ${styles.icon}`} />
@@ -105,7 +130,7 @@ export function QuizTimer({ duration, onTimeUp }: QuizTimerProps) {
         </div>
         
         {/* Progress bar */}
-        <div className="mt-3 w-full bg-slate-700/50 rounded-full h-1.5">
+        <div className="mt-3 w-full bg-slate-700/50 rounded-full h-1.5 z-50">
           <div 
             className={`h-1.5 rounded-full transition-all duration-1000 ${styles.progress}`}
             style={{ 
@@ -114,6 +139,5 @@ export function QuizTimer({ duration, onTimeUp }: QuizTimerProps) {
           />
         </div>
       </div>
-    </div>
   );
 }

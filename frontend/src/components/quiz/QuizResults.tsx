@@ -155,8 +155,8 @@ export function QuizResults({ quizId, isAdminMode = false, onClose, userId }: Qu
   };
 
   return (
-    <div className={isAdminMode ? "h-full flex flex-col" : "min-h-screen dashboard-bg-animated"}>
-      <div className={isAdminMode ? "flex-1 overflow-y-auto p-6" : "container mx-auto py-6 max-w-6xl"}>
+    <div className={isAdminMode ? "h-full flex flex-col" : "min-h-screen "}>
+      <div className={isAdminMode ? "flex-1 overflow-y-auto p-6" : "container mx-auto py-6"}>
         <div className={isAdminMode ? "max-w-6xl mx-auto space-y-6" : ""}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

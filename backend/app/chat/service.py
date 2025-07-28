@@ -107,3 +107,9 @@ def rename_chat(chat_id: str, new_name: str, db: Session) -> Chat:
 
 def delete_chat(chat_id: str, db: Session):
     return chat_db.delete_chat(chat_id, db)
+
+def get_latest_chats(db: Session, user_id: str):
+    """
+    Getting max 10 latest chats for a user
+    """
+    return chat_db.get_latest_chats(db, user_id)

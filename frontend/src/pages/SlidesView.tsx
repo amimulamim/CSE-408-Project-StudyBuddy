@@ -143,7 +143,7 @@ export default function PDFView({ contentType = 'slide' }: PDFViewProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen dashboard-bg-animated flex items-center justify-center">
+      <div className="min-h-screen  flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
           <p className="text-muted-foreground">
@@ -156,7 +156,7 @@ export default function PDFView({ contentType = 'slide' }: PDFViewProps) {
 
   if (!metadata && !loading) {
     return (
-      <div className="min-h-screen dashboard-bg-animated flex items-center justify-center">
+      <div className="min-h-screen  flex items-center justify-center">
         <Card className="glass-card max-w-md">
           <CardContent className="flex flex-col items-center gap-4 p-8">
             <AlertCircle className="h-16 w-16 text-red-400" />
@@ -166,10 +166,10 @@ export default function PDFView({ contentType = 'slide' }: PDFViewProps) {
             <p className="glass-text-description text-center">
               The requested {contentType} could not be found.
             </p>
-            <Button onClick={getBackNavigation()}>
+            {/* <Button onClick={getBackNavigation()}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               {getBackButtonText()}
-            </Button>
+            </Button> */}
           </CardContent>
         </Card>
       </div>
@@ -177,9 +177,9 @@ export default function PDFView({ contentType = 'slide' }: PDFViewProps) {
   }
 
   return (
-    <div className="min-h-screen dashboard-bg-animated">
-      <div className="container mx-auto py-6 max-w-4xl">
-        <div className="flex items-center justify-between mb-6">
+    <div className="min-h-screen ">
+      <div className="container mx-auto py-6">
+        {/* <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold gradient-text">{metadata?.topic}</h1>
             <p className="text-muted-foreground">{getContentTypeLabel()}</p>
@@ -192,11 +192,11 @@ export default function PDFView({ contentType = 'slide' }: PDFViewProps) {
             <ArrowLeft className="h-4 w-4 mr-2" />
             {getBackButtonText()}
           </Button>
-        </div>
+        </div> */}
 
         <Card className="glass-card">
           <CardHeader>
-            <CardTitle>{getContentTitle()}</CardTitle>
+            <CardTitle>{metadata?.topic}</CardTitle>
             <CardDescription>
               {getContentDescription()}
             </CardDescription>

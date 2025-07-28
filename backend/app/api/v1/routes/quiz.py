@@ -353,7 +353,10 @@ async def evaluate_all_answers(
 
         # Fetch all questions for the quiz
         questions = db.query(QuizQuestion).filter(QuizQuestion.quiz_id == quiz_id).all()
-        question_map = {str(q.id): q for q in questions}
+        
+        # Create a map of submitted answers for easy lookup
+        submitted_answers = {ans.question_id: ans.student_answer for ans in request.answers}
+        
         results = []
         correct_answers = []
 
@@ -363,12 +366,11 @@ async def evaluate_all_answers(
         total_score = 0.0
         total_marks = 0.0
 
-        for ans in request.answers:
-            qid = ans.question_id
-            student_answer = ans.student_answer
-            question = question_map.get(qid)
-            if not question:
-                continue
+        # Process ALL questions in the quiz, not just the ones with answers
+        for question in questions:
+            qid = str(question.id)
+            student_answer = submitted_answers.get(qid, "")  # Use empty string for unanswered questions
+            
             eval_result = exam_generator.evaluate_answer(
                 exam_id=quiz_id,
                 question_id=qid,
@@ -391,8 +393,7 @@ async def evaluate_all_answers(
             total_score += eval_result["score"]
             total_marks += question.marks
 
-        # Optionally fetch topic/domain/feedback from Quiz or QuizResult if needed
-        quiz = db.query(Quiz).filter(Quiz.quiz_id == quiz_id).first()
+        # Optionally fetch topic/domain/feedback from QuizResult if needed
         quiz_result = db.query(QuizResult).filter(
             QuizResult.quiz_id == quiz_id,
             QuizResult.user_id == user_id

@@ -17,11 +17,12 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CreditCard, FileText, Calendar, MoreVertical, Edit2, Trash2 } from 'lucide-react';
+import { MoreVertical, Edit2, Trash2, GitBranch, CreditCard, FileText, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { makeRequest } from '@/lib/apiCall';
+import { ContentVersionsDialog } from './ContentVersionsDialog';
 
 interface ContentItem {
   contentId: string;
@@ -45,6 +46,10 @@ export function ContentList({ contents, loading, onContentUpdate, setContents }:
     item: null
   });
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; item: ContentItem | null }>({
+    open: false,
+    item: null
+  });
+  const [versionsDialog, setVersionsDialog] = useState<{ open: boolean; item: ContentItem | null }>({
     open: false,
     item: null
   });
@@ -230,6 +235,19 @@ export function ContentList({ contents, loading, onContentUpdate, setContents }:
                         <DropdownMenuItem 
                           onClick={(e) => {
                             e.stopPropagation();
+                            setVersionsDialog({
+                              open: true,
+                              item: item
+                            });
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <GitBranch className="h-4 w-4 mr-2" />
+                          Versions
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={(e) => {
+                            e.stopPropagation();
                             handleDelete(item);
                           }}
                           className="cursor-pointer text-red-600 focus:text-red-600"
@@ -345,6 +363,16 @@ export function ContentList({ contents, loading, onContentUpdate, setContents }:
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Content Versions Dialog */}
+      {versionsDialog.open && versionsDialog.item && (
+        <ContentVersionsDialog
+          contentId={versionsDialog.item.contentId}
+          contentTitle={versionsDialog.item.topic}
+          isOpen={versionsDialog.open}
+          onClose={() => setVersionsDialog({ open: false, item: null })}
+        />
+      )}
     </>
   );
 }

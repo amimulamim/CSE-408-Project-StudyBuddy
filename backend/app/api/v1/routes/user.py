@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import Dict, Any, List
+from app.chat.service import get_latest_chats 
 
 from app.auth.firebase_auth import get_current_user
 from app.core.database import get_db
@@ -14,13 +15,17 @@ from app.utils.notification_helpers import (
 )
 from app.users.schema import (
     UserBase, UserProfile, 
-    SecureProfileEdit
+    SecureProfileEdit, Activity
 )
 from app.users.service import (
     get_or_create_user, get_user_by_uid,
     update_user_profile_secure, validate_and_upload_avatar,
-    update_user_avatar, delete_user_avatar
+    update_user_avatar, delete_user_avatar, build_activities
 )
+from app.quiz_generator.models import QuizResult, Quiz
+
+from app.chat.schema import ChatListResponse, ChatSummary
+from app.content_generator.models import ContentItem
 
 # Constants
 USER_NOT_FOUND = "User not found"
@@ -308,3 +313,37 @@ def get_unread_notifications_count(
     return {
         "unread_count": unread_count
     }
+
+@router.get('/activities')
+def get_user_activities(
+    db: Session = Depends(get_db),
+    user_info: Dict[str, any] = Depends(get_current_user)
+):
+    """
+    Dummy activity endpoint for future implementation
+    """
+    chats = get_latest_chats(db, user_info["uid"])
+    ci = ContentItem
+    contents = (
+        db.query(ci.id,ci.topic,ci.content_type,ci.created_at).
+        where(ci.user_id == user_info["uid"]).
+        order_by(ci.created_at.desc()).
+        limit(10)
+    )
+    qr = QuizResult
+    q = Quiz
+    quiz_results = (
+        db.query(qr.created_at, qr.id, q.topic).
+        join(q, q.quiz_id == qr.quiz_id).
+        where(q.user_id == user_info["uid"]).
+        order_by(qr.created_at.desc()).
+        limit(10)
+    )
+    activities = (
+        build_activities(chats, "chat") +
+        build_activities(contents, "content") +
+        build_activities(quiz_results, "quiz_taken")
+    )
+
+    return sorted(activities, key=lambda x:x.created_at, reverse=True)[:10]
+               

@@ -99,7 +99,9 @@ export function QuizList({ quizzes, onTakeQuiz, onViewResults, onRetakeQuiz, sho
                 </div>
                 <CardDescription className="glass-text-description">
                   {quiz.domain && `${quiz.domain} • `}
-                  Collection: {quiz.collection_name}
+                  <span className="block sm:inline">
+                    Collection: {quiz.collection_name}
+                  </span>
                 </CardDescription>
               </div>
 
@@ -123,7 +125,7 @@ export function QuizList({ quizzes, onTakeQuiz, onViewResults, onRetakeQuiz, sho
           </CardHeader>
 
           <CardContent className="pt-0">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-col md:flex-row gap-2">
               <div className="flex items-center gap-6 text-sm glass-text-description">
                 <div className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />

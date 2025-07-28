@@ -82,7 +82,7 @@ export function Navbar({ onSignIn, onSignUp }: NavbarProps) {
         
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <nav className="md:hidden mt-4 py-4 border-t border-border/40 animate-fade-in bg-background/95 backdrop-blur-sm shadow-md">
+          <nav className="md:hidden mt-4 py-4 border-t border-border/40 animate-fade-in bg-background/95 backdrop-blur-sm shadow-md rounded-md">
             <ul className="flex flex-col gap-4 px-4">
               {navLinks.map((link) => (
                 <li key={link.name}>
@@ -96,7 +96,7 @@ export function Navbar({ onSignIn, onSignUp }: NavbarProps) {
                 </li>
               ))}
             </ul>
-            <div className="flex flex-col gap-3 mt-6">
+            <div className="flex flex-col gap-3 mt-6 p-4">
               <Button 
                 variant="ghost" 
                 onClick={() => { onSignIn(); setIsMobileMenuOpen(false); }}

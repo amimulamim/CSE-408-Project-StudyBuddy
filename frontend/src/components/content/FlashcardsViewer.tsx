@@ -89,7 +89,7 @@ export function FlashcardsViewer({ flashcards, topic, onClose }: FlashcardsViewe
 
   if (flashcards.length === 0) {
     return (
-      <div className="min-h-screen dashboard-bg-animated flex items-center justify-center">
+      <div className="min-h-screen  flex items-center justify-center">
         <Card className="glass-card max-w-md">
           <CardContent className="p-6 text-center">
             <h3 className="text-lg font-semibold mb-2">No flashcards found</h3>
@@ -102,8 +102,8 @@ export function FlashcardsViewer({ flashcards, topic, onClose }: FlashcardsViewe
   }
 
   return (
-    <div className="min-h-screen dashboard-bg-animated p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen  p-4">
+      <div className="container mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -177,8 +177,8 @@ export function FlashcardsViewer({ flashcards, topic, onClose }: FlashcardsViewe
               </Card>
 
               {/* Back of card */}
-              <Card className="absolute inset-0 backface-hidden rotate-y-180 border-0 shadow-2xl flashcard-academic-back">
-                <CardContent className="flex flex-col items-center justify-center h-full p-8 text-center">
+              <Card className="absolute inset-0 backface-hidden rotate-y-180 border-0 shadow-2xl flashcard-academic-back max-h-lg">
+                <CardContent className="flex flex-col items-center justify-start max-h-full p-8 text-center overflow-y-auto scrollbar-hide">
                   <div className="mb-6">
                     <Badge 
                       className="bg-white/20 text-white border-0 px-4 py-2 text-sm font-semibold backdrop-blur-sm"

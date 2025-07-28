@@ -55,12 +55,15 @@ export function DifficultyAnalysisChart({ data }: DifficultyAnalysisChartProps) 
 }
 
 function processDifficultyData(data: any[]) {
-  const difficulties = ['DifficultyLevel.Easy', 'DifficultyLevel.Medium', 'DifficultyLevel.Hard'];
-  console.log('difficulties');
-  console.log(data);
+  const difficulties = ['Easy', 'Medium', 'Hard'];
+  const newData = data.map(quiz => {
+    const modifiedQuiz = { ...quiz };
+    modifiedQuiz['difficulty'] = quiz['difficulty'].replace('DifficultyLevel.', '')
+    return modifiedQuiz;
+  });
   
   return difficulties.map(difficulty => {
-    const quizzesForDifficulty = data.filter(quiz => 
+    const quizzesForDifficulty = newData.filter(quiz => 
       quiz.difficulty?.toLowerCase() === difficulty.toLowerCase()
     );
     

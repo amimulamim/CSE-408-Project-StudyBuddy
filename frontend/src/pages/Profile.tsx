@@ -221,7 +221,7 @@ export default function Profile() {
 
   if (!userProfile) {
     return (
-      <div className="min-h-screen dashboard-bg-animated flex items-center justify-center">
+      <div className="min-h-screen  flex items-center justify-center">
         <Card className="glass-card p-8">
           <CardContent className="text-center">
             <h2 className="text-xl font-bold glass-text-title mb-2">Profile not found</h2>
@@ -233,10 +233,11 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen dashboard-bg-animated">
+    
+    <div className="min-h-screen ">
       {analyticsLoading && <LoadingOverlay message="Updating analytics..." />}
       
-      <div className="container mx-auto py-8 max-w-7xl">
+      <div className="container mx-auto py-8">
         {/* Use the existing ProfileCard component */}
         <div className="mb-8">
           <ProfileCard 
@@ -287,14 +288,14 @@ export default function Profile() {
 
         {/* Analytics Dashboard */}
         <div className="glass-card p-6 mb-8 rounded-md">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col md:flex-row items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold glass-text-title">Performance Analytics</h2>
-              <p className="glass-text-description">Detailed insights into your learning progress</p>
+              <h2 className="text-2xl font-bold glass-text-title md:whitespace-nowrap">Performance Analytics</h2>
+              <p className="glass-text-description  md:whitespace-nowrap">Detailed insights into your learning progress</p>
             </div>
             
             {/* Chart Customization Controls */}
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col md:flex-row items-start md:items-center pt-2 md:pt-0 justify-end gap-4 w-full">
               <Select value={chartTimeframe} onValueChange={setChartTimeframe}>
                 <SelectTrigger className="glass-input w-40">
                   <SelectValue placeholder="Time period" />
@@ -323,25 +324,26 @@ export default function Profile() {
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="glass-card w-full justify-start">
-              <TabsTrigger value="overview" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Overview
-              </TabsTrigger>
-              <TabsTrigger value="quiz-performance" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Quiz Performance
-              </TabsTrigger>
-              <TabsTrigger value="content-analytics" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
-                <PieChart className="h-4 w-4 mr-2" />
-                Content Analytics
-              </TabsTrigger>
-              <TabsTrigger value="progress-timeline" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
-                <Calendar className="h-4 w-4 mr-2" />
-                Progress Timeline
-              </TabsTrigger>
-            </TabsList>
-
+            <div className="overflow-x-auto w-full scrollbar-hide rounded-md">
+              <TabsList className="glass-card w-max min-w-full flex-nowrap whitespace-nowrap">
+                <TabsTrigger value="overview" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger value="quiz-performance" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Quiz Performance
+                </TabsTrigger>
+                <TabsTrigger value="content-analytics" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+                  <PieChart className="h-4 w-4 mr-2" />
+                  Content Analytics
+                </TabsTrigger>
+                <TabsTrigger value="progress-timeline" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Progress Timeline
+                </TabsTrigger>
+              </TabsList>
+            </div>
             <TabsContent value="overview" className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card className="glass-card">
@@ -447,5 +449,6 @@ export default function Profile() {
         </div>
       </div>
     </div>
+    
   );
 }

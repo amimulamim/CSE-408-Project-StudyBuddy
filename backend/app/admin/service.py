@@ -135,11 +135,13 @@ def get_all_content_paginated(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None
 ) -> Tuple[List[Dict[str, Any]], int]:
-    """Get paginated list of all generated content with user information"""
+    """Get paginated list of all generated content with user information (latest versions only)"""
     from app.content_generator.models import ContentItem
     
-    # Join with users table to get user information
-    query = db.query(ContentItem, User).join(User, ContentItem.user_id == User.uid)
+    # Join with users table to get user information, only show latest versions
+    query = db.query(ContentItem, User).join(User, ContentItem.user_id == User.uid).filter(
+        ContentItem.is_latest_version == True
+    )
 
     if filter_type:
         query=query.filter(ContentItem.content_type == filter_type)
@@ -192,12 +194,14 @@ def search_content_by_query(
     query: str, 
     pagination: PaginationQuery
 ) -> Tuple[List[Dict[str, Any]], int]:
-    """Search content by topic, content type, or user name"""
+    """Search content by topic, content type, or user name (latest versions only)"""
     from app.content_generator.models import ContentItem
     from sqlalchemy import or_, and_
     
-    # Join with users table to get user information and enable search
-    base_query = db.query(ContentItem, User).join(User, ContentItem.user_id == User.uid)
+    # Join with users table to get user information and enable search, only show latest versions
+    base_query = db.query(ContentItem, User).join(User, ContentItem.user_id == User.uid).filter(
+        ContentItem.is_latest_version == True
+    )
     
     # Apply search filters
     search_query = base_query.filter(
