@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationButton } from "@/components/notifications/NotificationButton";
 import { 
-  getSubscriptionStatus, 
   getStatusColor, 
   getStatusLabel,
 } from "@/lib/billing";
@@ -71,7 +70,7 @@ export function Header({userProfile, subscription, billingLoading}: HeaderProps)
   
   return (
     <header 
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 h-20 border-b border-white/10 bg-white/10 backdrop-blur`}
+      className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 h-20 border-b border-white/10 bg-white/10 backdrop-blur`}
     >
       <div className="container mx-auto px-6 py-2">
         <div className="flex items-center justify-between w-full">
@@ -140,16 +139,18 @@ export function Header({userProfile, subscription, billingLoading}: HeaderProps)
         
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="md:hidden flex flex-col items-start mt-4 space-y-4 bg-white/40 backdrop-blur-sm p-4 rounded-lg shadow-lg">
+          <div className="md:hidden flex flex-row items-start justify-around mt-4 bg-white/40 backdrop-blur-sm p-4 rounded-lg shadow-lg">
             <Button 
               variant="ghost" 
               onClick={handleLogout} 
               size='sm'
-              className="relative bg-white/50 backdrop-blur-sm hover:bg-white/70 border border-white/50"
+              className="relative bg-white/50 backdrop-blur-sm hover:bg-white/70 border border-white/50 mt-2"
             >
               <LogOut className="h-4 w-4" />
             </Button>
-            <NotificationButton />
+            <div className='mt-2'>
+              <NotificationButton />
+            </div>
             <Avatar 
               className="h-12 w-12 ring-2 ring-white shadow-md hover:cursor-pointer hover:ring-4 transition-all duration-300"
               onClick={() => navigate("/profile")}

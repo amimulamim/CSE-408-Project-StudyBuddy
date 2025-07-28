@@ -35,45 +35,11 @@ export function ChatSidebar({ isOpen, onToggle }: ChatSidebarProps) {
 
   return (
     <div>
-      {/* Mobile overlay */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={onToggle}
-        />
-      )}
-
       {/* Sidebar */}
       <div className={cn(
-        "fixed h-screen top-20 left-0 bg-study-dark border-r border-white/10 transition-all duration-300 overflow-y-auto pb-20 scrollbar-hide",
-        isOpen ? "w-80 translate-x-0" : "w-16 -translate-x-full md:translate-x-0"
+        "fixed h-screen top-20 left-0 bg-study-dark border-r border-white/10 transition-all duration-300 overflow-y-auto pb-20 scrollbar-hide z-50",
+        isOpen ? "w-80 translate-x-0" : "w-16 translate-x-0"
       )}>
-        {/* <div className={`p-4 px-3 border-b border-white/10 ${isOpen ? 'flex' : 'flex-column'} items-center min-w-0`}>
-          <Button
-            onClick={createNewChat}
-            className="flex-1 bg-study-purple hover:bg-study-purple/90 text-white min-w-0 transition-all duration-300"
-            size={`${isOpen ? 'default' : 'icon'}`}
-          >
-            <Plus className={`h-4 w-4 flex-shrink-0 ${isOpen ? 'mr-2' : ''}`} />
-            { isOpen && <span className="truncate">New Chat</span>}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggle}
-            className={`bg-study-purple hover:bg-study-purple/90 text-white flex-shrink-0 ${isOpen ? 'ml-2' : 'mt-2'}`}
-          >
-            <Menu className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggle}
-            className="ml-2 md:hidden text-white hover:bg-white/10 flex-shrink-0"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div> */}
         <div className={`p-4 px-3 border-b border-white/10 items-center min-w-0 ${isOpen ? 'flex' : 'flex-column'} transition-all duration-300`}>
           {/* New Chat Button */}
           <Button
@@ -105,21 +71,11 @@ export function ChatSidebar({ isOpen, onToggle }: ChatSidebarProps) {
           >
             { isOpen? (<ArrowLeft className="h-4 w-4" />) : (<ArrowRight className="h-4 w-4" />) }
           </Button>
-
-          {/* Mobile Close Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggle}
-            className="ml-2 md:hidden text-white hover:bg-white/10 flex-shrink-0"
-          >
-            <X className="h-4 w-4" />
-          </Button>
         </div>
 
 
         <div className="flex-1 overflow-y-auto p-2 min-w-0">
-          {isChatListLoading && (
+          {isChatListLoading && isOpen && (
             <div className="flex items-center justify-center py-4">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 border-2 border-study-purple/30 border-t-study-purple rounded-full animate-spin"></div>

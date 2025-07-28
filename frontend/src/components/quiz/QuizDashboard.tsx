@@ -186,16 +186,6 @@ export function QuizDashboard() {
             <Plus className="h-4 w-4 mr-2" />
             Create Quiz
           </Button>
-          
-          {/* <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => navigate('/dashboard')}
-            className="button-light"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Button> */}
         </div>
       </div>
 

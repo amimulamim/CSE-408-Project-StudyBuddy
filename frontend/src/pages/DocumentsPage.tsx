@@ -115,20 +115,12 @@ export default function DocumentsPage() {
 
   return (
     <div className="min-h-screen ">
-      <div className="container mx-auto py-8 max-w-6xl">
+      <div className="container mx-auto py-8">
         {/* Header */}
         <div className="glass-card p-6 mb-6 rounded-md">
-          <div className="flex items-center gap-4 mb-4">
-            {/* <Button 
-              variant="outline" 
-              onClick={() => navigate('/collections')}
-              className="button-light"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Collections
-            </Button> */}
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4">
             <div className="flex items-center gap-3 flex-1">
-              <FolderOpen className="h-8 w-8 text-purple-400" />
+              <FolderOpen className="h-8 w-8 text-blue-400" />
               <div>
                 <h1 className="text-3xl font-bold gradient-text">
                   {decodeURIComponent(collectionName || '')}

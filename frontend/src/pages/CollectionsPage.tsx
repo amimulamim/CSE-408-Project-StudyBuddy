@@ -200,14 +200,14 @@ export default function CollectionsPage() {
         <div className="container mx-auto py-8 max-w-6xl">
           {/* Header */}
           <div className="glass-card p-6 mb-6 rounded-md">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col md:flex-row items-center justify-between mb-4">
               <div>
-                <h1 className="text-3xl font-bold gradient-text">Document Collections</h1>
-                <p className="glass-text-description mt-1">
+                <h1 className="text-3xl font-bold gradient-text md:whitespace-nowrap">Document Collections</h1>
+                <p className="glass-text-description mt-1 md:whitespace-nowrap">
                   Organize and manage your document collections
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col md:flex-row items-start md:items-center pt-2 md:pt-0 justify-end gap-2 w-full">
                 <DocumentUploadDialog 
                   collections={collections}
                   onUploadSuccess={fetchCollections}

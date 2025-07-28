@@ -139,14 +139,14 @@ export function QuizTaker({ quizId }: QuizTakerProps) {
   }
 
   return (
-    <div className="min-h-screen ">
+    <div className="min-h-screen z-50">
       {/* Quiz Timer */}
-      <QuizTimer duration={duration} onTimeUp={handleTimeUp} />
+      {/* <QuizTimer duration={duration} onTimeUp={handleTimeUp} /> */}
       
-      <div className="container mx-auto py-20 max-w-4xl">
+      <div className="container mx-auto pb-20 pt-8">
         {/* Header */}
         <div className="glass-card p-6 mb-6 rounded-md">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col md:flex-row items-center justify-between mb-4">
             <div>
               <h1 className="text-3xl font-bold glass-text-title">
                 {quizInfo?.topic || 'Quiz in Progress'}
@@ -156,6 +156,7 @@ export function QuizTaker({ quizId }: QuizTakerProps) {
                 Question {currentQuestionIndex + 1} of {questions.length}
               </p>
             </div>
+            <QuizTimer duration={duration} onTimeUp={handleTimeUp} />
             <div className="glass-card-inner p-4 rounded-lg">
               <Target className="h-5 w-5 mx-auto mb-1 text-purple-400" />
               <div className="text-sm font-medium glass-text-description">Total Points</div>

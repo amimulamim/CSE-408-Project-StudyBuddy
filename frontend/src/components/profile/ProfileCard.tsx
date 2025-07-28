@@ -171,7 +171,7 @@ export function ProfileCard({ userProfile, analyticsStats, onProfileUpdate }: Pr
                   </div>
                 </div>
                 
-                <div className="flex gap-2 self-start sm:self-center">
+                <div className="flex flex-col md:flex-row gap-2 self-start sm:self-center">
                   {userProfile.is_admin && (
                     <Button
                       variant="outline"
@@ -191,15 +191,6 @@ export function ProfileCard({ userProfile, analyticsStats, onProfileUpdate }: Pr
                   >
                     <Edit3 className="h-4 w-4 mr-2" />
                     Edit Profile
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate('/dashboard')}
-                    className="button-light-blue"
-                  >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Dashboard
                   </Button>
                 </div>
               </div>

@@ -72,6 +72,8 @@ export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfacePro
     }
   };
 
+  const isMobile = window.innerWidth < 768;
+
   // Smart scroll logic - only scroll for new messages
   useEffect(() => {
     if (isNewChatLoading) setIsNewChatLoading(false);
@@ -220,7 +222,7 @@ export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfacePro
   };
 
   return (
-    <div className={`fixed top-0 ${ sidebarOpen? "left-80 w-[calc(100vw-20rem)]" : "left-16 w-[calc(100vw-4rem)]" } h-screen pt-20 flex flex-col`}>
+    <div className={`fixed top-0 ${ sidebarOpen && !isMobile? "left-80 w-[calc(100vw-20rem)]" : "left-16 w-[calc(100vw-4rem)]" } h-screen pt-20 flex flex-col z-30`}>
 
       {/* Messages */}
       <div 
@@ -255,7 +257,7 @@ export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfacePro
       </div>
 
       {/* Input Area */}
-      <div className={`border-t border-white/10 p-4 bg-study-dark`}>
+      <div className={`p-4`}>
         {/* File Previews */}
         {attachedFiles.length > 0 && (
           <div className="mb-4 flex flex-wrap gap-3">
