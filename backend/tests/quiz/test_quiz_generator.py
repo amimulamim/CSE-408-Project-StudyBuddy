@@ -799,6 +799,93 @@ class TestExamGenerator:
             )
         assert "Error evaluating answer" in str(exc_info.value)
 
+    def test_evaluate_answer_short_answer_empty_string(self, exam_generator, mock_db):
+        """Test evaluating short answer with empty string (should get 0 marks)"""
+        # Arrange
+        question = Mock(spec=QuizQuestion)
+        question.id = "question-123"
+        question.quiz_id = "quiz-123"
+        question.type = QuestionType.ShortAnswer
+        question.question_text = "What is Python?"
+        question.correct_answer = "A programming language"
+        question.marks = 3.0
+        question.explanation = "Python is a programming language"
+        
+        mock_db.query.return_value.filter.return_value.first.return_value = question
+        
+        # Act
+        result = exam_generator.evaluate_answer(
+            exam_id="quiz-123",
+            question_id="question-123",
+            student_answer="",  # Empty string
+            user_id="user-123",
+            db=mock_db
+        )
+        
+        # Assert
+        assert result["is_correct"] is False
+        assert result["score"] == pytest.approx(0.0)
+        # Verify that LLM was not called for empty answer
+        exam_generator.model.generate_content.assert_not_called()
+
+    def test_evaluate_answer_short_answer_whitespace_only(self, exam_generator, mock_db):
+        """Test evaluating short answer with only whitespace (should get 0 marks)"""
+        # Arrange
+        question = Mock(spec=QuizQuestion)
+        question.id = "question-123"
+        question.quiz_id = "quiz-123"
+        question.type = QuestionType.ShortAnswer
+        question.question_text = "What is Python?"
+        question.correct_answer = "A programming language"
+        question.marks = 3.0
+        question.explanation = "Python is a programming language"
+        
+        mock_db.query.return_value.filter.return_value.first.return_value = question
+        
+        # Act
+        result = exam_generator.evaluate_answer(
+            exam_id="quiz-123",
+            question_id="question-123",
+            student_answer="   \t\n   ",  # Only whitespace
+            user_id="user-123",
+            db=mock_db
+        )
+        
+        # Assert
+        assert result["is_correct"] is False
+        assert result["score"] == pytest.approx(0.0)
+        # Verify that LLM was not called for whitespace-only answer
+        exam_generator.model.generate_content.assert_not_called()
+
+    def test_evaluate_answer_short_answer_none(self, exam_generator, mock_db):
+        """Test evaluating short answer with None value (should get 0 marks)"""
+        # Arrange
+        question = Mock(spec=QuizQuestion)
+        question.id = "question-123"
+        question.quiz_id = "quiz-123"
+        question.type = QuestionType.ShortAnswer
+        question.question_text = "What is Python?"
+        question.correct_answer = "A programming language"
+        question.marks = 3.0
+        question.explanation = "Python is a programming language"
+        
+        mock_db.query.return_value.filter.return_value.first.return_value = question
+        
+        # Act
+        result = exam_generator.evaluate_answer(
+            exam_id="quiz-123",
+            question_id="question-123",
+            student_answer=None,  # None value
+            user_id="user-123",
+            db=mock_db
+        )
+        
+        # Assert
+        assert result["is_correct"] is False
+        assert result["score"] == pytest.approx(0.0)
+        # Verify that LLM was not called for None answer
+        exam_generator.model.generate_content.assert_not_called()
+
     def test_evaluate_answer_true_false_correct(self, exam_generator, mock_db):
         """Test evaluating correct true/false answer"""
         # Arrange
