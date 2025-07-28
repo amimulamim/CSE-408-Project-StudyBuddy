@@ -10,7 +10,8 @@ import {
   XCircle, 
   ArrowLeft, 
   BarChart3,
-  Loader2
+  Loader2,
+  HelpCircle
 } from 'lucide-react';
 import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
@@ -143,10 +144,9 @@ export function QuizResults({ quizId, isAdminMode = false, onClose, userId }: Qu
   const totalQuestions = results.question_results?.length || 0;
   
   // Calculate more detailed statistics
-  const incorrectAnswers = results.question_results?.filter((q: QuestionResult) => !q.is_correct && q.score > 0).length || 0;
-  const wrongAnswers = results.question_results?.filter((q: QuestionResult) => !q.is_correct && q.score === 0).length || 0;
   const partiallyCorrect = results.question_results?.filter((q: QuestionResult) => !q.is_correct && q.score > 0).length || 0;
-  const unansweredQuestions = totalQuestions - (correctAnswers + incorrectAnswers + wrongAnswers);
+  const unansweredQuestions = results.question_results?.filter((q: QuestionResult) => !q.student_answer || q.student_answer.trim() === '').length || 0;
+  const wrongAnswers = results.question_results?.filter((q: QuestionResult) => !q.is_correct && q.score === 0 && q.student_answer && q.student_answer.trim() !== '').length || 0;
 
   const getScoreColor = (percentage: number) => {
     if (percentage >= 80) return 'text-green-600';
@@ -166,6 +166,8 @@ export function QuizResults({ quizId, isAdminMode = false, onClose, userId }: Qu
       return { label: 'Correct', color: 'bg-green-500', textColor: 'text-green-500', icon: CheckCircle };
     } else if (result.score > 0) {
       return { label: 'Partially Correct', color: 'bg-yellow-500', textColor: 'text-yellow-500', icon: CheckCircle };
+    } else if (!result.student_answer || result.student_answer.trim() === '') {
+      return { label: 'Unanswered', color: 'bg-gray-500', textColor: 'text-gray-500', icon: HelpCircle };
     } else {
       return { label: 'Incorrect', color: 'bg-red-500', textColor: 'text-red-500', icon: XCircle };
     }
@@ -334,8 +336,18 @@ export function QuizResults({ quizId, isAdminMode = false, onClose, userId }: Qu
                   <div className="space-y-3">
                     <div className="p-4 rounded-lg bg-slate-800/30 border border-white/20">
                       <h4 className="font-medium glass-text mb-2">Your Answer:</h4>
-                      <div className={`${result.is_correct ? 'text-green-400' : result.score > 0 ? 'text-yellow-400' : 'text-red-400'} font-medium`}>
-                        {result.options && result.options.length > 0 ? (
+                      <div className={`${
+                        result.is_correct 
+                          ? 'text-green-400' 
+                          : result.score > 0 
+                            ? 'text-yellow-400' 
+                            : (!result.student_answer || result.student_answer.trim() === '')
+                              ? 'text-gray-400'
+                              : 'text-red-400'
+                      } font-medium`}>
+                        {(!result.student_answer || result.student_answer.trim() === '') ? (
+                          <span className="italic">No answer provided</span>
+                        ) : result.options && result.options.length > 0 ? (
                           // For multiple choice, show the option text
                           result.options[parseInt(result.student_answer)] || result.student_answer
                         ) : (
@@ -345,10 +357,25 @@ export function QuizResults({ quizId, isAdminMode = false, onClose, userId }: Qu
                       </div>
                     </div>
                     
-                    {!result.is_correct && result.correct_answer && (
+                    {!result.is_correct && result.correct_answer && (result.student_answer && result.student_answer.trim() !== '') && (
                       <div className="p-4 rounded-lg bg-green-500/10 border border-green-400/50">
                         <h4 className="font-medium text-green-300 mb-2">Correct Answer:</h4>
                         <div className="text-green-400 font-medium">
+                          {result.options && result.options.length > 0 ? (
+                            // For multiple choice, show the option text
+                            result.options[parseInt(result.correct_answer)] || result.correct_answer
+                          ) : (
+                            // For other types, show the raw answer
+                            result.correct_answer
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {(!result.student_answer || result.student_answer.trim() === '') && result.correct_answer && (
+                      <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-400/50">
+                        <h4 className="font-medium text-blue-300 mb-2">You should have answered:</h4>
+                        <div className="text-blue-400 font-medium">
                           {result.options && result.options.length > 0 ? (
                             // For multiple choice, show the option text
                             result.options[parseInt(result.correct_answer)] || result.correct_answer
