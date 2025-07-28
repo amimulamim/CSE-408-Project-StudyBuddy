@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
-import heroPicture from '@/assets/hero-3d.png'; // Adjust the path as necessary
+import heroPicture from '@/assets/hero-3d-transparent.png'; // Adjust the path as necessary
 
 interface HeroProps {
   onSignUp: () => void;
@@ -155,7 +155,7 @@ export function Hero({ onSignUp }: HeroProps) {
               }}
             />
             
-            <div className="bg-white/5 border border-white/10 backdrop-blur-sm shadow-2xl rounded-2xl p-6">
+            {/* <div className="bg-white/5 border border-white/10 backdrop-blur-sm shadow-2xl rounded-2xl p-6"> */}
             <motion.img
               src={heroPicture}
               alt="AI Study Buddy 3D Illustration"
@@ -163,7 +163,7 @@ export function Hero({ onSignUp }: HeroProps) {
               whileHover={{ scale: 1.02 }}
               transition={{ duration: 0.3 }}
             />
-          </div>
+          {/* </div> */}
           </motion.div>
         </motion.div>
       </div>
