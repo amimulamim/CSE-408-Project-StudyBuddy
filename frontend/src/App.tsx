@@ -37,9 +37,9 @@ const App = () => {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route element={<MainLayout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/collections" element={<CollectionsPage />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/collections/:collectionName" element={<DocumentsPage />} />

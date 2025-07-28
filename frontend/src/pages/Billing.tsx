@@ -1,12 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
 import { BillingSubscription } from '@/components/billing/BillingSubscription';
 import { toast } from 'sonner';
-import { Header } from '@/components/header/Header';
-import { Footer } from '@/components/footer/Footer';
-import { LoadedHeader } from './Dashboard';
+
 
 export default function BillingPage() {
   const navigate = useNavigate();

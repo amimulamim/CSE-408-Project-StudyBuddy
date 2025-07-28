@@ -14,8 +14,6 @@ import { makeRequest } from '@/lib/apiCall';
 import { toast } from 'sonner';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { format } from 'date-fns';
-import { Footer } from '@/components/footer/Footer';
-import { LoadedHeader } from './Dashboard';
 
 interface ContentItem {
   contentId: string;
