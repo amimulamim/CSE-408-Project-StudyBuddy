@@ -3,7 +3,7 @@ import { Logo } from '../ui/logo';
 
 export function Footer() {
   return (
-    <footer className="bg-transparent px-8">
+    <footer className="bg-transparent px-8 z-10">
         <div className="border-t border-white/10 py-6 flex flex-col md:flex-row justify-between items-center">
           <p className="text-muted-foreground text-sm">
             © {new Date().getFullYear()} StuddyBuddy. All rights reserved.
