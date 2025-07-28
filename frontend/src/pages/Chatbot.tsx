@@ -10,17 +10,13 @@ export default function Chatbot() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
-    <>
-    {LoadedHeader}
-    <div className="fixed top-20 bottom-0 w-screen overflow-y-auto scrollbar-hide">
+    
       <ChatProvider>
-        <div className="h-screen flex dashboard-bg-animated overflow-hidden">
+        <div className="h-screen flex  overflow-hidden">
           <ChatSidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
           <ChatInterface sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
         </div>
       </ChatProvider>
-      <Footer />
-    </div>
-    </>
+    
   );
 }

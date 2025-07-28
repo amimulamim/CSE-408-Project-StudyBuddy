@@ -114,19 +114,19 @@ export default function DocumentsPage() {
   }
 
   return (
-    <div className="min-h-screen dashboard-bg-animated">
+    <div className="min-h-screen ">
       <div className="container mx-auto py-8 max-w-6xl">
         {/* Header */}
         <div className="glass-card p-6 mb-6 rounded-md">
           <div className="flex items-center gap-4 mb-4">
-            <Button 
+            {/* <Button 
               variant="outline" 
               onClick={() => navigate('/collections')}
               className="button-light"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Collections
-            </Button>
+            </Button> */}
             <div className="flex items-center gap-3 flex-1">
               <FolderOpen className="h-8 w-8 text-purple-400" />
               <div>

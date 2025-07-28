@@ -72,43 +72,43 @@ export function Header({ userProfile, subscription, billingLoading }: HeaderProp
   
   return (
     <header 
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 h-20 border-b border-white/10 glass-effect`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 h-20 border-b border-white/10 bg-white/10 backdrop-blur`}
     >
-      <div className="mx-auto px-8 py-2">
-        <div className="flex items-center justify-between">
+      <div className="container mx-auto px-6 py-2">
+        <div className="flex items-center justify-between w-full">
           {/* Logo */}
           <Logo />
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
             <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-white/70 backdrop-blur-sm rounded-full px-4 py-2 border border-white/50 shadow-sm">
-                {billingLoading ? (
-                    <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 bg-gray-300 rounded-full animate-pulse"></div>
-                        <div className="h-4 w-16 bg-gray-300 rounded animate-pulse"></div>
-                    </div>
-                ) : (
-                    <>
-                        <Crown className={`h-4 w-4 ${
-                            subscription?.plan_id && subscription.plan_id !== 'free' 
-                                ? 'text-yellow-500' 
-                                : 'text-gray-400'
-                        }`} />
-                        <span className="text-sm font-medium text-gray-900">
-                            {subscription ? getPlanDisplayName(subscription.plan_id) : 'Free Plan'}
-                        </span>
-                        {subscription && (
-                            <Badge 
-                                className={`${getStatusColor(subscription.status)} text-xs`}
-                                variant="secondary"
-                            >
-                                {getStatusLabel(subscription.status)}
-                            </Badge>
-                        )}
-                    </>
-                )}
-            </div>
+              <div className="flex items-center gap-2 bg-white/70 backdrop-blur-sm rounded-full px-4 py-2 border border-white/50 shadow-sm">
+                  {billingLoading ? (
+                      <div className="flex items-center gap-2">
+                          <div className="h-4 w-4 bg-gray-300 rounded-full animate-pulse"></div>
+                          <div className="h-4 w-16 bg-gray-300 rounded animate-pulse"></div>
+                      </div>
+                  ) : (
+                      <>
+                          <Crown className={`h-4 w-4 ${
+                              subscription?.plan_id && subscription.plan_id !== 'free' 
+                                  ? 'text-yellow-500' 
+                                  : 'text-gray-400'
+                          }`} />
+                          <span className="text-sm font-medium text-gray-900">
+                              {subscription ? getPlanDisplayName(subscription.plan_id) : 'Free Plan'}
+                          </span>
+                          {subscription && (
+                              <Badge 
+                                  className={`${getStatusColor(subscription.status)} text-xs`}
+                                  variant="secondary"
+                              >
+                                  {getStatusLabel(subscription.status)}
+                              </Badge>
+                          )}
+                      </>
+                  )}
+              </div>
               <Button 
                 variant="ghost" 
                 onClick={handleLogout} 
@@ -119,7 +119,7 @@ export function Header({ userProfile, subscription, billingLoading }: HeaderProp
               </Button>
               <NotificationButton />
               <Avatar 
-                className="h-12 w-12 ring-2 ring-white shadow-md hover:cursor-pointer hover:ring-4 transition-all duration-300"
+                className="h-10 w-10 ring-2 ring-white shadow-md hover:cursor-pointer hover:ring-4 transition-all duration-300"
                 onClick={() => navigate("/profile")}
               >
                 <AvatarImage src={userProfile?.avatar} alt={userProfile?.name} />

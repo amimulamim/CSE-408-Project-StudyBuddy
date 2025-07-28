@@ -43,7 +43,7 @@ export default function QuizTaker() {
 
   if (!quiz) {
     return (
-      <div className="min-h-screen dashboard-bg-animated flex items-center justify-center">
+      <div className="min-h-screen  flex items-center justify-center">
         <div className="text-center glass-card p-8 max-w-md mx-auto">
           <h2 className="text-2xl font-bold mb-2 glass-text-title">Loading Quiz...</h2>
           <p className="glass-text-description">Please wait while we prepare your quiz.</p>
@@ -53,7 +53,7 @@ export default function QuizTaker() {
   }
 
   return (
-    <div className="min-h-screen dashboard-bg-animated">
+    <div className="min-h-screen ">
       <QuizTakerComponent
         quiz={quiz}
         onComplete={handleComplete}

@@ -51,7 +51,7 @@
 
 @layer utilities {
   .glass-effect {
-    @apply bg-opacity-20 bg-opacity-20 border border-white/10;
+    @apply bg-opacity-20 border-b border-white/20;
   }
   
   .gradient-text {

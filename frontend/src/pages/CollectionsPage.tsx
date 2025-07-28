@@ -196,7 +196,7 @@ export default function CollectionsPage() {
     <>
       {actionLoading && <LoadingOverlay message="Updating your collection" />}
       
-      <div className="min-h-screen dashboard-bg-animated">
+      <div className="min-h-screen ">
         <div className="container mx-auto py-8 max-w-6xl">
           {/* Header */}
           <div className="glass-card p-6 mb-6 rounded-md">

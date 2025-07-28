@@ -120,7 +120,7 @@ export function QuizTaker({ quizId }: QuizTakerProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen dashboard-bg-animated">
+      <div className="flex items-center justify-center min-h-screen ">
         <div className="text-center glass-card p-8 max-w-md mx-auto rounded-lg">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
           <h2 className="text-2xl font-bold mb-2 glass-text-title">Preparing Your Quiz</h2>
@@ -139,7 +139,7 @@ export function QuizTaker({ quizId }: QuizTakerProps) {
   }
 
   return (
-    <div className="min-h-screen dashboard-bg-animated">
+    <div className="min-h-screen ">
       {/* Quiz Timer */}
       <QuizTimer duration={duration} onTimeUp={handleTimeUp} />
       
