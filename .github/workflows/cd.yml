@@ -81,5 +81,8 @@ jobs:
           key: ${{ secrets.AZURE_VM_SSH_PRIVATE_KEY }}
           script: |
             docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin <<< "${{ secrets.DOCKERHUB_TOKEN }}"
-            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml down
+            docker image prune -f
+            export IMAGE_TAG=${{ github.event.workflow_run.head_sha }}
+            docker compose -f docker-compose.prod.yml pull --ignore-pull-failures
             docker compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
