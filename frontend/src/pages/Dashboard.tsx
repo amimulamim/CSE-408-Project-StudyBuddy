@@ -9,6 +9,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Header } from "@/components/header/Header";
 import { Footer } from "@/components/footer/Footer";
+import { RecentActivities } from "@/components/activity/RecentActivities";
 
 let LoadedHeader = null;
 
@@ -192,20 +193,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Recent Activity */}
-                <Card className="glass-card">
-                    <CardHeader>
-                        <CardTitle className="glass-text-title">Recent Activity</CardTitle>
-                        <CardDescription className="glass-text-description">Your latest interactions and generated content</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-center py-8">
-                            <div className="relative mb-4">
-                                <BookOpen className="h-12 w-12 mx-auto text-gray-300 opacity-60" />
-                            </div>
-                            <p className="glass-text-description">No recent activity yet. Start by chatting with AI or generating content!</p>
-                        </div>
-                    </CardContent>
-                </Card>
+                <RecentActivities />
             </div>
             {/* <Footer /> */}
             <ChatbotFAB />
