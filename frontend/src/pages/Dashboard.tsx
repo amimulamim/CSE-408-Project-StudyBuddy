@@ -164,7 +164,7 @@ export default function Dashboard() {
         // </div>
 
         <div className="min-h-screen">
-            <div className="container mx-auto mb-12 py-8 space-y-8">
+            <div className="container xl:max-w-screen-xl px-4 mx-auto mb-12 py-8 space-y-8">
                 {/* Main Content Grid */}
                 <div className="space-y-6">
                     {/* Quick Actions */}

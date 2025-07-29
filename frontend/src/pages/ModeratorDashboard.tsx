@@ -18,7 +18,7 @@ export default function ModeratorDashboard() {
           <TabsTrigger value="profile">Profile & Stats</TabsTrigger>
         </TabsList>
         <TabsContent value="pending-content">
-          <ModeratorContentList type="pending" />
+          <ModeratorContentList type="slides_pending" />
         </TabsContent>
         {/* <TabsContent value="pending-quizzes">
           <ModeratorQuizList type="pending" />
