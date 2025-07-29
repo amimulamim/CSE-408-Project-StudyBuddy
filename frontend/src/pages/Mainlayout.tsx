@@ -3,13 +3,8 @@ import { LoadedHeader } from "./Dashboard";
 import { Footer } from "@/components/footer/Footer";
 import { toast } from "sonner";
 import { useUserRole } from "@/hooks/useUserRole";
-import { 
-  getSubscriptionStatus, 
-  getStatusColor, 
-  getStatusLabel,
-} from "@/lib/billing";
-import { SubscriptionStatus } from "@/lib/billingTypes";
-import { useEffect, useState } from "react";
+import { useSubscription } from "@/hooks/useSubscription";
+import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { Header } from "@/components/header/Header";
 
@@ -18,8 +13,7 @@ const MainLayout = () => {
   const navigate = useNavigate();
 
   const { userProfile, loading, refetchUserProfile } = useUserRole();
-  const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
-  const [billingLoading, setBillingLoading] = useState(true);
+  const { subscription, loading: billingLoading } = useSubscription();
 
   useEffect(() => {
     if (!loading && !userProfile) {
@@ -27,22 +21,6 @@ const MainLayout = () => {
       navigate('/');
     }
   }, [loading, userProfile, navigate]);
-
-  useEffect(() => {
-    loadSubscriptionStatus();
-  }, []);
-
-  const loadSubscriptionStatus = async () => {
-      try {
-          setBillingLoading(true);
-          const status = await getSubscriptionStatus();
-          setSubscription(status);
-      } catch (error) {
-          console.error("Failed to load subscription status:", error);
-      } finally {
-          setBillingLoading(false);
-      }
-  };
 
     // Show loading state while checking authentication
   if (loading) {

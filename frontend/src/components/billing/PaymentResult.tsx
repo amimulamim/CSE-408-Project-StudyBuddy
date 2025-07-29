@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, XCircle, ArrowLeft } from "lucide-react";
+import { triggerSubscriptionRefresh } from "@/hooks/useSubscription";
 
 export function PaymentResult() {
   const location = useLocation();
@@ -19,12 +20,17 @@ export function PaymentResult() {
     if (!query.has("success")) {
       navigate("/dashboard/billing");
     }
-  }, []);
+  }, [navigate, query]);
 
   useEffect(() => {
+    // If payment was successful, trigger subscription refresh
+    if (success) {
+      triggerSubscriptionRefresh();
+    }
+    
     const timer = setTimeout(() => navigate('/dashboard/billing'), 5000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [success, navigate]);
 
   return (
     <div className="container mx-auto py-12">
