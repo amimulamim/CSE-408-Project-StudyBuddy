@@ -3,12 +3,16 @@ import { Clock, AlertTriangle, Timer } from 'lucide-react';
 
 interface QuizTimerProps {
   duration: number; // in minutes
-  startTime: number; // timestamp when quiz started
+  startTime?: number; // timestamp when quiz started
   onTimeUp: () => void;
 }
 
 export function QuizTimer({ duration, startTime, onTimeUp }: QuizTimerProps) {
   const [timeLeft, setTimeLeft] = useState(() => {
+    // If no startTime provided, start with full duration (useful for testing)
+    if (startTime === undefined) {
+      return duration * 60;
+    }
     // Calculate initial time left based on elapsed time
     const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
     const totalSeconds = duration * 60;
@@ -19,6 +23,10 @@ export function QuizTimer({ duration, startTime, onTimeUp }: QuizTimerProps) {
 
   // Update timeLeft when startTime or duration changes (for restored state)
   useEffect(() => {
+    // If no startTime provided, use the current timeLeft (useful for testing)
+    if (startTime === undefined) {
+      return;
+    }
     const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
     const totalSeconds = duration * 60;
     const remaining = Math.max(0, totalSeconds - elapsedSeconds);
@@ -58,7 +66,7 @@ export function QuizTimer({ duration, startTime, onTimeUp }: QuizTimerProps) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [onTimeUp]);
+  }, [onTimeUp, submitted]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
