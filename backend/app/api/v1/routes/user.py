@@ -364,7 +364,7 @@ def get_user_activities(
         
         # Add quiz activities
         if quiz_results:
-            activities.extend(build_activities(quiz_results, "quiz_taken"))
+            activities.extend(build_activities(quiz_results, "quiz"))
         
         # Sort by creation date (most recent first) and limit results
         sorted_activities = sorted(activities, key=lambda x: x.created_at, reverse=True)
