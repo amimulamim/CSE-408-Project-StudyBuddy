@@ -13,7 +13,7 @@ services:
       - ./.env
 
   backend:
-    image: amimulamim/studybuddy-backend:latest
+    image: amimulamim/studybuddy-backend:${IMAGE_TAG:-latest}
     expose:
       - "8000"
     volumes:
@@ -22,7 +22,7 @@ services:
       - ./.env
 
   frontend:
-    image: amimulamim/studybuddy-frontend:latest
+    image: amimulamim/studybuddy-frontend:${IMAGE_TAG:-latest}
     
     ports:
       - "80:80"
