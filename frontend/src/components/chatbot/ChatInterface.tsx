@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, Send, Paperclip, Loader2 } from 'lucide-react';
+import { Send, Paperclip, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useChat } from './ChatContext';
@@ -9,8 +9,8 @@ import { ThinkingAnimation } from './ThinkingAnimation';
 import type { FileAttachment } from './chat';
 
 interface ChatInterfaceProps {
-  sidebarOpen: boolean;
-  onToggleSidebar: () => void;
+  readonly sidebarOpen: boolean;
+  readonly onToggleSidebar: () => void;
 }
 
 export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfaceProps) {
@@ -227,8 +227,9 @@ export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfacePro
       {/* Messages */}
       <div 
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide"
+        className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 scrollbar-hide"
         onScroll={handleScroll}
+        style={{ minWidth: 0 }}
       >
         {/* Loading indicator for old messages */}
         {isLoadingOldMessages && (
