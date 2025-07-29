@@ -164,9 +164,9 @@ export function RecentActivities({ className = '', limit = 5 }: RecentActivities
     switch (activity.activity_type) {
       case 'chat':
         if (activity.details.chat_id || activity.details.id) {
-          navigate(`/chat/${activity.details.chat_id || activity.details.id}`);
+          navigate(`/chatbot/${activity.details.chat_id || activity.details.id}`);
         } else {
-          navigate('/chat');
+          navigate('/chatbot');
         }
         break;
       case 'content':

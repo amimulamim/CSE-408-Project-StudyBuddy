@@ -45,7 +45,7 @@ const App = () => {
               <Route path="/profile" element={<Profile />} />
               <Route path="/collections/:collectionName" element={<DocumentsPage />} />
               <Route path="/content/flashcards/:contentId" element={<FlashcardsView />} />
-              <Route path="/content/slides/:contentId" element={<SlidesView />} />
+              <Route path="/content/slides/:contentId" element={<SlidesView contentType="slide" />} />
               <Route path="/content/document/:collectionName/:documentId" element={<SlidesView contentType="document" />} />
               <Route path="/quiz/take/:quizId" element={<QuizTakePage />} />
               <Route path="/quiz/results/:quizId" element={<QuizResultsPage />} />
@@ -53,6 +53,7 @@ const App = () => {
               <Route path="/dashboard/content" element={<ContentLibrary />} />
               <Route path="/dashboard/quiz" element={<QuizPage />} />
               <Route path="/chatbot" element={<Chatbot />} />
+              <Route path="/chatbot/:chatId" element={<Chatbot />} />
               <Route path="/moderator/dashboard" element={<ModeratorDashboard />} />
               <Route path="*" element={<NotFound />} />
             </Route>

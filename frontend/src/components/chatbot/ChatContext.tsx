@@ -23,9 +23,9 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-const ChatProvider = ({ children }: { children: React.ReactNode }) => {
+const ChatProvider = ({ children, initialChatId }: { children: React.ReactNode; initialChatId?: string | null }) => {
   const [chatList, setChatList] = useState<ChatIdentifier[]>([]);
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [currentChatId, setCurrentChatId] = useState<string | null>(initialChatId || null);
   const [isNewChatLoading, setIsNewChatLoading] = useState(false);
   const [isChatListLoading, setIsChatListLoading] = useState(false);
   // Initialize currentChat with a default structure
