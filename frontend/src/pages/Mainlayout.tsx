@@ -42,8 +42,12 @@ const MainLayout = () => {
         billingLoading={billingLoading}
       />
       <div className="fixed top-0 bottom-0 pt-20 w-screen overflow-y-auto scrollbar-hide">
-        <Outlet />
-        <Footer />
+      <div className="min-h-full flex flex-col">
+        <div className="flex-1">
+          <Outlet />
+        </div>
+          <Footer />
+        </div>
       </div>
     </div>
   );
