@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
@@ -323,11 +323,12 @@ export function QuizTaker({ quizId }: QuizTakerProps) {
                   </div>
                   Your Answer:
                 </Label>
-                <Input
+                <Textarea
                   value={answers[currentQuestion.question_id] || ''}
                   onChange={(e) => handleAnswerChange(currentQuestion.question_id, e.target.value)}
                   placeholder="Type your detailed answer here..."
-                  className="glass-input text-lg p-4 border-white/20 focus:border-purple-400/50 bg-slate-800/30 focus:bg-slate-800/50 transition-all duration-200"
+                  className="glass-input text-lg p-4 border-white/20 focus:border-purple-400/50 bg-slate-800/30 focus:bg-slate-800/50 transition-all duration-200 min-h-32 resize-none"
+                  rows={4}
                 />
               </div>
             )}

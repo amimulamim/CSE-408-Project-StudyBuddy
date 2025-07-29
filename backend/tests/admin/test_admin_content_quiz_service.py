@@ -35,10 +35,12 @@ class TestAdminContentQuizService:
         mock_content.content_type = "summary"
         mock_content.raw_source = None
         mock_content.created_at = datetime.now(timezone.utc)
+        mock_content.is_latest_version = True  # Added missing field
         
         mock_user = Mock()
         mock_user.name = "Test User"
         mock_user.email = "test@example.com"
+        mock_user.uid = "user123"  # Added missing field
         
         # Mock the joined query result (content_item, user)
         mock_result = (mock_content, mock_user)
@@ -46,6 +48,7 @@ class TestAdminContentQuizService:
         mock_query = Mock()
         mock_db.query.return_value = mock_query
         mock_query.join.return_value = mock_query
+        mock_query.filter.return_value = mock_query  # Added filter for is_latest_version
         mock_query.count.return_value = 1
         mock_query.order_by.return_value = mock_query
         mock_query.offset.return_value = mock_query
@@ -55,8 +58,11 @@ class TestAdminContentQuizService:
         # Mock the ContentItem and User classes
         with patch('app.content_generator.models.ContentItem') as mock_content_item, \
              patch('app.admin.service.User'):
+            # Mock ContentItem attributes
             mock_content_item.created_at = Mock()
             mock_content_item.created_at.desc.return_value = Mock()
+            mock_content_item.created_at.asc.return_value = Mock()
+            mock_content_item.is_latest_version = Mock()
             
             # Act
             content, total = get_all_content_paginated(mock_db, pagination)

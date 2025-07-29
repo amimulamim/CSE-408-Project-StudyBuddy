@@ -218,40 +218,68 @@ class ExamGenerator:
                     is_correct = True
                     score = float(question.marks)
             elif question.type == QuestionType.ShortAnswer:
-                prompt = f"""
-                Evaluate if the student's answer is correct based on the correct answer.
-                Question: {question.question_text}
-                Correct Answer: {question.correct_answer}
-                Student Answer: {student_answer}
-                Return JSON: {{"is_correct": boolean, "score": float}}
-                """
-                response = self.model.generate_content(prompt)
-                if not response or not hasattr(response, 'text') or not response.text:
-                    logger.error(f"Invalid Gemini API response for evaluation: {response}")
-                    raise ValueError("No valid response from Gemini API")
-                try:
-                    eval_text = response.text.strip()
-                    if eval_text.startswith("```json"):
-                        eval_text = eval_text[7:]
-                    if eval_text.endswith("```"):
-                        eval_text = eval_text[:-3]
-                    eval_text = eval_text.strip()
-
-                    # Extract only the first JSON object or array
-                    import re
-                    json_match = re.search(r'(\{.*?\}|\[.*?\])', eval_text, re.DOTALL)
-                    if not json_match:
-                        logger.error(f"No JSON object found in evaluation response: {eval_text[:500]}")
-                        raise ValueError("No JSON object found in evaluation response")
-                    json_str = json_match.group(1)
-                    result = json.loads(json_str)
-
+                # Check if student answer is empty or just whitespace
+                if not student_answer or str(student_answer).strip() == '':
+                    # No answer provided - give 0 marks
+                    is_correct = False
+                    score = 0.0
+                else:
+                    prompt = f"""
+                    Evaluate the student's answer based on the correct answer and provide partial scoring.
+                    Question: {question.question_text}
+                    Correct Answer: {question.correct_answer}
+                    Student Answer: {student_answer}
+                    Total Marks: {question.marks}
                     
-                except json.JSONDecodeError as e:
-                    logger.error(f"JSON decode error in evaluation: {str(e)}, response: {response.text[:500]}")
-                    raise ValueError(f"Invalid JSON response: {str(e)}")
-                is_correct = result.get("is_correct", False)
-                score = float(question.marks) if is_correct else 0.0
+                    Instructions:
+                    - Give full marks for completely correct answers
+                    - Give partial marks (e.g., 50-80% of total) for partially correct answers that show understanding but miss some key points
+                    - Give minimal marks (e.g., 10-30% of total) for answers that show some relevant knowledge but are mostly incorrect
+                    - Give 0 marks for completely wrong or irrelevant answers
+                    - Give 0 marks for empty or blank answers
+                    
+                    Return JSON: {{"is_correct": boolean, "score": float, "percentage": float}}
+                    Where:
+                    - is_correct: true if score is 100% of total marks, false otherwise
+                    - score: actual marks awarded (between 0 and {question.marks})
+                    - percentage: percentage of total marks awarded (0-100)
+                    """
+                    response = self.model.generate_content(prompt)
+                    if not response or not hasattr(response, 'text') or not response.text:
+                        logger.error(f"Invalid Gemini API response for evaluation: {response}")
+                        raise ValueError("No valid response from Gemini API")
+                    try:
+                        eval_text = response.text.strip()
+                        if eval_text.startswith("```json"):
+                            eval_text = eval_text[7:]
+                        if eval_text.endswith("```"):
+                            eval_text = eval_text[:-3]
+                        eval_text = eval_text.strip()
+
+                        # Extract only the first JSON object or array
+                        import re
+                        json_match = re.search(r'(\{[^\}]*\}|\[[^\]]*\])', eval_text, re.DOTALL)
+                        if not json_match:
+                            logger.error(f"No JSON object found in evaluation response: {eval_text[:500]}")
+                            raise ValueError("No JSON object found in evaluation response")
+                        json_str = json_match.group(1)
+                        result = json.loads(json_str)
+
+                        # Use the score provided by the LLM for partial marking
+                        awarded_score = result.get("score", 0.0)
+                        max_marks = float(question.marks)
+                        
+                        # Ensure score doesn't exceed maximum marks
+                        awarded_score = min(awarded_score, max_marks)
+                        awarded_score = max(awarded_score, 0.0)  # Ensure non-negative
+                        
+                        # Consider answer correct if it gets more than 80% of total marks
+                        is_correct = awarded_score >= (0.8 * max_marks)
+                        score = awarded_score
+                        
+                    except json.JSONDecodeError as e:
+                        logger.error(f"JSON decode error in evaluation: {str(e)}, response: {response.text[:500]}")
+                        raise ValueError(f"Invalid JSON response: {str(e)}")
             elif question.type == QuestionType.TrueFalse:
                 is_correct = str(student_answer).lower() == question.correct_answer.lower()
                 score = float(question.marks) if is_correct else 0.0
@@ -278,4 +306,4 @@ class ExamGenerator:
         except Exception as e:
             db.rollback()
             logger.error(f"Error evaluating answer: {str(e)}")
-            raise Exception(f"Error evaluating answer: {str(e)}")
+            raise ValueError(f"Error evaluating answer: {str(e)}")

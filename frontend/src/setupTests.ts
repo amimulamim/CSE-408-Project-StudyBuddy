@@ -18,6 +18,17 @@ Object.defineProperty(import.meta, 'env', {
   configurable: true
 });
 
+// Global React Router mock
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => vi.fn(),
+    useLocation: () => ({ pathname: '/', search: '', hash: '', state: null }),
+    useParams: () => ({}),
+  };
+});
+
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
   constructor(cb: ResizeObserverCallback) {
