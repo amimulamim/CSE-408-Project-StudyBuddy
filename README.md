@@ -4,9 +4,13 @@
 
 ## 🔗 Quick Links
 
+
+
 - **📖 API Documentation**: [OpenAPI Specification](./API_DOCUMENTATION/openapi.yaml)
-- **🎥 Demo Video**: *[Insert demonstration video link here]*
-- **🏗️ Code Structure Video**: *[Insert code structure video link here]*
+- **🌐 Public URL**: [studdybuddy.me](https://studdybuddy.me)
+- **🎥 Demo Video**: [Watch Demo](https://your-demo-video-link.com)
+- **🏗️ Code Structure Video**: [Watch Code Structure Video](https://your-code-structure-link.com)
+
 
 ## 🚀 Quick Start
 
