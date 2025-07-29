@@ -72,7 +72,7 @@ export function Header({userProfile, subscription, billingLoading}: HeaderProps)
     <header 
       className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 h-20 border-b border-white/10 bg-white/10 backdrop-blur`}
     >
-      <div className="container xl:max-w-screen-xl mx-auto px-6 py-2">
+      <div className="container md:max-w-screen-xl mx-auto px-10 py-2">
         <div className="flex items-center justify-between w-full">
           {/* Logo */}
           <Logo />
