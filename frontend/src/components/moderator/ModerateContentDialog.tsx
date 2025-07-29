@@ -30,7 +30,7 @@ export function ModerateContentDialog({ content, onClose, onModerated }: any) {
         "content_url": content.content_url,
         "raw_content": rawContent,
         "approve": true,
-        "topic": content.topic + " (approved)"
+        "topic": content.topic
       }
     );
     toast.success('Content approved');
