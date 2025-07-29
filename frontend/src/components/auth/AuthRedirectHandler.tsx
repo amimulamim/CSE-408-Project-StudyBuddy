@@ -40,6 +40,9 @@ export const AuthRedirectHandler = ({ onRedirectComplete }: AuthRedirectHandlerP
       if (userProfile.is_admin) {
         toast.success(`Welcome back, Admin ${userProfile.name}!`);
         navigate('/admin/dashboard');
+      } else if (userProfile.is_moderator) {
+        toast.success(`Welcome back, Moderator ${userProfile.name}!`);
+        navigate('/moderator/dashboard');
       } else {
         toast.success(`Welcome back, ${userProfile.name}!`);
         navigate('/dashboard');

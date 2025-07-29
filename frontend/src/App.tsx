@@ -25,6 +25,7 @@ import QuizResultsPage from './pages/QuizResultsPage';
 import CollectionsPage from './pages/CollectionsPage';
 import DocumentsPage from './pages/DocumentsPage';
 import MainLayout from './pages/Mainlayout';
+import ModeratorDashboard from './pages/ModeratorDashboard';
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ const App = () => {
               <Route path="/dashboard/content" element={<ContentLibrary />} />
               <Route path="/dashboard/quiz" element={<QuizPage />} />
               <Route path="/chatbot" element={<Chatbot />} />
+              <Route path="/moderator/dashboard" element={<ModeratorDashboard />} />
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>

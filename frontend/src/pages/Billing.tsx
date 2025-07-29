@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { BillingSubscription } from '@/components/billing/BillingSubscription';
+import { triggerSubscriptionRefresh } from '@/hooks/useSubscription';
 import { toast } from 'sonner';
 
 
@@ -20,6 +21,8 @@ export default function BillingPage() {
       // Refresh subscription status after a short delay
       setTimeout(() => {
         billingRef.current?.refreshSubscriptionStatus();
+        // Also trigger global subscription refresh for header
+        triggerSubscriptionRefresh();
       }, 1000);
     } else if (success === 'false') {
       toast.error("Payment Failed", {
@@ -28,7 +31,7 @@ export default function BillingPage() {
       // Clean up URL
       navigate('/dashboard/billing', { replace: true });
     }
-  }, [searchParams, toast, navigate]);
+  }, [searchParams, navigate]);
 
   return (
     <div>  
