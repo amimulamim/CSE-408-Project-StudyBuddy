@@ -8,8 +8,8 @@
 
 - **📖 API Documentation**: [OpenAPI Specification](./API_DOCUMENTATION/openapi.yaml)
 - **🌐 Public URL**: [studdybuddy.me](https://studdybuddy.me)
-- **🎥 Demo Video**: [Watch Demo](https://your-demo-video-link.com)
-- **🏗️ Code Structure Video**: [Watch Code Structure Video](https://your-code-structure-link.com)
+- **🎥 Demo Video**: [Watch Demo](https://youtu.be/MZ95SM88dbQ?si=d2g7ea9Cj8lNO5nk)
+- **🏗️ Code Structure Video**: [Watch Code Structure Video](https://youtu.be/IHC0hNuqKWM?si=WWQCpFH0T0055ob0)
 
 
 ## 🚀 Quick Start
