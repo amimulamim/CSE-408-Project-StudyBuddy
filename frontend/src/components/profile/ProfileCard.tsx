@@ -15,6 +15,7 @@ interface UserProfile {
   institution: string;
   role: string;
   is_admin: boolean;
+  is_moderator: boolean;
   avatar: string;
   current_plan: string;
   location: string;
@@ -181,6 +182,17 @@ export function ProfileCard({ userProfile, analyticsStats, onProfileUpdate }: Pr
                     >
                       <Crown className="h-4 w-4 mr-2" />
                       Admin Dashboard
+                    </Button>
+                  )}
+                  {userProfile.is_moderator && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate('/moderator/dashboard')}
+                      className="button-light-purple"
+                    >
+                      <Crown className="h-4 w-4 mr-2" />
+                      Moderator Dashboard
                     </Button>
                   )}
                   <Button

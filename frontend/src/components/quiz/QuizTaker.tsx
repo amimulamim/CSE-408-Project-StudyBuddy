@@ -23,6 +23,13 @@ interface Question {
   hints?: string[];
 }
 
+interface QuizState {
+  answers: Record<string, string>;
+  currentQuestionIndex: number;
+  startTime: number;
+  timeElapsed: number;
+}
+
 interface QuizTakerProps {
   quizId: string;
 }
@@ -36,6 +43,76 @@ export function QuizTaker({ quizId }: QuizTakerProps) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [quizInfo, setQuizInfo] = useState<any>(null);
+  const [startTime, setStartTime] = useState<number>(Date.now());
+
+  // Generate storage key for this specific quiz
+  const getStorageKey = () => `quiz_state_${quizId}`;
+
+  // Save quiz state to localStorage
+  const saveQuizState = (state: Partial<QuizState>) => {
+    try {
+      const existingState = getQuizState();
+      const newState = { ...existingState, ...state };
+      localStorage.setItem(getStorageKey(), JSON.stringify(newState));
+    } catch (error) {
+      console.error('Failed to save quiz state:', error);
+    }
+  };
+
+  // Load quiz state from localStorage
+  const getQuizState = (): QuizState => {
+    try {
+      const stored = localStorage.getItem(getStorageKey());
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (error) {
+      console.error('Failed to load quiz state:', error);
+    }
+    return {
+      answers: {},
+      currentQuestionIndex: 0,
+      startTime: Date.now(),
+      timeElapsed: 0
+    };
+  };
+
+  // Clear quiz state when quiz is completed
+  const clearQuizState = () => {
+    try {
+      localStorage.removeItem(getStorageKey());
+    } catch (error) {
+      console.error('Failed to clear quiz state:', error);
+    }
+  };
+
+  // Save state whenever answers or current question changes
+  useEffect(() => {
+    if (!loading && questions.length > 0) {
+      saveQuizState({
+        answers,
+        currentQuestionIndex,
+        startTime,
+        timeElapsed: Math.floor((Date.now() - startTime) / 1000)
+      });
+    }
+  }, [answers, currentQuestionIndex, startTime, loading, questions.length]);
+
+  // Add beforeunload event to warn user about leaving the quiz
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      // Only show warning if there are unsaved answers
+      if (Object.keys(answers).length > 0) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [answers]);
 
   useEffect(() => {
     fetchQuiz();
@@ -53,6 +130,22 @@ export function QuizTaker({ quizId }: QuizTakerProps) {
         setQuestions(response.data.questions || []);
         setQuizInfo(response.data);
         setDuration(response.data.duration || 30);
+        
+        // After loading quiz data, restore saved state
+        const savedState = getQuizState();
+        
+        if (Object.keys(savedState.answers).length > 0) {
+          // Restore from saved state
+          setAnswers(savedState.answers);
+          setCurrentQuestionIndex(savedState.currentQuestionIndex);
+          setStartTime(savedState.startTime);
+          toast.success('Quiz progress restored! You can continue from where you left off.');
+        } else {
+          // Initialize new quiz session
+          const newStartTime = Date.now();
+          setStartTime(newStartTime);
+          saveQuizState({ startTime: newStartTime });
+        }
       }
     } catch (error) {
       console.error('Error fetching quiz:', error);
@@ -94,6 +187,8 @@ export function QuizTaker({ quizId }: QuizTakerProps) {
       );
 
       if (response?.status === 'success') {
+        // Clear saved quiz state on successful submission
+        clearQuizState();
         toast.success('Quiz submitted successfully!');
         navigate(`/quiz/results/${quizId}`);
       }
@@ -156,7 +251,7 @@ export function QuizTaker({ quizId }: QuizTakerProps) {
                 Question {currentQuestionIndex + 1} of {questions.length}
               </p>
             </div>
-            <QuizTimer duration={duration} onTimeUp={handleTimeUp} />
+            <QuizTimer duration={duration} startTime={startTime} onTimeUp={handleTimeUp} />
             <div className="glass-card-inner p-4 rounded-lg">
               <Target className="h-5 w-5 mx-auto mb-1 text-purple-400" />
               <div className="text-sm font-medium glass-text-description">Total Points</div>

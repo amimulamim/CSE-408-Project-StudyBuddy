@@ -1,27 +1,22 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { ChatbotFAB } from '@/components/chatbot/ChatbotFAB';
-import { CreditCard, MessageSquare, BookOpen, Settings, Loader2, Brain, User, Crown, LogOut, Sparkles } from "lucide-react";
+import { CreditCard, MessageSquare, BookOpen, Loader2, Brain, User, Crown, LogOut, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useUserRole } from "@/hooks/useUserRole";
-import { 
-  getSubscriptionStatus, 
-  getStatusColor, 
-  getStatusLabel,
-} from "@/lib/billing";
-import { SubscriptionStatus } from "@/lib/billingTypes";
+import { useSubscription } from "@/hooks/useSubscription";
 import { Header } from "@/components/header/Header";
 import { Footer } from "@/components/footer/Footer";
+import { RecentActivities } from "@/components/activity/RecentActivities";
 
 let LoadedHeader = null;
 
 export default function Dashboard() {
     const navigate = useNavigate();
-    const { userProfile, loading, refetchUserProfile } = useUserRole();
-    const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
-    const [billingLoading, setBillingLoading] = useState(true);
+    const { userProfile, loading } = useUserRole();
+    const { subscription, loading: billingLoading } = useSubscription();
 
     useEffect(() => {
         if (!loading && !userProfile) {
@@ -29,22 +24,6 @@ export default function Dashboard() {
           navigate('/');
         }
     }, [loading, userProfile, navigate]);
-
-    useEffect(() => {
-        loadSubscriptionStatus();
-    }, []);
-
-    const loadSubscriptionStatus = async () => {
-        try {
-            setBillingLoading(true);
-            const status = await getSubscriptionStatus();
-            setSubscription(status);
-        } catch (error) {
-            console.error("Failed to load subscription status:", error);
-        } finally {
-            setBillingLoading(false);
-        }
-    };
 
 
     const getCurrentTimeGreeting = () => {
@@ -185,7 +164,7 @@ export default function Dashboard() {
         // </div>
 
         <div className="min-h-screen">
-            <div className="container mx-auto mb-12 py-8 space-y-8">
+            <div className="container px-4 mx-auto mb-12 py-8 space-y-8">
                 {/* Main Content Grid */}
                 <div className="space-y-6">
                     {/* Quick Actions */}
@@ -214,20 +193,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Recent Activity */}
-                <Card className="glass-card">
-                    <CardHeader>
-                        <CardTitle className="glass-text-title">Recent Activity</CardTitle>
-                        <CardDescription className="glass-text-description">Your latest interactions and generated content</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-center py-8">
-                            <div className="relative mb-4">
-                                <BookOpen className="h-12 w-12 mx-auto text-gray-300 opacity-60" />
-                            </div>
-                            <p className="glass-text-description">No recent activity yet. Start by chatting with AI or generating content!</p>
-                        </div>
-                    </CardContent>
-                </Card>
+                <RecentActivities />
             </div>
             {/* <Footer /> */}
             <ChatbotFAB />

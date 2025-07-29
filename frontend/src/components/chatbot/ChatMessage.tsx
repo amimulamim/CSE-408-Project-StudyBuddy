@@ -74,22 +74,29 @@ export function ChatMessage({ message }: ChatMessageProps) {
   };
 
   return (
-    <div className={`flex gap-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div className={`flex gap-4 ${isUser ? 'justify-end' : 'justify-start'} min-w-0`}>
       {!isUser && (
         <div className="flex-shrink-0 w-8 h-8 rounded-full bg-study-purple flex items-center justify-center">
           <Bot className="h-4 w-4 text-white" />
         </div>
       )}
       
-      <div className={`max-w-3xl ${isUser ? 'order-first' : ''}`}>
+      <div className={`max-w-3xl ${isUser ? 'order-first' : ''} min-w-0 w-full`}>
         <div
-          className={`p-4 rounded-lg ${
+          className={`p-4 rounded-lg min-w-0 ${
             isUser
               ? 'bg-study-purple text-white ml-12'
               : 'bg-white/5 text-white'
           }`}
+          style={{ 
+            overflowWrap: 'anywhere', 
+            wordBreak: 'break-word',
+            maxWidth: '100%'
+          }}
         >
-          <p className="whitespace-pre-wrap"><MarkdownRenderer content={message.content} /></p>
+          <div className="min-w-0">
+            <MarkdownRenderer content={message.content} />
+          </div>
           
           {/* File attachments */}
           {message.files && message.files.length > 0 && (

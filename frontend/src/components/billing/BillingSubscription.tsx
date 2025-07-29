@@ -13,6 +13,7 @@ import {
   getStatusColor,
   getStatusLabel, 
 } from "@/lib/billing";
+import { triggerSubscriptionRefresh } from "@/hooks/useSubscription";
 import { toast } from 'sonner';
 import { SubscriptionStatus } from "@/lib/billingTypes";
 
@@ -124,6 +125,8 @@ export const BillingSubscription = forwardRef<{ refreshSubscriptionStatus: () =>
       
       // Reload subscription status
       await loadSubscriptionStatus();
+      // Trigger global subscription refresh for header
+      triggerSubscriptionRefresh();
     } catch (error: any) {
       console.error("Failed to cancel subscription:", error);
       toast.error("Failed to cancel subscription", {
