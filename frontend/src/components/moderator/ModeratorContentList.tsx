@@ -15,7 +15,7 @@ interface ContentItem {
   content_url?: string;
 }
 
-export function ModeratorContentList({ type }: { type: 'pending' | 'all' }) {
+export function ModeratorContentList({ type }: { type: 'slides_pending' | 'all' }) {
   const [contents, setContents] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<ContentItem | null>(null);
@@ -23,13 +23,13 @@ export function ModeratorContentList({ type }: { type: 'pending' | 'all' }) {
   useEffect(() => {
     setLoading(true);
     const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-    const url = type === 'pending'
+    const url = type === 'slides_pending'
       ? `${API_BASE_URL}/api/v1/content-moderator/pending`
       : `${API_BASE_URL}/api/v1/content-moderator/all`;
     makeRequest(url, 'GET', null)
       .then(res => res.data)
       .then(data => {
-        setContents(type === 'pending' ? data.pending_contents : data.all_contents);
+        setContents(type === 'slides_pending' ? data.pending_contents : data.all_contents);
       })
       .finally(() => setLoading(false));
   }, [type]);
