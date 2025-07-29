@@ -388,4 +388,52 @@
   .enhanced-table tr:hover {
     @apply bg-[#f9fafb]/5;
   }
+
+  /* Text Overflow and Word Breaking Utilities */
+  .overflow-wrap-anywhere {
+    overflow-wrap: anywhere;
+  }
+  
+  .word-break-all {
+    word-break: break-all;
+  }
+  
+  .hyphens-auto {
+    hyphens: auto;
+  }
+
+  /* Chat-specific overflow styles */
+  .chat-message-content {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    hyphens: auto;
+  }
+
+  .chat-code-block {
+    overflow-x: auto;
+    word-break: normal;
+    white-space: pre;
+    scrollbar-width: thin;
+  }
+
+  /* Prose styling overrides for better text wrapping */
+  .prose {
+    overflow-wrap: anywhere;
+  }
+
+  .prose pre {
+    overflow-x: auto !important;
+    white-space: pre !important;
+    word-break: normal !important;
+  }
+
+  .prose code {
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+  }
+
+  .prose p {
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
 }
