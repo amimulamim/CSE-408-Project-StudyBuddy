@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ModeratorContentList } from '@/components/moderator/ModeratorContentList';
-import { ModeratorQuizList } from '@/components/moderator/ModeratorQuizList';
 import { ModeratorProfileCard } from '@/components/moderator/ModeratorProfileCard';
 
 export default function ModeratorDashboard() {
@@ -13,23 +12,23 @@ export default function ModeratorDashboard() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="pending-content">Pending Content</TabsTrigger>
-          <TabsTrigger value="pending-quizzes">Pending Quizzes</TabsTrigger>
+          {/* <TabsTrigger value="pending-quizzes">Pending Quizzes</TabsTrigger> */}
           <TabsTrigger value="all-content">All Content</TabsTrigger>
-          <TabsTrigger value="all-quizzes">All Quizzes</TabsTrigger>
+          {/* <TabsTrigger value="all-quizzes">All Quizzes</TabsTrigger> */}
           <TabsTrigger value="profile">Profile & Stats</TabsTrigger>
         </TabsList>
         <TabsContent value="pending-content">
           <ModeratorContentList type="pending" />
         </TabsContent>
-        <TabsContent value="pending-quizzes">
+        {/* <TabsContent value="pending-quizzes">
           <ModeratorQuizList type="pending" />
-        </TabsContent>
+        </TabsContent> */}
         <TabsContent value="all-content">
           <ModeratorContentList type="all" />
         </TabsContent>
-        <TabsContent value="all-quizzes">
+        {/* <TabsContent value="all-quizzes">
           <ModeratorQuizList type="all" />
-        </TabsContent>
+        </TabsContent> */}
         <TabsContent value="profile">
           <ModeratorProfileCard />
         </TabsContent>

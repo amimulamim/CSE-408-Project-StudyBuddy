@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { makeRequest } from '@/lib/apiCall';
+import { Textarea } from '../ui/textarea';
 
 export function ModerateContentDialog({ content, onClose, onModerated }: any) {
   const [rawContent, setRawContent] = useState('');
@@ -10,9 +11,10 @@ export function ModerateContentDialog({ content, onClose, onModerated }: any) {
 
   // Fetch raw content on open
   useState(() => {
+    const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
     if (content.raw_source_url) {
-      makeRequest(content.raw_source_url, 'GET', null)
-        .then(res => res.data)
+      makeRequest(`${API_BASE_URL}/api/v1/content-moderator/${content.contentId}/raw_content`, 'GET', null)
+        .then(res => res.data.raw_content)
         .then(setRawContent);
     }
   });
@@ -20,7 +22,17 @@ export function ModerateContentDialog({ content, onClose, onModerated }: any) {
   const handleApprove = async () => {
     setLoading(true);
     const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-    await makeRequest(`${API_BASE_URL}/api/v1/content-moderator/${content.contentId}/moderate`, 'PUT', JSON.stringify({ approve: true }));
+    console.log('printing raw url');
+    console.log(content.content_url);
+    await makeRequest(`${API_BASE_URL}/api/v1/content-moderator/${content.contentId}/moderate`,
+      "PUT",
+      {
+        "content_url": content.content_url,
+        "raw_content": rawContent,
+        "approve": true,
+        "topic": content.topic + " (approved)"
+      }
+    );
     toast.success('Content approved');
     setLoading(false);
     onModerated();
@@ -32,7 +44,7 @@ export function ModerateContentDialog({ content, onClose, onModerated }: any) {
         <DialogHeader>
           <DialogTitle>Moderate Content: {content.topic}</DialogTitle>
         </DialogHeader>
-        <textarea
+        <Textarea
           className="w-full border rounded p-2 min-h-[200px] font-mono"
           value={rawContent}
           onChange={e => setRawContent(e.target.value)}

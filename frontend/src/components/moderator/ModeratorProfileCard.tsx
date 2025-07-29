@@ -24,8 +24,8 @@ export function ModeratorProfileCard() {
         <div className="mb-2"><b>Contents Modified:</b> {profile.contents_modified}</div>
         <div className="mb-2"><b>Quizzes Modified:</b> {profile.quizzes_modified}</div>
         <div className="mb-2"><b>Total Time Spent:</b> {profile.total_time_spent} min</div>
-        <div className="mb-2"><b>Domains:</b> {profile.domains?.join(', ')}</div>
-        <div className="mb-2"><b>Topics:</b> {profile.topics?.join(', ')}</div>
+        <div className="mb-2"><b>Domains:</b> {profile.domains?.join(', ') || 'All'}</div>
+        <div className="mb-2"><b>Topics:</b> {profile.topics?.join(', ') || 'All Topic'}</div>
       </CardContent>
     </Card>
   );
