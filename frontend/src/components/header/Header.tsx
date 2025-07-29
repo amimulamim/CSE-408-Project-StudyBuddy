@@ -80,7 +80,11 @@ export function Header({userProfile, subscription, billingLoading}: HeaderProps)
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-white/70 backdrop-blur-sm rounded-full px-4 py-2 border border-white/50 shadow-sm">
+              <button 
+                className="flex items-center gap-2 bg-white/70 backdrop-blur-sm rounded-full px-4 py-2 border border-white/50 shadow-sm hover:bg-white/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                onClick={() => navigate("/dashboard/billing")}
+                aria-label="Go to billing page"
+              >
                   {billingLoading ? (
                       <div className="flex items-center gap-2">
                           <div className="h-4 w-4 bg-gray-300 rounded-full animate-pulse"></div>
@@ -106,7 +110,7 @@ export function Header({userProfile, subscription, billingLoading}: HeaderProps)
                           )}
                       </>
                   )}
-              </div>
+              </button>
               <Button 
                 variant="ghost" 
                 onClick={handleLogout} 
@@ -139,27 +143,64 @@ export function Header({userProfile, subscription, billingLoading}: HeaderProps)
         
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="md:hidden flex flex-row items-start justify-around mt-4 bg-white/40 backdrop-blur-sm p-4 rounded-lg shadow-lg">
-            <Button 
-              variant="ghost" 
-              onClick={handleLogout} 
-              size='sm'
-              className="relative bg-white/50 backdrop-blur-sm hover:bg-white/70 border border-white/50 mt-2"
+          <div className="md:hidden mt-4 bg-white/40 backdrop-blur-sm p-4 rounded-lg shadow-lg space-y-4">
+            {/* Mobile Billing Status */}
+            <button 
+              className="w-full flex items-center justify-center gap-2 bg-white/70 backdrop-blur-sm rounded-full px-4 py-2 border border-white/50 shadow-sm hover:bg-white/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+              onClick={() => {
+                navigate("/dashboard/billing");
+                setIsMobileMenuOpen(false);
+              }}
+              aria-label="Go to billing page"
             >
-              <LogOut className="h-4 w-4" />
-            </Button>
-            <div className='mt-2'>
+              {billingLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-4 bg-gray-300 rounded-full animate-pulse"></div>
+                  <div className="h-4 w-16 bg-gray-300 rounded animate-pulse"></div>
+                </div>
+              ) : (
+                <>
+                  <Crown className={`h-4 w-4 ${
+                    subscription?.plan_id && subscription.plan_id !== 'free' 
+                      ? 'text-yellow-500' 
+                      : 'text-gray-400'
+                  }`} />
+                  <span className="text-sm font-medium text-gray-900">
+                    {subscription ? getPlanDisplayName(subscription.plan_id) : 'Free Plan'}
+                  </span>
+                  {subscription && (
+                    <Badge 
+                      className={`${getStatusColor(subscription.status)} text-xs`}
+                      variant="secondary"
+                    >
+                      {getStatusLabel(subscription.status)}
+                    </Badge>
+                  )}
+                </>
+              )}
+            </button>
+
+            {/* Mobile Action Buttons */}
+            <div className="flex flex-row items-center justify-around">
+              <Button 
+                variant="ghost" 
+                onClick={handleLogout} 
+                size='sm'
+                className="relative bg-white/50 backdrop-blur-sm hover:bg-white/70 border border-white/50"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
               <NotificationButton />
+              <Avatar 
+                className="h-12 w-12 ring-2 ring-white shadow-md hover:cursor-pointer hover:ring-4 transition-all duration-300"
+                onClick={() => navigate("/profile")}
+              >
+                <AvatarImage src={userProfile?.avatar} alt={userProfile?.name} />
+                <AvatarFallback className="text-xl font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                    {getInitials(userProfile?.name || 'User')}
+                </AvatarFallback>
+              </Avatar>
             </div>
-            <Avatar 
-              className="h-12 w-12 ring-2 ring-white shadow-md hover:cursor-pointer hover:ring-4 transition-all duration-300"
-              onClick={() => navigate("/profile")}
-            >
-              <AvatarImage src={userProfile?.avatar} alt={userProfile?.name} />
-              <AvatarFallback className="text-xl font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                  {getInitials(userProfile?.name || 'User')}
-              </AvatarFallback>
-            </Avatar>
           </div>
         )}
       </div>
