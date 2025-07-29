@@ -314,36 +314,65 @@ def get_unread_notifications_count(
         "unread_count": unread_count
     }
 
-@router.get('/activities')
+@router.get('/activities', response_model=List[Activity])
 def get_user_activities(
     db: Session = Depends(get_db),
-    user_info: Dict[str, any] = Depends(get_current_user)
+    user_info: Dict[str, Any] = Depends(get_current_user),
+    limit: int = Query(10, le=50, description="Limit the number of activities returned")
 ):
     """
-    Dummy activity endpoint for future implementation
+    Get user's recent activities including chats, content generation, and quiz attempts
     """
-    chats = get_latest_chats(db, user_info["uid"])
-    ci = ContentItem
-    contents = (
-        db.query(ci.id,ci.topic,ci.content_type,ci.created_at).
-        where(ci.user_id == user_info["uid"]).
-        order_by(ci.created_at.desc()).
-        limit(10)
-    )
-    qr = QuizResult
-    q = Quiz
-    quiz_results = (
-        db.query(qr.created_at, qr.id, q.topic).
-        join(q, q.quiz_id == qr.quiz_id).
-        where(q.user_id == user_info["uid"]).
-        order_by(qr.created_at.desc()).
-        limit(10)
-    )
-    activities = (
-        build_activities(chats, "chat") +
-        build_activities(contents, "content") +
-        build_activities(quiz_results, "quiz_taken")
-    )
-
-    return sorted(activities, key=lambda x:x.created_at, reverse=True)[:10]
+    try:
+        user_id = user_info["uid"]
+        
+        # Get recent chats
+        chats = get_latest_chats(db, user_id)
+        
+        # Get recent content generation
+        ci = ContentItem
+        contents = (
+            db.query(ci.id, ci.topic, ci.content_type, ci.created_at)
+            .filter(ci.user_id == user_id, ci.is_latest_version == True)
+            .order_by(ci.created_at.desc())
+            .limit(limit)
+            .all()
+        )
+        
+        # Get recent quiz attempts
+        qr = QuizResult
+        q = Quiz
+        quiz_results = (
+            db.query(qr.created_at, qr.id, q.topic, qr.score, qr.total)
+            .join(q, q.quiz_id == qr.quiz_id)
+            .filter(qr.user_id == user_id)
+            .order_by(qr.created_at.desc())
+            .limit(limit)
+            .all()
+        )
+        
+        # Build activities from each data source
+        activities = []
+        
+        # Add chat activities
+        if chats:
+            activities.extend(build_activities(chats, "chat"))
+        
+        # Add content activities
+        if contents:
+            activities.extend(build_activities(contents, "content"))
+        
+        # Add quiz activities
+        if quiz_results:
+            activities.extend(build_activities(quiz_results, "quiz"))
+        
+        # Sort by creation date (most recent first) and limit results
+        sorted_activities = sorted(activities, key=lambda x: x.created_at, reverse=True)
+        return sorted_activities[:limit]
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch user activities: {str(e)}"
+        )
                
