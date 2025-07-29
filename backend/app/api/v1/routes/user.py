@@ -318,7 +318,7 @@ def get_unread_notifications_count(
 def get_user_activities(
     db: Session = Depends(get_db),
     user_info: Dict[str, Any] = Depends(get_current_user),
-    limit: int = Query(10, le=50, description="Limit the number of activities returned")
+    limit: int = Query(5, le=50, description="Limit the number of activities returned")
 ):
     """
     Get user's recent activities including chats, content generation, and quiz attempts
@@ -343,7 +343,7 @@ def get_user_activities(
         qr = QuizResult
         q = Quiz
         quiz_results = (
-            db.query(qr.created_at, qr.id, q.topic, qr.score, qr.total)
+            db.query(qr.created_at, qr.id, q.topic, qr.score, qr.total, q.quiz_id)
             .join(q, q.quiz_id == qr.quiz_id)
             .filter(qr.user_id == user_id)
             .order_by(qr.created_at.desc())
@@ -364,7 +364,7 @@ def get_user_activities(
         
         # Add quiz activities
         if quiz_results:
-            activities.extend(build_activities(quiz_results, "quiz"))
+            activities.extend(build_activities(quiz_results, "quiz_taken"))
         
         # Sort by creation date (most recent first) and limit results
         sorted_activities = sorted(activities, key=lambda x: x.created_at, reverse=True)

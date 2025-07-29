@@ -24,6 +24,7 @@ interface Activity {
     title?: string;
     score?: number;
     total?: number;
+    quiz_id?: string;
   };
   created_at: string;
 }
@@ -33,7 +34,7 @@ interface RecentActivitiesProps {
   readonly limit?: number;
 }
 
-export function RecentActivities({ className = '', limit = 10 }: RecentActivitiesProps) {
+export function RecentActivities({ className = '', limit = 5 }: RecentActivitiesProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -89,6 +90,7 @@ export function RecentActivities({ className = '', limit = 10 }: RecentActivitie
       case 'content':
         return FileText;
       case 'quiz':
+      case 'quiz_taken':
         return Trophy;
       default:
         return BookOpen;
@@ -102,6 +104,7 @@ export function RecentActivities({ className = '', limit = 10 }: RecentActivitie
       case 'content':
         return 'text-green-400';
       case 'quiz':
+      case 'quiz_taken':
         return 'text-yellow-400';
       default:
         return 'text-gray-400';
@@ -115,6 +118,7 @@ export function RecentActivities({ className = '', limit = 10 }: RecentActivitie
       case 'content':
         return 'bg-green-600/20 text-green-300 border-green-500/30';
       case 'quiz':
+      case 'quiz_taken':
         return 'bg-yellow-600/20 text-yellow-300 border-yellow-500/30';
       default:
         return 'bg-gray-600/20 text-gray-300 border-gray-500/30';
@@ -128,6 +132,7 @@ export function RecentActivities({ className = '', limit = 10 }: RecentActivitie
       case 'content':
         return activity.details.topic || 'Generated Content';
       case 'quiz':
+      case 'quiz_taken':
         return activity.details.topic || 'Quiz Attempt';
       default:
         return 'Activity';
@@ -140,7 +145,8 @@ export function RecentActivities({ className = '', limit = 10 }: RecentActivitie
         return 'Had a conversation with AI assistant';
       case 'content':
         return `Generated ${activity.details.content_type || 'content'}`;
-      case 'quiz': {
+      case 'quiz':
+      case 'quiz_taken': {
         const score = activity.details.score;
         const total = activity.details.total;
         if (score !== undefined && total !== undefined) {
@@ -164,10 +170,28 @@ export function RecentActivities({ className = '', limit = 10 }: RecentActivitie
         }
         break;
       case 'content':
-        navigate('/content-library');
+        // Navigate to specific content based on type and id
+        if (activity.details.id) {
+          const contentType = activity.details.content_type?.toLowerCase();
+          if (contentType === 'flashcards') {
+            navigate(`/content/flashcards/${activity.details.id}`);
+          } else if (contentType === 'slides' || contentType === 'summary') {
+            navigate(`/content/slides/${activity.details.id}`);
+          } else {
+            navigate('/dashboard/content');
+          }
+        } else {
+          navigate('/dashboard/content');
+        }
         break;
       case 'quiz':
-        navigate('/dashboard/quiz');
+      case 'quiz_taken':
+        // Navigate to quiz results if we have quiz_id
+        if (activity.details.quiz_id) {
+          navigate(`/quiz/results/${activity.details.quiz_id}`);
+        } else {
+          navigate('/dashboard/quiz');
+        }
         break;
       default:
         break;
